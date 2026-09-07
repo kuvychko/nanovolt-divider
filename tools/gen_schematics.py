@@ -309,16 +309,28 @@ def tq2_symbol_text() -> str:
 
 def sw3pdt_symbol_text() -> str:
     """Generic 3PDT toggle, 3 units. Per pole: NORM throw, COM, HV throw. Lug numbering 1-9 is a placeholder
-    until the physical switch is chosen."""
-    pole = lambda unit, norm, com, hv: f'''
+    until the physical switch is chosen.
+
+    Two lugs are deliberately absent from the symbol because they carry no board connection:
+      lug 6 (pole 2, HV throw)  - wired panel-to-panel from the HV IN- jack straight to the switch
+      lug 7 (pole 3, NORM throw)- unused; R25 (100k) already holds HV_SENSE low outside the HV throw
+    A lug with no pad must have no pin, or KiCad reports a missing pad on every netlist update.
+    The panel wiring is documented in a text block on the root sheet."""
+    def pole(unit, norm, com, hv):
+        pins = [_pin("passive", -5.08, 0, 0, "COM", com)]
+        if norm:
+            pins.append(_pin("passive", 5.08, 2.54, 180, "NORM", norm))
+        if hv:
+            pins.append(_pin("passive", 5.08, -2.54, 180, "HV", hv))
+        off = "" if (norm and hv) else '''
+      (text "off-board lug" (at 6.35 0 0) (effects (font (size 0.762 0.762)) (justify left)))'''
+        return f'''
     (symbol "SW_3PDT_{unit}_1"
       (circle (center -2.032 0) (radius 0.508) {STROKE} (fill (type none)))
       (circle (center 2.032 2.54) (radius 0.508) {STROKE} (fill (type none)))
       (circle (center 2.032 -2.54) (radius 0.508) {STROKE} (fill (type none)))
-      (polyline (pts (xy -1.524 0.254) (xy 1.524 2.286)) {STROKE} (fill (type none)))
-      {_pin("passive", 5.08, 2.54, 180, "NORM", norm)}
-      {_pin("passive", -5.08, 0, 0, "COM", com)}
-      {_pin("passive", 5.08, -2.54, 180, "HV", hv)}
+      (polyline (pts (xy -1.524 0.254) (xy 1.524 2.286)) {STROKE} (fill (type none))){off}
+      {chr(10).join("      " + x for x in pins).strip()}
     )'''
     return f'''
   (symbol "SW_3PDT"
@@ -326,20 +338,86 @@ def sw3pdt_symbol_text() -> str:
     (exclude_from_sim no) (in_bom yes) (on_board yes) (in_pos_files yes) (duplicate_pin_numbers_are_jumpers no)
     {_prop("Reference", "SW", 0, 5.08)}
     {_prop("Value", "SW_3PDT", 0, -5.08)}
-    {_prop("Footprint", "nanovolt-divider:SW_3PDT_WirePads_3x3_P7.62mm", 0, 0, hide=True)}
+    {_prop("Footprint", "nanovolt-divider:SW_3PDT_WirePads_Split", 0, 0, hide=True)}
     {_prop("Datasheet", "~", 0, 0, hide=True)}
-    {_prop("Description", "3PDT toggle switch, panel mount (NORMAL / HV selector), wired to 3x3 solder pads on the board; select a 450 VDC rated switch.", 0, 0, hide=True)}
+    {_prop("Description", "3PDT toggle switch, panel mount (NORMAL / HV selector), wired to solder pads on the board; select a break-before-make 450 VDC rated switch. Lugs 6 (HV IN-) and 7 (unused) have no board connection.", 0, 0, hide=True)}
     {_prop("ki_keywords", "switch toggle 3PDT", 0, 0, hide=True)}
     {pole(1, "1", "2", "3")}
-    {pole(2, "4", "5", "6")}
-    {pole(3, "7", "8", "9")}
+    {pole(2, "4", "5", None)}
+    {pole(3, None, "8", "9")}
+    (embedded_fonts no)
+  )'''
+
+
+def dgnd_symbol_text() -> str:
+    """Control-domain ground.  Deliberately NOT power:GND: the analog return (SRC_RTN / ANALOG_RTN)
+    floats, and a distinct global name makes it impossible to merge the two by accident later."""
+    return f'''
+  (symbol "DGND"
+    (power global)
+    (pin_numbers (hide yes)) (pin_names (offset 0) (hide yes))
+    (exclude_from_sim no) (in_bom yes) (on_board yes) (in_pos_files yes) (duplicate_pin_numbers_are_jumpers no)
+    {_prop("Reference", "#PWR", 0, -3.81, hide=True)}
+    {_prop("Value", "DGND", 0, 3.556)}
+    {_prop("Footprint", "", 0, 0, hide=True)}
+    {_prop("Datasheet", "", 0, 0, hide=True)}
+    {_prop("Description", "Control-section digital ground (MCP23017, TMP117, relay coil drivers, ESP32 harness). Never tied to the floating analog return.", 0, 0, hide=True)}
+    {_prop("ki_keywords", "power-flag global ground digital", 0, 0, hide=True)}
+    (symbol "DGND_0_1"
+      (polyline (pts (xy 0 0) (xy 0 -1.27) (xy 1.27 -1.27) (xy 0 -2.54) (xy -1.27 -1.27) (xy 0 -1.27)) {STROKE} (fill (type none)))
+    )
+    (symbol "DGND_1_1"
+      {_pin("power_in", 0, 0, 270, "", "1", length=0)}
+    )
+    (embedded_fonts no)
+  )'''
+
+
+# Harness headers to the ESP32 display module.  Pin *names* carry the module's own labels so a wire
+# that lands on the wrong pin is visible in the schematic instead of looking plausibly correct.
+# UNVERIFIED against the board in hand - see README "confirm the display module variant".
+ESP32_CONNECTORS = {
+    "J_ESP32_P1": ("ESP32_DISP_P1",
+                   "Harness to ESP32-2432S028R (ELEGOO 2.8in) connector P1 (power in). Verify pinout against the module in hand.",
+                   [("1", "TX_IO1"), ("2", "RX_IO3"), ("3", "VIN_5V"), ("4", "GND")]),
+    "J_ESP32_CN1": ("ESP32_DISP_CN1",
+                    "Harness to ESP32-2432S028R connector CN1 (I2C + 3V3). Verify pinout against the module in hand.",
+                    [("1", "GND"), ("2", "SCL_IO22"), ("3", "SDA_IO27"), ("4", "P3V3")]),
+    "J_ESP32_P3": ("ESP32_DISP_P3",
+                   "Harness to ESP32-2432S028R connector P3 (GPIO). Verify pinout against the module in hand.",
+                   [("1", "GND"), ("2", "IO35"), ("3", "IO22_DUP"), ("4", "IO21_BL")]),
+}
+
+
+def esp32_connector_symbol_text(name) -> str:
+    """1x4 harness header.  Pin geometry is identical to Connector_Generic:Conn_01x04 (x=-5.08,
+    y=2.54/0/-2.54/-5.08, length 3.81) so it is a drop-in replacement that only renames the pins."""
+    value, desc, pins = ESP32_CONNECTORS[name]
+    body = ("\n      ").join(_pin("passive", -5.08, 2.54 - 2.54 * i, 0, pname, num, length=3.81)
+                               for i, (num, pname) in enumerate(pins))
+    return f'''
+  (symbol {q(name)}
+    (pin_names (offset 1.016))
+    (exclude_from_sim no) (in_bom yes) (on_board yes) (in_pos_files yes) (duplicate_pin_numbers_are_jumpers no)
+    {_prop("Reference", "J", 0, 6.35)}
+    {_prop("Value", value, 0, -8.89)}
+    {_prop("Footprint", FP_JST4, 0, 0, hide=True)}
+    {_prop("Datasheet", "~", 0, 0, hide=True)}
+    {_prop("Description", desc, 0, 0, hide=True)}
+    {_prop("ki_keywords", "connector harness esp32 display", 0, 0, hide=True)}
+    (symbol "{name}_1_1"
+      (rectangle (start -1.27 3.81) (end 1.27 -6.35) {STROKE} (fill (type background)))
+      {body}
+    )
     (embedded_fonts no)
   )'''
 
 
 def project_symbol_lib_text() -> str:
     return (f'(kicad_symbol_lib (version {SYM_VERSION}) (generator "nanovolt-divider-gen") (generator_version "{GEN_VERSION}")'
-            f'{tq2_symbol_text()}{sw3pdt_symbol_text()}\n)\n')
+            f'{tq2_symbol_text()}{sw3pdt_symbol_text()}{dgnd_symbol_text()}'
+            + "".join(esp32_connector_symbol_text(n) for n in ESP32_CONNECTORS)
+            + "\n)\n")
 
 
 def tq2_footprint_text() -> str:
@@ -511,8 +589,11 @@ class Sheet:
         raise KeyError(f"{lib_id} pin {number}")
 
     def power(self, kind, x, y, ref, angle=0):
-        self.symbol(f"power:{kind}", x, y, ref, kind, angle=angle,
-                    ref_pos=(x, y + 6.35), val_pos=(x, y + 3.81 if kind.startswith("GND") else y - 3.81))
+        """kind is a bare stock name ("GND", "+3V3") or a lib-qualified id ("nanovolt-divider:DGND")."""
+        lib_id = kind if ":" in kind else f"power:{kind}"
+        value = kind.split(":")[-1]
+        self.symbol(lib_id, x, y, ref, value, angle=angle,
+                    ref_pos=(x, y + 6.35), val_pos=(x, y + 3.81 if value.endswith("GND") else y - 3.81))
 
     def sheet(self, name, file, sheet_uuid, x, y, w, h, left=(), right=(), page="2"):
         lines = [f'(sheet (at {fmt(x)} {fmt(y)}) (size {fmt(w)} {fmt(h)}) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)',
@@ -544,12 +625,14 @@ class Sheet:
 # Footprint placeholders / part data
 # --------------------------------------------------------------------------------------
 
+DGND = f"{PROJECT}:DGND"        # control-domain ground; the analog return stays floating
+
 FP_R1206 = "Resistor_SMD:R_1206_3216Metric"
 FP_C1206 = "Capacitor_SMD:C_1206_3216Metric"
 FP_MOX700 = f"{PROJECT}:R_Axial_Ohmite_MOX700_L7.0mm_D2.7mm_P10.16mm_Horizontal"     # measured: body 7.0 x 2.7 mm, lead 0.6 mm
 FP_SM102 = f"{PROJECT}:R_Radial_Ohmite_SlimMox_SM102_L14.7mm_W2.5mm_P10.16mm"      # datasheet: 14.73 x 2.54 x 8.64 mm, pitch 10.16, lead 0.81
 FP_RS02C = f"{PROJECT}:R_Axial_Vishay_RS02C_L15.1mm_D5.6mm_P20.32mm_Horizontal"    # datasheet 30204: body 15.06 x 5.54 mm, lead 1.02
-FP_SW3PDT = f"{PROJECT}:SW_3PDT_WirePads_3x3_P7.62mm"
+FP_SW3PDT = f"{PROJECT}:SW_3PDT_WirePads_Split"
 FP_BANANA = "Connector_Wire:SolderWire-0.25sqmm_1x01_D0.65mm_OD1.7mm"           # panel jack wired to board
 FP_JST4 = "Connector_JST:JST_XH_B4B-XH-A_1x04_P2.50mm_Vertical"                # harness to display module (module side is 1.25 mm JST-style)
 TODO = ""
@@ -582,7 +665,7 @@ def build_relay_channel(lib: SymbolLib) -> Sheet:
         sh.symbol(R, 48.26, y0 + 7.62, rp_ref, "10k", footprint=FP_R1206, ref_pos=(50.8, y0 + 6.35), val_pos=(50.8, y0 + 8.89))
         sh.wire(48.26, y0, 48.26, y0 + 3.81)
         sh.wire(48.26, y0 + 11.43, 48.26, y0 + 13.97)
-        sh.power("GND", 48.26, y0 + 13.97, [f"#PWR{i}{pwr_i:02d}" for i in n])
+        sh.power(DGND, 48.26, y0 + 13.97, [f"#PWR{i}{pwr_i:02d}" for i in n])
         sh.junction(48.26, y0 + 11.43)
         sh.wire(48.26, y0 + 11.43, 58.42, y0 + 11.43)
         # transistor
@@ -648,7 +731,9 @@ def build_relay_channel(lib: SymbolLib) -> Sheet:
 def build_control(lib: SymbolLib) -> Sheet:
     sh = Sheet("control", "control.kicad_sch", U("file:control"), "A4", lib, [f"/{ROOT_UUID}/{CONTROL_UUID}"],
                title="Control: ESP32 display module interface, MCP23017 relay drivers, TMP117")
-    C4 = "Connector_Generic:Conn_01x04"
+    JP1 = f"{PROJECT}:J_ESP32_P1"     # module P1  (power in)
+    JCN1 = f"{PROJECT}:J_ESP32_CN1"   # module CN1 (I2C + 3V3)
+    JP3 = f"{PROJECT}:J_ESP32_P3"     # module P3  (GPIO)
     R = "Device:R"
     C = "Device:C"
     pw = [0]
@@ -662,10 +747,10 @@ def build_control(lib: SymbolLib) -> Sheet:
 
     # ---- ESP32 display module harness connectors ---------------------------------------
     # J1 = module P1 (UART / VIN). mirror y -> pins on the right, pin 1 on top.
-    sh.symbol(C4, 38.1, 45.72, "J7", "ESP32_DISP_P1", mirror="y", footprint=FP_JST4,
+    sh.symbol(JP1, 38.1, 45.72, "J7", "ESP32_DISP_P1", mirror="y", footprint=FP_JST4,
               description="Harness to ESP32-2432S028R (ELEGOO 2.8in) connector P1: 1 TX(IO1), 2 RX(IO3), 3 VIN(5V), 4 GND",
               ref_pos=(33.02, 39.37), val_pos=(27.94, 41.91))
-    p = lambda k: sh.pinpos(C4, 38.1, 45.72, 0, k, mirror="y")
+    p = lambda k: sh.pinpos(JP1, 38.1, 45.72, 0, k, mirror="y")
     sh.noconn(*p("1"))
     sh.noconn(*p("2"))
     vin, gnd = p("3"), p("4")
@@ -676,35 +761,35 @@ def build_control(lib: SymbolLib) -> Sheet:
     flag(58.42, 35.56, "#FLG01")
     sh.poly(gnd, (55.88, gnd[1]), (55.88, 58.42))
     sh.junction(55.88, 58.42)
-    pwr("GND", 55.88, 58.42)
+    pwr(DGND, 55.88, 58.42)
     sh.wire(55.88, 58.42, 63.5, 58.42)
     flag(63.5, 58.42, "#FLG02")
 
     # J2 = module CN1 (I2C + 3V3). angle 180 -> pins on the right, pin 1 at the bottom.
-    sh.symbol(C4, 38.1, 76.2, "J8", "ESP32_DISP_CN1", angle=180, footprint=FP_JST4,
+    sh.symbol(JCN1, 38.1, 76.2, "J8", "ESP32_DISP_CN1", angle=180, footprint=FP_JST4,
               description="Harness to ESP32-2432S028R connector CN1: 1 GND, 2 IO22 (SCL), 3 IO27 (SDA), 4 3V3",
               ref_pos=(33.02, 67.31), val_pos=(27.94, 69.85))
-    p = lambda k: sh.pinpos(C4, 38.1, 76.2, 180, k)
+    p = lambda k: sh.pinpos(JCN1, 38.1, 76.2, 180, k)
     g, scl, sda, v33 = p("1"), p("2"), p("3"), p("4")
     sh.poly(v33, (48.26, v33[1]), (48.26, 63.5))
     pwr("+3V3", 48.26, 63.5)
     sh.poly(g, (48.26, g[1]), (48.26, 86.36))
-    pwr("GND", 48.26, 86.36)
+    pwr(DGND, 48.26, 86.36)
     sh.wire(scl[0], scl[1], 53.34, scl[1])
     sh.label("SCL", 53.34, scl[1])
     sh.wire(sda[0], sda[1], 53.34, sda[1])
     sh.label("SDA", 53.34, sda[1])
 
     # J3 = module P3 (GPIO). angle 180.
-    sh.symbol(C4, 38.1, 106.68, "J9", "ESP32_DISP_P3", angle=180, footprint=FP_JST4,
+    sh.symbol(JP3, 38.1, 106.68, "J9", "ESP32_DISP_P3", angle=180, footprint=FP_JST4,
               description="Harness to ESP32-2432S028R connector P3: 1 GND, 2 IO35 (input only, HV_SENSE), 3 IO22 (dup. SCL, n/c), 4 IO21 (backlight, n/c)",
               ref_pos=(33.02, 97.79), val_pos=(27.94, 100.33))
-    p = lambda k: sh.pinpos(C4, 38.1, 106.68, 180, k)
+    p = lambda k: sh.pinpos(JP3, 38.1, 106.68, 180, k)
     g, io35 = p("1"), p("2")
     sh.noconn(*p("3"))
     sh.noconn(*p("4"))
     sh.poly(g, (48.26, g[1]), (48.26, 116.84))
-    pwr("GND", 48.26, 116.84)
+    pwr(DGND, 48.26, 116.84)
     sh.wire(io35[0], io35[1], 53.34, io35[1])
     sh.label("HV_SENSE", 53.34, io35[1])
 
@@ -744,10 +829,10 @@ def build_control(lib: SymbolLib) -> Sheet:
     sh.wire(109.22, a2[1], 109.22, a2[1] + 5.08)
     sh.junction(109.22, a1[1])
     sh.junction(109.22, a2[1])
-    pwr("GND", 109.22, a2[1] + 5.08)
+    pwr(DGND, 109.22, a2[1] + 5.08)
     vss, vdd = pin("10"), pin("9")
     sh.wire(vss[0], vss[1], vss[0], vss[1] + 2.54)
-    pwr("GND", vss[0], vss[1] + 2.54)
+    pwr(DGND, vss[0], vss[1] + 2.54)
     sh.wire(vdd[0], vdd[1], vdd[0], vdd[1] - 10.16)
     pwr("+3V3", vdd[0], vdd[1] - 10.16)
     # GPIO -> relay coil control lines
@@ -767,7 +852,7 @@ def build_control(lib: SymbolLib) -> Sheet:
         sh.wire(x, y - 3.81, x, y - 5.08)
         pwr(rail, x, y - 5.08)
         sh.wire(x, y + 3.81, x, y + 5.08)
-        pwr("GND", x, y + 5.08)
+        pwr(DGND, x, y + 5.08)
 
     cap(139.7, 71.12, "C1", "100n", "+3V3", "MCP23017 decoupling, 100 nF X7R 16 V 1206 (SH31B104K160CT)", "SH31B104K160CT")
     cap(170.18, 45.72, "C3", "22u", "+5V", "5 V bulk, 22 uF X7R 16 V 1206 MLCC (EMK316BB7226ML-T)", "EMK316BB7226ML-T")
@@ -790,24 +875,22 @@ def build_control(lib: SymbolLib) -> Sheet:
     sh.label("SCL", 83.82, s_cl[1], 180)
     sh.poly(add0, (86.36, add0[1]), (86.36, gn[1] + 2.54), (gn[0], gn[1] + 2.54), gn)
     sh.junction(gn[0], gn[1] + 2.54)
-    pwr("GND", gn[0], gn[1] + 2.54)
+    pwr(DGND, gn[0], gn[1] + 2.54)
     sh.wire(vp[0], vp[1], vp[0], vp[1] - 5.08)
     pwr("+3V3", vp[0], vp[1] - 5.08)
     sh.noconn(*alert)
     cap(121.92, 165.1, "C2", "100n", "+3V3", "TMP117 decoupling, 100 nF X7R 16 V 1206 (SH31B104K160CT)", "SH31B104K160CT")
 
     # ---- NORMAL/HV mode sense (3PDT pole 3) ------------------------------------------------
-    # HV throw -> 10k -> +3V3 ; NORMAL throw -> 10k -> GND ; COM -> HV_SENSE with 100k pulldown.
+    # HV throw -> 10k -> +3V3 ; COM -> HV_SENSE with a 100k pulldown and a 10 nF filter.
+    # The NORMAL throw needs neither a resistor nor a board pad: R25 alone holds HV_SENSE low whenever
+    # COM is not on the HV throw, including while a break-before-make switch is in transit.  C5 stiffens
+    # the 100k source impedance against pickup on the harness run to IO35.
     sh.hlabel("MODE_SW_HV", "passive", 38.1, 134.62, 180)
     sh.symbol(R, 48.26, 134.62, "R24", "10k", angle=90, footprint=FP_R1206, ref_pos=(45.72, 132.08), val_pos=(45.72, 138.43))
     sh.wire(38.1, 134.62, 44.45, 134.62)
     sh.poly((52.07, 134.62), (55.88, 134.62), (55.88, 129.54))
     pwr("+3V3", 55.88, 129.54)
-    sh.hlabel("MODE_SW_NORM", "passive", 38.1, 152.4, 180)
-    sh.symbol(R, 48.26, 152.4, "R26", "10k", angle=90, footprint=FP_R1206, ref_pos=(45.72, 149.86), val_pos=(45.72, 156.21))
-    sh.wire(38.1, 152.4, 44.45, 152.4)
-    sh.poly((52.07, 152.4), (55.88, 152.4), (55.88, 157.48))
-    pwr("GND", 55.88, 157.48)
     sh.hlabel("HV_SENSE", "passive", 38.1, 142.24, 180)
     sh.wire(38.1, 142.24, 66.04, 142.24)
     sh.junction(66.04, 142.24)
@@ -816,7 +899,13 @@ def build_control(lib: SymbolLib) -> Sheet:
     sh.symbol(R, 66.04, 149.86, "R25", "100k", footprint=FP_R1206, ref_pos=(68.58, 148.59), val_pos=(68.58, 151.13))
     sh.wire(66.04, 142.24, 66.04, 146.05)
     sh.wire(66.04, 153.67, 66.04, 157.48)
-    pwr("GND", 66.04, 157.48)
+    pwr(DGND, 66.04, 157.48)
+    sh.wire(66.04, 142.24, 76.2, 142.24)
+    sh.symbol(C, 76.2, 149.86, "C5", "10n", footprint=FP_C1206, ref_pos=(78.74, 148.59), val_pos=(78.74, 151.13),
+              description="HV_SENSE filter, 10 nF X7R 1206; damps pickup on the IO35 harness run")
+    sh.wire(76.2, 142.24, 76.2, 146.05)
+    sh.wire(76.2, 153.67, 76.2, 157.48)
+    pwr(DGND, 76.2, 157.48)
 
     # ---- notes -------------------------------------------------------------------------------
     sh.text("ESP32 2.8in touch display module (ESP32-2432S028R type, ELEGOO) - off-board, connected by 3 harnesses:\n"
@@ -825,8 +914,9 @@ def build_control(lib: SymbolLib) -> Sheet:
             "  P3 : GND / IO35 / IO22 / IO21   -> IO35 (input only) reads HV_SENSE. IO22 duplicate and IO21 (backlight) left open.\n"
             "I2C addresses: MCP23017 0x20 (A2:A0 = 000), TMP117 0x48 (ADD0 = GND). 4.7k pull-ups to 3V3 on this board.\n"
             "MCP23017 GPA0..GPA7, GPB0, GPB1 -> K1..K5 SET/RESET coil drivers (see relay_channel sheets). GPB2..GPB7 spare.\n"
-            "MODE_SW_HV / MODE_SW_NORM / HV_SENSE: third pole of the front-panel 3PDT NORMAL/HV toggle. HV position pulls HV_SENSE high through 10k (~3.0 V);\n"
-            "NORMAL position pulls it low through 10k; 100k keeps it low while the switch is in transit. IO35 has no internal pull.",
+            "MODE_SW_HV / HV_SENSE: third pole of the front-panel 3PDT NORMAL/HV toggle. HV position pulls HV_SENSE high through 10k (~3.0 V);\n"
+            "NORMAL position and switch-in-transit leave it low through R25 (100k); C5 (10 nF) filters the harness run. IO35 has no internal pull.\n"
+            "The NORMAL lug of pole 3 and the HV lug of pole 2 have no board connection - see the panel-wiring note on the root sheet.",
             172.72, 143.51, 1.0)
     sh.text("ESP32 display module harness", 25.4, 30.48, 2.0)
     sh.text("MCP23017 -> relay coil drivers", 66.04, 80.01, 2.0)
@@ -864,9 +954,11 @@ def build_root(lib: SymbolLib) -> Sheet:
              page="6")
     # NIN+ -> A_NC and B_NO ; NIN- -> A_NO and B_NC
     sh.wire(nin_p[0], nin_p[1], px, 60.96)
+    sh.label("NORMAL_IN_P", 40.64, 60.96)
     sh.junction(48.26, 60.96)
     sh.poly((48.26, 60.96), (48.26, 66.04), (px, 66.04))
     sh.wire(nin_n[0], nin_n[1], 43.18, 76.2)
+    sh.label("NORMAL_IN_N", 40.64, 76.2)
     sh.junction(43.18, 76.2)
     sh.poly((43.18, 76.2), (43.18, 73.66), (px, 73.66))
     sh.poly((43.18, 76.2), (43.18, 78.74), (px, 78.74))
@@ -891,24 +983,33 @@ def build_root(lib: SymbolLib) -> Sheet:
                "Ohmite Slim-Mox SM102, 10 MOhm 1%, high leg for the 1e-7 range" + TODO, "5")]
     a_com_ys, r_out_ys = [], []
     for idx, (y, name, kref, rref, val, mpn, fp, desc, page) in enumerate(ranges):
+        netname = {"100k": "R100K", "1M": "R1M", "10M": "R10M"}[val]
+        # Both poles are used: pole A breaks the top of the high leg, pole B breaks the bottom, so a
+        # deselected resistor is isolated at both ends instead of hanging on the range bus.
         sh.sheet(name, RC, RELAY_UUIDS[idx], rx, y, 38.1, 30.48,
-                 left=[("A_COM", "passive", 5.08), ("B_COM", "passive", 12.7)],
-                 right=[("A_NC", "passive", 5.08), ("A_NO", "passive", 10.16), ("B_NC", "passive", 15.24),
-                        ("B_NO", "passive", 20.32), ("SET", "input", 25.4), ("RESET", "input", 27.94)],
+                 left=[("A_COM", "passive", 5.08)],
+                 right=[("A_NO", "passive", 5.08), ("B_NO", "passive", 12.7), ("B_COM", "passive", 17.78),
+                        ("A_NC", "passive", 20.32), ("B_NC", "passive", 22.86),
+                        ("SET", "input", 25.4), ("RESET", "input", 27.94)],
                  page=page)
         a_com = (rx, y + 5.08)
         a_com_ys.append(a_com[1])
         sh.wire(bus_x, a_com[1], a_com[0], a_com[1])
-        sh.noconn(rx, y + 12.7)
-        for off in (5.08, 15.24, 20.32):
+        for off in (20.32, 22.86):
             sh.noconn(rx + 38.1, y + off)
-        # high-leg resistor
-        ry = y + 10.16
-        sh.symbol(R, 167.64, ry, rref, val, angle=90, footprint=fp, description=desc,
-                  fields={"MPN": mpn, "Manufacturer": "Ohmite"}, ref_pos=(165.1, ry - 2.54), val_pos=(165.1, ry + 3.81))
-        sh.wire(rx + 38.1, ry, 163.83, ry)
-        sh.wire(171.45, ry, rbus_x, ry)
-        r_out_ys.append(ry)
+        # high-leg resistor, vertical between A_NO (pin 1) and B_NO (pin 2)
+        ry = y + 8.89
+        sh.symbol(R, 167.64, ry, rref, val, footprint=fp, description=desc,
+                  fields={"MPN": mpn, "Manufacturer": "Ohmite"}, ref_pos=(170.18, ry - 1.27), val_pos=(170.18, ry + 1.27))
+        r_hi, r_lo = sh.pinpos(R, 167.64, ry, 0, "1"), sh.pinpos(R, 167.64, ry, 0, "2")
+        assert r_hi[1] == y + 5.08 and r_lo[1] == y + 12.7, (r_hi, r_lo)
+        sh.wire(rx + 38.1, r_hi[1], r_hi[0], r_hi[1])
+        sh.label(f"{netname}_IN", 160.02, r_hi[1])
+        sh.wire(rx + 38.1, r_lo[1], r_lo[0], r_lo[1])
+        sh.label(f"{netname}_OUT", 160.02, r_lo[1])
+        # pole B common -> RANGE_BUS
+        sh.wire(rx + 38.1, y + 17.78, rbus_x, y + 17.78)
+        r_out_ys.append(y + 17.78)
         # control labels
         sh.wire(rx + 38.1, y + 25.4, 160.02, y + 25.4)
         sh.label(f"{kref}_SET", 160.02, y + 25.4)
@@ -916,6 +1017,7 @@ def build_root(lib: SymbolLib) -> Sheet:
         sh.label(f"{kref}_RESET", 160.02, y + 27.94)
     # SRC+ bus
     sh.wire(src_p[0], src_p[1], bus_x, src_p[1])
+    sh.label("SRC_P", 101.6, src_p[1])
     ys = sorted(set(a_com_ys + [src_p[1]]))
     for a, b in zip(ys, ys[1:]):
         sh.wire(bus_x, a, bus_x, b)
@@ -930,6 +1032,7 @@ def build_root(lib: SymbolLib) -> Sheet:
     for yy in ys[1:-1]:
         sh.junction(rbus_x, yy)
     sh.wire(rbus_x, inj_in[1], inj_in[0], inj_in[1])
+    sh.label("RANGE_BUS", rbus_x, 76.2, 180)
 
     # ---- INJECT / ISOLATE relay -------------------------------------------------------------------
     sh.sheet("INJECT (K5)", RC, RELAY_UUIDS[4], ix, iy, 38.1, 30.48,
@@ -952,32 +1055,35 @@ def build_root(lib: SymbolLib) -> Sheet:
     sh.symbol(SW, swx, 60.96, "SW1", "SW_3PDT NORMAL/HV", angle=180, unit=2, ref_pos=(swx - 3.81, 54.61), val_pos=(swx - 12.7, 69.85), hide_value=True)
     sh.symbol(SW, swx, 132.08, "SW1", "SW_3PDT NORMAL/HV", angle=180, unit=3, ref_pos=(swx - 3.81, 125.73), val_pos=(swx - 12.7, 140.97), hide_value=True)
     sp = lambda unit, num: sh.pinpos(SW, swx, {1: 88.9, 2: 60.96, 3: 132.08}[unit], 180, num)
+    # Lug 6 (pole 2 HV) and lug 7 (pole 3 NORM) are not on the symbol: they carry no board
+    # connection, so they get no pad.  See the panel-wiring note at the bottom of this sheet.
     p1_norm, p1_com, p1_hv = sp(1, "1"), sp(1, "2"), sp(1, "3")
-    p2_norm, p2_com, p2_hv = sp(2, "4"), sp(2, "5"), sp(2, "6")
-    p3_norm, p3_com, p3_hv = sp(3, "7"), sp(3, "8"), sp(3, "9")
+    p2_norm, p2_com = sp(2, "4"), sp(2, "5")
+    p3_com, p3_hv = sp(3, "8"), sp(3, "9")
     assert p1_norm[1] > p1_hv[1] and p1_norm[0] < p1_com[0], (p1_norm, p1_com, p1_hv)
     # NORMAL path: INJECT relay output -> pole 1 NORM
     sh.wire(inj_node[0], inj_node[1], p1_norm[0], p1_norm[1])
+    sh.label("INJ_NODE", 238.76, inj_node[1])
     assert inj_node[1] == p1_norm[1]
     # analog return: SRC- -> pole 2 NORM (routed along the top of the sheet)
     sh.poly(src_n, (101.6, src_n[1]), (101.6, 27.94), (243.84, 27.94), (243.84, p2_norm[1]), p2_norm)
-    # mode sense pole
-    sh.wire(p3_norm[0], p3_norm[1], 246.38, p3_norm[1])
-    sh.label("MODE_SW_NORM", 246.38, p3_norm[1], 180)
+    sh.label("SRC_RTN", 101.6, 45.72)
+    # mode sense pole: only the HV throw needs a board connection (R25 holds HV_SENSE low otherwise)
     sh.wire(p3_hv[0], p3_hv[1], 246.38, p3_hv[1])
     sh.label("MODE_SW_HV", 246.38, p3_hv[1], 180)
     sh.wire(p3_com[0], p3_com[1], 271.78, p3_com[1])
     sh.label("HV_SENSE", 271.78, p3_com[1])
 
     # ---- HV input path ----------------------------------------------------------------------------
-    hv_n = jack(111.76, 20.32, "J4", "HV IN -", 180, "Front panel shrouded safety banana jack, HV input - (450 VDC service)")
+    # HV IN - is wired panel-to-panel (jack -> SW1 pole 2 HV lug) and never touches the board.
     hv_p = jack(111.76, 35.56, "J3", "HV IN +", 180, "Front panel shrouded safety banana jack, HV input + (450 VDC service)")
     sh.symbol(R, 127.0, 35.56, "R34", "10M", angle=90, footprint=FP_SM102,
               description="Ohmite Slim-Mox SM102, 10 MOhm 1%, dedicated HV divider high leg (~45 uA / 20 mW at 450 V)" + TODO,
               fields={"MPN": "SM102031005FE", "Manufacturer": "Ohmite"}, ref_pos=(124.46, 30.48), val_pos=(124.46, 40.64))
     sh.wire(hv_p[0], hv_p[1], 123.19, 35.56)
+    sh.label("HV_IN_P", 119.38, 35.56)
     sh.poly((130.81, 35.56), (238.76, 35.56), (238.76, p1_hv[1]), p1_hv)
-    sh.poly(hv_n, (248.92, hv_n[1]), (248.92, p2_hv[1]), p2_hv)
+    sh.label("HV_DIV", 182.88, 35.56)
 
     # ---- measurement node, 1 ohm low leg, output ---------------------------------------------------
     rlx = 289.56
@@ -988,10 +1094,12 @@ def build_root(lib: SymbolLib) -> Sheet:
     out_hi = jack(307.34, 88.9, "J5", "DIVIDER OUT HI", 0, "Front panel banana jack, divider output HI (to DMM HI)")
     out_lo = jack(307.34, 60.96, "J6", "DIVIDER OUT LO", 0, "Front panel banana jack, divider output LO (to DMM LO)")
     sh.wire(p1_com[0], p1_com[1], rlx, p1_com[1])
+    sh.label("MEAS_NODE", 274.32, p1_com[1])
     sh.junction(rlx, p1_com[1])
     sh.wire(rlx, p1_com[1], rl_bot[0], rl_bot[1])
     sh.wire(rlx, p1_com[1], out_hi[0], out_hi[1])
     sh.wire(p2_com[0], p2_com[1], rlx, p2_com[1])
+    sh.label("ANALOG_RTN", 274.32, p2_com[1])
     sh.junction(rlx, p2_com[1])
     sh.wire(rlx, p2_com[1], rl_top[0], rl_top[1])
     sh.wire(rlx, p2_com[1], out_lo[0], out_lo[1])
@@ -1000,7 +1108,7 @@ def build_root(lib: SymbolLib) -> Sheet:
     cx, cy = 55.88, 177.8
     right = [(n, "output", 5.08 + 2.54 * i) for i, n in enumerate(
         ["K1_SET", "K1_RESET", "K2_SET", "K2_RESET", "K3_SET", "K3_RESET", "K4_SET", "K4_RESET", "K5_SET", "K5_RESET"])]
-    right += [("HV_SENSE", "passive", 30.48), ("MODE_SW_NORM", "passive", 33.02), ("MODE_SW_HV", "passive", 35.56)]
+    right += [("HV_SENSE", "passive", 30.48), ("MODE_SW_HV", "passive", 33.02)]
     sh.sheet("CONTROL", "control.kicad_sch", CONTROL_UUID, cx, cy, 60.96, 45.72, right=right, page="2")
     for (n, _, off) in right:
         sh.wire(cx + 60.96, cy + off, 124.46, cy + off)
@@ -1010,20 +1118,23 @@ def build_root(lib: SymbolLib) -> Sheet:
     sh.text("Metrology topology (precision / quiet region)", 25.4, 15.24, 2.5)
     sh.text("Control (warm / noisy region)", 25.4, 172.72, 2.5)
     sh.text("Relay states (all relays 2-coil latching, pulsed only):\n"
-            "  K4 POLARITY : RESET = normal (SRC+ = NORMAL IN +), SET = inverted\n"
-            "  K1..K3 RANGE: SET = range active (one at a time, break-before-make), RESET = open\n"
+            "  K4 POLARITY : RESET = normal (SRC_P = NORMAL_IN_P), SET = inverted\n"
+            "  K1..K3 RANGE: SET = range active (one at a time, break-before-make), RESET = open at BOTH ends\n"
             "  K5 INJECT   : SET = INJECT (high leg drives 1 ohm), RESET = ISOLATE (1 ohm + DMM path untouched)\n"
+            "Each high leg is switched by both poles of its relay: pole A breaks R*_IN, pole B breaks R*_OUT,\n"
+            "so a deselected resistor is isolated at both ends and never loads RANGE_BUS.\n"
             "Nominal factor k = 1 / (R_high + 1); actual factors come from calibration.\n"
             "Nothing switches below the measurement node: the 1 ohm low leg, its pads, and OUT HI/LO are permanent.\n"
-            "Analog return (SRC-) is never tied to the digital GND of the control section.\n"
+            "ANALOG_RTN / SRC_RTN are never tied to DGND, the control-section ground.\n"
             "HV path: 3PDT pole 1 selects the measurement node source, pole 2 selects the return, pole 3 reports the mode.\n"
-            "HV IN / R34 / SW1 must be rated and laid out for 450 VDC (creepage, clearance, shrouded jacks).",
+            "HV_IN_P / R34 / SW1 must be rated and laid out for 450 VDC (creepage, clearance, shrouded jacks).",
             160.02, 215.9, 1.27)
-    sh.text("SRC+", 96.52, 67.31, 1.0)
-    sh.text("SRC- (analog return)", 103.0, 26.67, 1.0)
-    sh.text("INJ_NODE", 236.22, 90.17, 1.0)
-    sh.text("MEAS_NODE", 268.0, 87.63, 1.0)
-    sh.text("ANALOG_RTN", 268.0, 59.69, 1.0)
+    sh.text("Panel wiring - NOT on the board, so it does not appear in the netlist:\n"
+            "  HV IN - jack        -> SW1 pole 2, HV lug (lug 6). The board has no HV IN - pad.\n"
+            "  SW1 pole 3, NORM lug (lug 7) -> unused; R25 (100k, control sheet) already holds HV_SENSE low.\n"
+            "Every other SW1 lug lands on a board pad. Confirm the lever-to-throw mapping on the physical\n"
+            "switch before wiring: which row is NORMAL depends on the part, which has not been selected yet.",
+            160.02, 236.22, 1.27)
     sh.text("1 ohm low leg - TMP117 (U2) mounted adjacent", 283.0, 70.0, 1.0)
     return sh
 
@@ -1107,22 +1218,42 @@ def radial_box_footprint(name, descr, tags, pitch, body_l, body_w, lead_d):
 
 
 def sw3pdt_pads_footprint(name):
-    """3x3 solder pads for the panel-mount 3PDT toggle: columns NORM / COM / HV, rows pole 1..3.
-    Pad numbers match the SW_3PDT symbol: pole n -> NORM 3n-2, COM 3n-1, HV 3n."""
-    p = 7.62
-    body = []
-    for r in range(3):
-        for c in range(3):
-            num = 3 * r + c + 1
-            body.append(_fppad(name, num, c * p, r * p, 1.9, 1.1, "rect" if num == 1 else "circle"))
-    for c, t in enumerate(("NORM", "COM", "HV")):
-        body.append(_fptext(name, t, c * p, -2.3))
-    for r in range(3):
-        body.append(_fptext(name, f"P{r + 1}", -2.6, r * p))
-    body += _fprect(name, "F.Fab", -1.5, -1.5, 2 * p + 1.5, 2 * p + 1.5, 0.1)
-    body += _fprect(name, "F.CrtYd", -1.5, -1.5, 2 * p + 1.5, 2 * p + 1.5, 0.05)
-    return _fp_common(name, "Solder pads for the panel-mount 3PDT NORMAL/HV toggle harness; 7.62 mm pitch gives >5 mm pad spacing for the 450 V column",
-                      "switch 3PDT wire pads HV", body, (p, -4.0), (p, 2 * p + 3.5))
+    """Solder pads for the panel-mount 3PDT NORMAL/HV toggle.
+
+    These are wire-landing pads, not the switch: there is no reason for them to copy the switch's
+    3x3 lug geometry, and doing so cost ~18 x 18 mm and put a 450 V pad 7.62 mm from MEAS_NODE.
+
+    Two lugs have no pad at all because they are wired panel-to-panel (see the SW_3PDT symbol):
+      lug 6 - pole 2 HV throw, goes straight to the HV IN- jack
+      lug 7 - pole 3 NORM throw, unused
+    The remaining seven split into a tight low-voltage cluster and one isolated HV pad:
+      9 MODE_SW_HV   8 HV_SENSE     3.3 V logic, kept at the far end from the measurement pads
+      1 INJ_NODE     2 MEAS_NODE    normal-path injection and the measurement node
+      4 SRC_RTN      5 ANALOG_RTN   the analog return
+      3 HV_DIV       alone, >11 mm away - it floats to 450 V when the toggle is in NORMAL
+    """
+    LV = [(9, 0.00, 0.00, "MODE_SW_HV"), (8, 3.81, 0.00, "HV_SENSE"),
+          (1, 0.00, 3.81, "INJ_NODE"),   (2, 3.81, 3.81, "MEAS_NODE"),
+          (4, 0.00, 7.62, "SRC_RTN"),    (5, 3.81, 7.62, "ANALOG_RTN")]
+    HVX, HVY = 15.24, 3.81
+    body = [_fppad(name, num, x, y, 1.9, 1.1, "rect" if num == 1 else "circle") for num, x, y, _ in LV]
+    body.append(_fppad(name, 3, HVX, HVY, 1.9, 1.1))
+    # Silk carries the lug number only (0.8 mm, the board minimum, and it has to fit a 3.81 mm
+    # pitch); the net each lug lands on goes on F.Fab, which has no minimum-height constraint.
+    for num, x, y, net in LV:
+        body.append(_fptext(name, str(num), x - 1.5, y - 1.5, 0.8))
+        body.append(_fptext(name, net, x + 1.3, y + 1.4, 0.5, "F.Fab"))
+    body.append(_fptext(name, "3", HVX - 1.5, HVY - 1.5, 0.8))
+    body.append(_fptext(name, "HV_DIV 450V", HVX, HVY + 2.2, 0.8))
+    body.append(_fptext(name, "HV_DIV 450V", HVX, HVY - 2.2, 0.5, "F.Fab"))
+    body += _fprect(name, "F.Fab", -1.4, -1.4, 3.81 + 1.4, 7.62 + 1.4, 0.1)
+    body += _fprect(name, "F.CrtYd", -1.4, -1.4, 3.81 + 1.4, 7.62 + 1.4, 0.05)
+    body += _fprect(name, "F.Fab", HVX - 1.4, HVY - 1.4, HVX + 1.4, HVY + 1.4, 0.1)
+    body += _fprect(name, "F.CrtYd", HVX - 1.4, HVY - 1.4, HVX + 1.4, HVY + 1.4, 0.05)
+    return _fp_common(name, "Solder pads for the panel-mount 3PDT NORMAL/HV toggle harness. Lugs 6 and 7 are wired "
+                            "panel-to-panel and have no pad; lug 3 (HV_DIV, up to 450 V) is separated from the "
+                            "low-voltage cluster by more than the 4 mm creepage the HV netclass requires.",
+                      "switch 3PDT wire pads HV", body, (1.9, -3.2), (1.9, 7.62 + 2.6))
 
 
 PROJECT_FOOTPRINTS = {
@@ -1139,7 +1270,7 @@ PROJECT_FOOTPRINTS = {
         "R_Axial_Vishay_RS02C_L15.1mm_D5.6mm_P20.32mm_Horizontal",
         "Vishay Dale RS-2C wirewound power resistor, axial, body 15.06 x 5.54 mm max (doc 30204), lead 1.02 mm, 20.32 mm pitch",
         "resistor axial Vishay Dale RS-2C wirewound", 20.32, 15.06, 5.54, 1.02),
-    "SW_3PDT_WirePads_3x3_P7.62mm": lambda: sw3pdt_pads_footprint("SW_3PDT_WirePads_3x3_P7.62mm"),
+    "SW_3PDT_WirePads_Split": lambda: sw3pdt_pads_footprint("SW_3PDT_WirePads_Split"),
 }
 
 
@@ -1191,6 +1322,18 @@ def write(path, text):
     print("wrote", os.path.relpath(path, ROOT))
 
 
+def write_once(path, text):
+    """Bootstrap-only write: never overwrite a file KiCad has since taken ownership of.
+
+    project_json() emits a minimal .kicad_pro.  Once the board exists KiCad keeps the DRC
+    severities, net classes and netclass patterns there, so regenerating the schematics must
+    not touch it."""
+    if os.path.exists(path):
+        print("kept  ", os.path.relpath(path, ROOT), "(exists; KiCad owns it)")
+        return
+    write(path, text)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--kicad-share", default=r"C:\Program Files\KiCad\10.0\share\kicad")
@@ -1208,7 +1351,7 @@ def main():
     control = build_control(lib)
     root = build_root(lib)
 
-    write(os.path.join(HW, f"{PROJECT}.kicad_pro"), project_json())
+    write_once(os.path.join(HW, f"{PROJECT}.kicad_pro"), project_json())
     write(os.path.join(HW, f"{PROJECT}.kicad_sch"), root.render(is_root=True))
     write(os.path.join(HW, "control.kicad_sch"), control.render())
     write(os.path.join(HW, "relay_channel.kicad_sch"), relay.render())

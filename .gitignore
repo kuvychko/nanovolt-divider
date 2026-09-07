@@ -40,3 +40,6 @@ desktop.ini
 __pycache__/
 *.pyc
 .venv/
+
+# VS Code Local History extension
+.history/

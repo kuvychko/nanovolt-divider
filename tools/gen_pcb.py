@@ -6,11 +6,11 @@ Produces hardware/nanovolt-divider.kicad_pcb with:
   * board outline (60 x 103 mm portrait) with two slots that isolate the 1 ohm strip except for a
     10 mm centre bridge and 3 mm bridges at both edges
   * every schematic footprint placed with the design rules from docs/nanovolt_divider_rev0.md
-    (warm/noisy control section left, precision section right, HV parts spaced, 1 ohm at the
-    output corner with the TMP117 adjacent)
+    (control cluster on top, then one self-contained cell per relay - drivers, relay and its own
+    high-leg resistor - the HV parts spaced, and the 1 ohm strip isolated behind two slots)
   * pad nets from the exported schematic netlist (so KiCad shows the ratsnest immediately)
-  * GND fill on B.Cu restricted to the control section, a no-pour keepout over the precision
-    section, four M3 mounting holes and silkscreen labels
+  * DGND fill on B.Cu over the digital circuitry (control cluster + coil drivers), a no-pour
+    keepout over the isolated 1 ohm island only, four M3 mounting holes and silkscreen labels
   * hardware/nanovolt-divider.kicad_dru with the 450 V clearance / creepage rules
 
 No tracks are routed.  Run once, then route in KiCad; after that the .kicad_pcb is the source
@@ -35,11 +35,13 @@ PROJECT = G.PROJECT
 BOARD = os.path.join(HW, f"{PROJECT}.kicad_pcb")
 
 OX, OY = 50.0, 50.0          # board origin on the KiCad sheet
-W, H = 60.0, 103.0           # board size (portrait: control on top, precision below)
-NOTCH_Y = (87.7, 89.3)       # two slots isolating the 1 ohm strip
+W, H = 60.0, 100.0           # board size (portrait: control on top, precision below)
+NOTCH_Y = (85.0, 86.6)       # two slots isolating the 1 ohm strip
 EDGE_BRIDGE = 3.0            # material left at both board edges beside the slots
 NOTCH_BRIDGE = (25.0, 35.0)  # centre bridge left between the notches (MEAS, RTN, TMP117 lines)
-CTRL_MAX_Y = 42.0            # control section copper limit (GND pour); precision keepout starts here
+DGND_MAX_Y = 42.0            # DGND pour limit: it follows the digital circuitry (control + coil
+                             # drivers), not an arbitrary cut across the board.  There is no blanket
+                             # keepout below it any more - only the 1 ohm island is kept clear.
 
 
 # --------------------------------------------------------------------------------------
@@ -64,9 +66,9 @@ def placement() -> dict:
     P["R21"] = (42.5, 19.0, 90)                 # SDA pull-up
     P["R22"] = (46.5, 13.5, 90)                 # SCL pull-up
     P["R23"] = (46.5, 19.0, 90)                 # ~RESET pull-up
-    P["R24"] = (50.5, 13.5, 90)                 # mode sense (HV throw -> 3V3)
+    P["R24"] = (50.5, 13.5, 90)                 # mode sense: HV throw -> 3V3
     P["R25"] = (50.5, 19.0, 90)                 # mode sense pulldown
-    P["R26"] = (54.5, 13.5, 90)                 # mode sense (NORM throw -> GND)
+    P["C5"] = (54.5, 13.5, 90)                  # HV_SENSE filter, next to J9
     # ---- row 3: coil drivers, one SET and one RESET column above each relay ---------------------------
     for n, kref in enumerate(("K1", "K2", "K3", "K4", "K5"), 1):
         kx = RELAY_X[kref]
@@ -77,30 +79,40 @@ def placement() -> dict:
             P[f"R{rp}"] = (x, 30.8, 90)         # 10k pulldown
             P[f"Q{qq}"] = (x, 35.0, 0)          # MMBT2222A
             P[f"D{dd}"] = (x, 39.2, 90)         # 1N4148W
-    # ---- row 5: relays (rotation 90: coil pins 5/6 face the slot, pins 1/10 face down) ---------------
+    # ---- row 4: relays (rotation 90: coil pins 5/6 face down, contact pins face the resistors) -------
     for ref, x in RELAY_X.items():
         P[ref] = (x, RELAY_Y, 90)
-    # ---- row 6: NORMAL IN pads and high-leg resistors --------------------------------------------------
-    P["J1"] = (5.0, 60.5, 0)                    # NORMAL IN +
-    P["J2"] = (5.0, 65.5, 0)                    # NORMAL IN -
-    P["R31"] = (13.5, 62.0, 0)                  # 100k (MOX-700)   under K1
-    P["R32"] = (27.0, 62.0, 0)                  # 1M   (MOX-700)   under K2
-    P["R33"] = (41.5, 62.0, 0)                  # 10M  (Slim-Mox)  under K3
-    # ---- row 7: 3PDT wiring pads, HV leg, HV input pads ----------------------------------------------
-    P["SW1"] = (6.0, 70.0, 0)                   # cols NORM 6 / COM 13.62 / HV 21.24; rows 70 / 77.62 / 85.24
-    P["R34"] = (37.5, 70.0, 180)                # HV 10M: pad 1 (HV IN +) toward J3, pad 2 toward the pole-1 HV pad
-    P["J3"] = (43.5, 70.0, 0)                   # HV IN +
-    P["J4"] = (43.5, 77.62, 0)                  # HV IN -
-    # ---- row 8: 1 ohm strip behind the notches ------------------------------------------------------
-    P["R35"] = (19.84, 97.0, 0)                # 1 ohm (RS-2C), pads at x = 19.84 / 40.16
-    P["J6"] = (14.5, 97.0, 0)                  # DIVIDER OUT LO at the pad-1 end
-    P["J5"] = (45.5, 97.0, 0)                  # DIVIDER OUT HI at the pad-2 end
-    P["U2"] = (30.0, 91.5, 0)                   # TMP117 over the resistor body
-    P["C2"] = (34.5, 91.5, 0)
+    # ---- row 5: each high leg directly under its own relay -------------------------------------------
+    # Both poles switch the resistor now (pole A the top, pole B the bottom), so the resistor belongs
+    # inside its relay's cell rather than on a shared row: A_NO and B_NO are 7.62 mm apart on the
+    # relay, and a vertical resistor lands straight across them.
+    # rotation 270, not 90: pad 2 must hang BELOW pad 1, away from the relay body.
+    P["R31"] = (RELAY_X["K1"], 61.0, 270)       # 100k (MOX-700)  under K1
+    P["R32"] = (RELAY_X["K2"], 61.0, 270)       # 1M   (MOX-700)  under K2
+    P["R33"] = (RELAY_X["K3"], 61.0, 270)       # 10M  (Slim-Mox) under K3
+    # ---- row 6: NORMAL IN pads (beside K4, the polarity relay) ---------------------------------------
+    P["J1"] = (3.0, 62.0, 0)                    # NORMAL IN +
+    P["J2"] = (3.0, 68.0, 0)                    # NORMAL IN -
+    # ---- row 7: 3PDT wire pads and the HV island -----------------------------------------------------
+    # SW1 is one footprint in two pieces: a 2x3 low-voltage cluster here, and pad 3 (HV_DIV) 15.24 mm
+    # to the right, inside the HV island.  HV IN- has no pad at all - it is wired panel-to-panel.
+    P["SW1"] = (23.5, 74.0, 0)                  # LV pads at y 74 / 77.81 / 81.62, x 23.5 / 27.31;
+                                                # HV pad 3 at (38.74, 77.81), clear of every LV pad
+    P["R34"] = (56.0, 64.0, 270)                # HV 10M, vertical: pad 1 (HV_IN_P) top, pad 2 (HV_DIV) bottom
+    P["J3"] = (48.0, 64.0, 0)                   # HV IN +, on the HV_IN_P net with R34 pad 1
+    # ---- row 8: 1 ohm strip behind the slots ---------------------------------------------------------
+    P["R35"] = (19.84, 95.0, 0)                 # 1 ohm (RS-2C), pads at x = 19.84 / 40.16
+    P["J6"] = (14.5, 95.0, 0)                   # DIVIDER OUT LO at the pad-1 end
+    P["J5"] = (45.5, 95.0, 0)                   # DIVIDER OUT HI at the pad-2 end
+    P["U2"] = (30.0, 89.5, 0)                   # TMP117 over the resistor body
+    P["C2"] = (34.5, 89.5, 0)
     return P
 
 
-MOUNTING_HOLES = [(3.0, 3.0), (57.0, 3.0), (3.0, 100.0), (57.0, 100.0)]
+# The two lower holes sit ABOVE the slots: a screw on the 1 ohm island would add a thermal and
+# mechanical-stress path straight to the precision resistor.  The island hangs on the two 3 mm
+# edge bridges plus the 10 mm centre bridge, which is ample for a 15 mm strip.
+MOUNTING_HOLES = [(3.0, 3.0), (57.0, 3.0), (3.0, 81.0), (57.0, 81.0)]
 
 
 # --------------------------------------------------------------------------------------
@@ -423,23 +435,27 @@ def build():
     g.append(gr_rect(EDGE_BRIDGE, ny0, bx0, ny1, "Edge.Cuts", "slot_1ohm_left"))
     g.append(gr_rect(bx1, ny0, W - EDGE_BRIDGE, ny1, "Edge.Cuts", "slot_1ohm_right"))
     # ---- silkscreen ----------------------------------------------------------------------------
-    g.append(gr_text("NANOVOLT DIVIDER Rev0", 58.6, 86.0, "t_title", 0.9, rot=90))
+    g.append(gr_text("NANOVOLT DIVIDER Rev0", 58.6, 40.0, "t_title", 0.9, rot=90))
     g.append(gr_text("P1", 11.4, 10.4, "t_p1", 0.8))
     g.append(gr_text("CN1", 25.0, 10.4, "t_cn1", 0.8))
     g.append(gr_text("P3", 38.6, 10.4, "t_p3", 0.8))
-    g.append(gr_text("CONTROL", 1.9, 30.0, "t_ctrl", 0.8, rot=90))
-    g.append(gr_text("PRECISION / QUIET", 1.9, 79.0, "t_prec", 0.8, rot=90))
-    g.append(gr_text("HV 450V", 40.5, 68.0, "t_hv", 0.9))
+    g.append(gr_text("CONTROL", 1.9, 22.0, "t_ctrl", 0.8, rot=90))
+    g.append(gr_text("RANGE CELLS", 1.9, 50.0, "t_cells", 0.8, rot=90))
+    g.append(gr_text("HV 450V", 47.0, 58.5, "t_hv", 0.9))
     g.append(gr_text("NORM IN", 2.5, 58.5, "t_nin", 0.8))
-    g.append(gr_text("1R + TMP117", 24.0, 102.4, "t_1r", 0.8))
-    g.append(gr_text("OUT LO", 9.5, 100.6, "t_outlo", 0.8))
-    g.append(gr_text("OUT HI", 42.5, 100.6, "t_outhi", 0.8))
+    g.append(gr_text("SW 3PDT", 31.0, 71.5, "t_sw", 0.8))
+    g.append(gr_text("1R + TMP117", 24.0, 99.4, "t_1r", 0.8))
+    g.append(gr_text("OUT LO", 9.5, 98.6, "t_outlo", 0.8))
+    g.append(gr_text("OUT HI", 42.5, 98.6, "t_outhi", 0.8))
     # ---- zones ---------------------------------------------------------------------------------
-    gnd = nets_by_name["GND"]
-    ctrl = [(0.3, 0.3), (W - 0.3, 0.3), (W - 0.3, CTRL_MAX_Y), (0.3, CTRL_MAX_Y)]
-    g.append(zone_fill(gnd, "GND", "B.Cu", ctrl, "GND_control", "z_gnd"))
-    prec = [(0.0, CTRL_MAX_Y), (W, CTRL_MAX_Y), (W, H), (0.0, H)]
-    g.append(zone_rule_area(prec, "precision_no_pour", "z_prec"))
+    gnd = nets_by_name["DGND"]
+    ctrl = [(0.3, 0.3), (W - 0.3, 0.3), (W - 0.3, DGND_MAX_Y), (0.3, DGND_MAX_Y)]
+    g.append(zone_fill(gnd, "DGND", "B.Cu", ctrl, "DGND_control", "z_gnd"))
+    # No blanket keepout over everything below the pour: the relays and their drivers are pulsed for
+    # 10-20 ms and never held, so their average dissipation is ~0 and co-locating them with the range
+    # resistors costs nothing while making the routing far shorter.  Only the 1 ohm island stays clear.
+    island = [(0.0, ny1), (W, ny1), (W, H), (0.0, H)]
+    g.append(zone_rule_area(island, "island_1ohm_no_pour", "z_prec"))
     g.append(zone_rule_area([(bx0, ny0 - 1.0), (bx1, ny0 - 1.0), (bx1, ny1 + 1.0), (bx0, ny1 + 1.0)],
                             "bridge_1ohm", "z_b1r", copperpour="allowed"))
 

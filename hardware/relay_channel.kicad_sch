@@ -585,6 +585,126 @@
 				)
 			)
 		)
+		(symbol "nanovolt-divider:DGND"
+			(power global)
+			(pin_numbers
+				(hide yes)
+			)
+			(pin_names
+				(offset 0)
+				(hide yes)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(in_pos_files yes)
+			(duplicate_pin_numbers_are_jumpers no)
+			(property "Reference" "#PWR"
+				(at 0 -3.81 0)
+				(hide yes)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "DGND"
+				(at 0 3.556 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(hide yes)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(hide yes)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Description" "Control-section digital ground (MCP23017, TMP117, relay coil drivers, ESP32 harness). Never tied to the floating analog return."
+				(at 0 0 0)
+				(hide yes)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_keywords" "power-flag global ground digital"
+				(at 0 0 0)
+				(hide yes)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(symbol "DGND_0_1"
+				(polyline
+					(pts
+						(xy 0 0)
+						(xy 0 -1.27)
+						(xy 1.27 -1.27)
+						(xy 0 -2.54)
+						(xy -1.27 -1.27)
+						(xy 0 -1.27)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "DGND_1_1"
+				(pin power_in line
+					(at 0 0 270)
+					(length 0)
+					(name ""
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "nanovolt-divider:TQ2-L2-5V"
 			(pin_names
 				(offset 1.016)
@@ -1181,126 +1301,6 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "power:GND"
-			(power global)
-			(pin_numbers
-				(hide yes)
-			)
-			(pin_names
-				(offset 0)
-				(hide yes)
-			)
-			(exclude_from_sim no)
-			(in_bom yes)
-			(on_board yes)
-			(in_pos_files yes)
-			(duplicate_pin_numbers_are_jumpers no)
-			(property "Reference" "#PWR"
-				(at 0 -6.35 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Value" "GND"
-				(at 0 -3.81 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Footprint" ""
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Datasheet" ""
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "ki_keywords" "global power"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(symbol "GND_0_1"
-				(polyline
-					(pts
-						(xy 0 0)
-						(xy 0 -1.27)
-						(xy 1.27 -1.27)
-						(xy 0 -2.54)
-						(xy -1.27 -1.27)
-						(xy 0 -1.27)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-			)
-			(symbol "GND_1_1"
-				(pin power_in line
-					(at 0 0 270)
-					(length 0)
-					(name ""
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-			)
-			(embedded_fonts no)
-		)
 	)
 	(hierarchical_label "SET" (shape input) (at 30.48 63.5 180) (effects (font (size 1.27 1.27)) (justify right)) (uuid "d1189932-de39-55f0-98f8-f465295cef72"))
 	(symbol (lib_id "Device:R") (at 40.64 63.5 90) (unit 1) (body_style 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (in_pos_files yes) (dnp no) (uuid "f76a3eba-ac90-58d2-a4f0-547793b96fd7")
@@ -1340,12 +1340,12 @@
 	)
 	(wire (pts (xy 48.26 63.5) (xy 48.26 67.31)) (stroke (width 0) (type default)) (uuid "52c55bb8-c5f7-589f-b7b6-66193d4d6b83"))
 	(wire (pts (xy 48.26 74.93) (xy 48.26 77.47)) (stroke (width 0) (type default)) (uuid "6089e476-1845-5c04-ab51-040cc65aa810"))
-	(symbol (lib_id "power:GND") (at 48.26 77.47 0) (unit 1) (body_style 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (in_pos_files yes) (dnp no) (uuid "acf43bab-15de-5c95-b236-2b274ed3dac3")
+	(symbol (lib_id "nanovolt-divider:DGND") (at 48.26 77.47 0) (unit 1) (body_style 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (in_pos_files yes) (dnp no) (uuid "acf43bab-15de-5c95-b236-2b274ed3dac3")
 	  (property "Reference" "#PWR101" (at 48.26 83.82 0) (hide yes) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27)) (justify left)))
-	  (property "Value" "GND" (at 48.26 81.28 0) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27)) (justify left)))
+	  (property "Value" "DGND" (at 48.26 81.28 0) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27)) (justify left)))
 	  (property "Footprint" "" (at 48.26 77.47 0) (hide yes) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27)) (justify left)))
 	  (property "Datasheet" "" (at 48.26 77.47 0) (hide yes) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27)) (justify left)))
-	  (property "Description" "Power symbol creates a global label with name \\\"GND\\\" , ground" (at 48.26 77.47 0) (hide yes) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27)) (justify left)))
+	  (property "Description" "Control-section digital ground (MCP23017, TMP117, relay coil drivers, ESP32 harness). Never tied to the floating analog return." (at 48.26 77.47 0) (hide yes) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27)) (justify left)))
 	  (pin "1" (uuid "d11ff35c-a631-55bd-bb42-6b1d5833076d"))
 	  (instances (project "nanovolt-divider"
 	    (path "/6b173215-4dcb-58a2-8716-bf25a1870e1e/8b2f703b-bc2a-57a7-a0af-1777c2dccd85" (reference "#PWR101") (unit 1))
@@ -1469,12 +1469,12 @@
 	)
 	(wire (pts (xy 48.26 127) (xy 48.26 130.81)) (stroke (width 0) (type default)) (uuid "cfbe00e7-900d-5508-8991-3156012d28ef"))
 	(wire (pts (xy 48.26 138.43) (xy 48.26 140.97)) (stroke (width 0) (type default)) (uuid "6002ec19-4aa5-5f68-82cb-3f355ca4f34b"))
-	(symbol (lib_id "power:GND") (at 48.26 140.97 0) (unit 1) (body_style 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (in_pos_files yes) (dnp no) (uuid "4034d87f-5d62-545d-9dd1-17c1b8050fc0")
+	(symbol (lib_id "nanovolt-divider:DGND") (at 48.26 140.97 0) (unit 1) (body_style 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (in_pos_files yes) (dnp no) (uuid "4034d87f-5d62-545d-9dd1-17c1b8050fc0")
 	  (property "Reference" "#PWR103" (at 48.26 147.32 0) (hide yes) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27)) (justify left)))
-	  (property "Value" "GND" (at 48.26 144.78 0) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27)) (justify left)))
+	  (property "Value" "DGND" (at 48.26 144.78 0) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27)) (justify left)))
 	  (property "Footprint" "" (at 48.26 140.97 0) (hide yes) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27)) (justify left)))
 	  (property "Datasheet" "" (at 48.26 140.97 0) (hide yes) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27)) (justify left)))
-	  (property "Description" "Power symbol creates a global label with name \\\"GND\\\" , ground" (at 48.26 140.97 0) (hide yes) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27)) (justify left)))
+	  (property "Description" "Control-section digital ground (MCP23017, TMP117, relay coil drivers, ESP32 harness). Never tied to the floating analog return." (at 48.26 140.97 0) (hide yes) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27)) (justify left)))
 	  (pin "1" (uuid "f36aedbd-c1f4-531d-a8b1-b783f6e85de3"))
 	  (instances (project "nanovolt-divider"
 	    (path "/6b173215-4dcb-58a2-8716-bf25a1870e1e/8b2f703b-bc2a-57a7-a0af-1777c2dccd85" (reference "#PWR103") (unit 1))

@@ -1,0 +1,12 @@
+# tools/gen_schematics.py and tools/gen_pcb.py write LF, and KiCad reads and writes LF on
+# every platform.  Without this, core.autocrlf=true wants CRLF in the working tree, so every
+# regeneration leaves the generated files permanently "modified" with an empty diff - which
+# hides real board changes.  Pin everything to LF.
+* text=auto eol=lf
+
+# Datasheets and captures are binary (docs/datasheets/ is git-ignored, but be explicit).
+*.png binary
+*.jpg binary
+*.pdf binary
+*.step binary
+*.zip binary

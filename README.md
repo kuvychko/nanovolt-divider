@@ -23,8 +23,8 @@ hardware/                  KiCad 10 project
   nanovolt-divider.kicad_sch   root sheet: metrology topology (inputs, relays, high legs, 3PDT, 1 ohm, outputs)
   control.kicad_sch            ESP32 display-module harness, MCP23017, TMP117, power
   relay_channel.kicad_sch      generic latching-relay channel, instantiated 5x (K1..K5)
-  nanovolt-divider.kicad_pcb   board: 100 x 62 mm, 2 layers, placed, not yet routed
-  nanovolt-divider.kicad_dru   custom DRC rules (450 V clearance / creepage, DSBGA, slot bridges)
+  nanovolt-divider.kicad_pcb   board: 60 x 103 mm, 2 layers, placed, not yet routed
+  nanovolt-divider.kicad_dru   custom DRC rules (450 V clearance / creepage, DSBGA, 1 ohm bridge)
   lib/                         project-local symbol and footprint libraries
 tools/gen_schematics.py    bootstrap script that produced the first version of the schematics
 tools/gen_pcb.py           bootstrap script that produced the placed (unrouted) board
@@ -83,20 +83,20 @@ reference; the `.kicad_sch` files are the source of truth from here on and are e
 
 `hardware/nanovolt-divider.kicad_pcb` is placed but unrouted:
 
-* 100 x 62 mm, two layers. Control section on the left (x < 44 mm), precision section on the
-  right, separated by a 1.6 mm routed slot with 8 mm bridges at top and bottom. Coil-drive lines
-  cross at the top bridge, the mode-sense lines at the bottom bridge; a DRC rule limits track width
-  on the bridges.
-* Relays K4, K1, K2, K3, K5 in one row along the top of the precision section (coil pins toward
-  the bridge), the five driver blocks directly across the slot from them.
+* 60 x 103 mm portrait, two layers, laid out top-down: display-module harness connectors, the
+  MCP23017 (horizontal, caps and pull-ups in columns on both sides), ten coil-driver columns, the
+  relay row (each SET/RESET driver pair directly above its relay), then the quiet section.
+* Quiet section, top to bottom: NORMAL IN pads and the three high-leg resistors, the 3PDT wiring
+  pad grid (3 x 3, 7.62 mm pitch: columns NORM / COM / HV, rows pole 1..3) with R34 and the HV
+  input pads, and finally the 1 ohm strip.
+* The 1 ohm strip is separated by two edge notches that leave a 10 mm centre bridge; MEAS, the
+  analog return, and the TMP117 lines cross there. The TMP117 sits over the resistor body and the
+  OUT HI / OUT LO wire pads are at the resistor's own terminals.
 * HV input pads, R34 and the switch pads' HV column are spaced for 450 V; the `HV` netclass carries
   3 mm clearance and a 4 mm creepage rule in the `.kicad_dru` file.
-* The 1 ohm low leg sits in the bottom-right corner behind an L-shaped slot, with the TMP117 between
-  the slot and the resistor body and the OUT HI / OUT LO wire pads at the resistor's own terminals.
-* GND pour on B.Cu is restricted to the control section; a no-pour keepout covers the precision
-  section so the analog return is never a plane.
-* Panel parts (banana jacks, 3PDT toggle) terminate on solder-wire pads. The switch pads are a 3 x 3
-  grid at 7.62 mm pitch (columns NORM / COM / HV, rows pole 1..3).
+* GND pour on B.Cu is restricted to the control section (above the relays); a no-pour keepout covers
+  the quiet section so the analog return is never a plane.
+* Panel parts (banana jacks, 3PDT toggle) terminate on solder-wire pads.
 
 DRC is clean apart from the unrouted ratsnest and silkscreen-over-pad warnings (reference
 designators still need tidying after routing).

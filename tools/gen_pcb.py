@@ -3,8 +3,8 @@
 Bootstrap PCB generator for the nanovolt-divider Rev0 board.
 
 Produces hardware/nanovolt-divider.kicad_pcb with:
-  * board outline (100 x 62 mm), a thermal/isolation slot between the control and precision
-    sections, and an L-shaped slot around the 1 ohm low-leg corner
+  * board outline (60 x 103 mm portrait) with two edge notches that isolate the 1 ohm strip except
+    for a 10 mm centre bridge
   * every schematic footprint placed with the design rules from docs/nanovolt_divider_rev0.md
     (warm/noisy control section left, precision section right, HV parts spaced, 1 ohm at the
     output corner with the TMP117 adjacent)
@@ -35,61 +35,71 @@ PROJECT = G.PROJECT
 BOARD = os.path.join(HW, f"{PROJECT}.kicad_pcb")
 
 OX, OY = 50.0, 50.0          # board origin on the KiCad sheet
-W, H = 100.0, 62.0           # board size
-SLOT_X = (44.5, 46.1)        # isolation slot between sections (x range), y 8..54
-CTRL_MAX_X = 44.0            # control section copper limit
+W, H = 60.0, 103.0           # board size (portrait: control on top, precision below)
+NOTCH_Y = (87.7, 89.3)       # two edge notches isolating the 1 ohm strip
+NOTCH_BRIDGE = (25.0, 35.0)  # centre bridge left between the notches (MEAS, RTN, TMP117 lines)
+CTRL_MAX_Y = 42.0            # control section copper limit (GND pour); precision keepout starts here
 
 
 # --------------------------------------------------------------------------------------
 # Placement table: ref -> (x, y, rotation) in board coordinates (origin top-left, y down)
 # --------------------------------------------------------------------------------------
 
+RELAY_X = {"K4": 9.6, "K1": 19.8, "K2": 30.0, "K3": 40.2, "K5": 50.4}   # relay row, pitch 10.2
+RELAY_Y = 50.0
+
+
 def placement() -> dict:
     P = {}
-    # ---- control section -------------------------------------------------------------
-    for n in range(1, 6):                       # driver blocks, one per relay, along the top bridge
-        bx = 7.5 + 8.0 * (n - 1)
-        for col, dx, rb, rp, qq, dd in ((0, -2.0, 4 * n - 3, 4 * n - 2, 2 * n - 1, 2 * n - 1),
-                                        (1, 2.0, 4 * n - 1, 4 * n, 2 * n, 2 * n)):
-            x = bx + dx
-            P[f"R{rb}"] = (x, 3.0, 90)          # 1k base
-            P[f"R{rp}"] = (x, 7.8, 90)          # 10k pulldown
-            P[f"Q{qq}"] = (x, 12.0, 0)          # MMBT2222A
-            P[f"D{dd}"] = (x, 16.2, 90)         # 1N4148W
-    P["U1"] = (25.0, 33.0, 0)                  # MCP23017 SOIC-28W
-    P["C1"] = (33.5, 26.0, 90)
-    P["R21"] = (13.0, 26.0, 0)                  # SDA pull-up
-    P["R22"] = (13.0, 29.5, 0)                  # SCL pull-up
-    P["R23"] = (13.0, 33.0, 0)                  # ~RESET pull-up
-    P["C3"] = (12.0, 52.0, 0)                   # 5 V bulk (near J7 / P1)
-    P["C4"] = (25.0, 52.0, 0)                   # 3V3 bulk (near J8 / CN1)
-    P["R24"] = (35.0, 48.0, 0)                  # mode sense
-    P["R25"] = (40.0, 48.0, 0)
-    P["R26"] = (35.0, 52.0, 0)
-    P["J7"] = (10.0, 57.5, 0)                   # P1  (5 V / GND)
-    P["J8"] = (23.5, 57.5, 0)                   # CN1 (I2C / 3V3)
-    P["J9"] = (37.0, 57.5, 0)                   # P3  (IO35 HV_SENSE)
-    # ---- precision section -------------------------------------------------------------
-    for ref, x in (("K4", 51.5), ("K1", 61.7), ("K2", 71.9), ("K3", 82.1), ("K5", 92.3)):
-        P[ref] = (x, 14.0, 90)                  # coil pins 5/6 face the top bridge
-    P["J1"] = (49.5, 25.0, 0)                   # NORMAL IN +
-    P["J2"] = (49.5, 30.0, 0)                   # NORMAL IN -
-    P["R31"] = (57.9, 25.0, 0)                  # 100k  (MOX-700)
-    P["R32"] = (57.9, 30.0, 0)                  # 1M    (MOX-700)
-    P["R33"] = (74.9, 26.5, 0)                  # 10M   (Slim-Mox)
-    P["SW1"] = (51.0, 36.0, 0)                  # 3PDT wiring pads: cols NORM/COM/HV, rows pole 1..3
-    P["R34"] = (81.6, 36.0, 180)                # HV 10M (Slim-Mox): pad 1 (HV IN +) at J3, pad 2 toward the pole-1 HV pad
-    P["J3"] = (86.5, 36.0, 0)                   # HV IN +
-    P["J4"] = (86.5, 42.0, 0)                   # HV IN -
-    P["U2"] = (86.5, 48.2, 0)                   # TMP117, between the slot and the 1 ohm body
-    P["C2"] = (91.5, 48.5, 0)
-    P["R35"] = (76.34, 53.0, 0)                 # 1 ohm low leg (RS-2C), pads at x=76.34 / 96.66
-    P["J6"] = (76.34, 58.5, 0)                  # DIVIDER OUT LO (at the R35 pad-1 end)
-    P["J5"] = (96.66, 58.5, 0)                  # DIVIDER OUT HI (at the R35 pad-2 end)
+    # ---- row 1: display-module harness connectors (JST XH, pin 1 at the footprint origin) ----------
+    P["J7"] = (11.4, 5.0, 0)                    # P1  (5 V / GND)
+    P["J8"] = (25.0, 5.0, 0)                    # CN1 (I2C / 3V3)
+    P["J9"] = (38.6, 5.0, 0)                    # P3  (IO35 HV_SENSE)
+    # ---- row 2: MCP23017 horizontal, flanked by caps and pull-ups ------------------------------------
+    P["U1"] = (30.0, 16.5, 90)
+    P["C1"] = (17.5, 13.5, 90)                  # 100n at VDD
+    P["C3"] = (17.5, 19.0, 90)                  # 22u 5 V bulk
+    P["C4"] = (42.5, 13.5, 90)                  # 22u 3V3 bulk
+    P["R21"] = (42.5, 19.0, 90)                 # SDA pull-up
+    P["R22"] = (46.5, 13.5, 90)                 # SCL pull-up
+    P["R23"] = (46.5, 19.0, 90)                 # ~RESET pull-up
+    P["R24"] = (50.5, 13.5, 90)                 # mode sense (HV throw -> 3V3)
+    P["R25"] = (50.5, 19.0, 90)                 # mode sense pulldown
+    P["R26"] = (54.5, 13.5, 90)                 # mode sense (NORM throw -> GND)
+    # ---- row 3: coil drivers, one SET and one RESET column above each relay ---------------------------
+    for n, kref in enumerate(("K1", "K2", "K3", "K4", "K5"), 1):
+        kx = RELAY_X[kref]
+        for dx, rb, rp, qq, dd in ((-2.0, 4 * n - 3, 4 * n - 2, 2 * n - 1, 2 * n - 1),
+                                   (2.0, 4 * n - 1, 4 * n, 2 * n, 2 * n)):
+            x = kx + dx
+            P[f"R{rb}"] = (x, 26.0, 90)         # 1k base
+            P[f"R{rp}"] = (x, 30.8, 90)         # 10k pulldown
+            P[f"Q{qq}"] = (x, 35.0, 0)          # MMBT2222A
+            P[f"D{dd}"] = (x, 39.2, 90)         # 1N4148W
+    # ---- row 5: relays (rotation 90: coil pins 5/6 face the slot, pins 1/10 face down) ---------------
+    for ref, x in RELAY_X.items():
+        P[ref] = (x, RELAY_Y, 90)
+    # ---- row 6: NORMAL IN pads and high-leg resistors --------------------------------------------------
+    P["J1"] = (5.0, 60.5, 0)                    # NORMAL IN +
+    P["J2"] = (5.0, 65.5, 0)                    # NORMAL IN -
+    P["R31"] = (13.5, 62.0, 0)                  # 100k (MOX-700)   under K1
+    P["R32"] = (27.0, 62.0, 0)                  # 1M   (MOX-700)   under K2
+    P["R33"] = (41.5, 62.0, 0)                  # 10M  (Slim-Mox)  under K3
+    # ---- row 7: 3PDT wiring pads, HV leg, HV input pads ----------------------------------------------
+    P["SW1"] = (6.0, 70.0, 0)                   # cols NORM 6 / COM 13.62 / HV 21.24; rows 70 / 77.62 / 85.24
+    P["R34"] = (37.5, 70.0, 180)                # HV 10M: pad 1 (HV IN +) toward J3, pad 2 toward the pole-1 HV pad
+    P["J3"] = (43.5, 70.0, 0)                   # HV IN +
+    P["J4"] = (43.5, 77.62, 0)                  # HV IN -
+    # ---- row 8: 1 ohm strip behind the notches ------------------------------------------------------
+    P["R35"] = (19.84, 97.0, 0)                # 1 ohm (RS-2C), pads at x = 19.84 / 40.16
+    P["J6"] = (14.5, 97.0, 0)                  # DIVIDER OUT LO at the pad-1 end
+    P["J5"] = (45.5, 97.0, 0)                  # DIVIDER OUT HI at the pad-2 end
+    P["U2"] = (30.0, 91.5, 0)                   # TMP117 over the resistor body
+    P["C2"] = (34.5, 91.5, 0)
     return P
 
 
-MOUNTING_HOLES = [(3.0, 22.5), (3.0, 42.0), (97.0, 3.0), (97.0, 26.0)]
+MOUNTING_HOLES = [(3.0, 3.0), (57.0, 3.0), (3.0, 100.0), (57.0, 100.0)]
 
 
 # --------------------------------------------------------------------------------------
@@ -318,10 +328,10 @@ DRU = '''(version 1)
 	(constraint clearance (min 0.1mm))
 	(condition "A.memberOfFootprint('U2') && B.memberOfFootprint('U2')"))
 
-# Coil drive lines cross the isolation slot only at the bridges; keep them narrow and on one layer.
-(rule "slot bridge tracks"
+# The 1 ohm strip is reached only through the centre bridge between the two notches; keep those tracks narrow.
+(rule "bridge tracks"
 	(constraint track_width (max 0.4mm))
-	(condition "A.intersectsArea('top_bridge') || A.intersectsArea('bottom_bridge')"))
+	(condition "A.intersectsArea('bridge_1ohm')"))
 '''
 
 
@@ -404,32 +414,32 @@ def build():
         items.append(dump(footprint_instance(f"H{i}", comp, hx, hy, 0, nets_by_name, pin_net,
                                              extra_attr=("board_only", "exclude_from_pos_files", "exclude_from_bom")), 1))
 
-    # ---- outline and slots ------------------------------------------------------------------
-    g = [gr_rect(0, 0, W, H, "Edge.Cuts", "outline")]
-    g.append(gr_rect(SLOT_X[0], 8.0, SLOT_X[1], 54.0, "Edge.Cuts", "slot_main"))
-    g.append(gr_poly([(71.2, 45.2), (97.0, 45.2), (97.0, 46.8), (72.8, 46.8), (72.8, 59.0), (71.2, 59.0)], "Edge.Cuts", "slot_1ohm"))
+    # ---- outline (with the two 1 ohm notches) and the driver/relay slot -------------------------
+    ny0, ny1 = NOTCH_Y
+    bx0, bx1 = NOTCH_BRIDGE
+    outline = [(0, 0), (W, 0), (W, ny0), (bx1, ny0), (bx1, ny1), (W, ny1), (W, H), (0, H),
+               (0, ny1), (bx0, ny1), (bx0, ny0), (0, ny0)]
+    g = [gr_poly(outline, "Edge.Cuts", "outline")]
     # ---- silkscreen ----------------------------------------------------------------------------
-    g.append(gr_text("NANOVOLT DIVIDER Rev0", 1.0, 20.5, "t_title", 1.2))
-    g.append(gr_text("CONTROL", 1.0, 23.0, "t_ctrl", 0.9))
-    g.append(gr_text("PRECISION / QUIET", 48.5, 33.0, "t_prec", 0.9))
-    g.append(gr_text("HV 450V", 90.5, 33.5, "t_hv", 1.0, justify="right bottom"))
-    g.append(gr_text("1R + TMP117", 79.0, 49.5, "t_1r", 0.8))
-    g.append(gr_text("NORM IN", 47.9, 23.3, "t_nin", 0.8))
-    g.append(gr_text("OUT LO", 73.5, 61.2, "t_outlo", 0.8))
-    g.append(gr_text("OUT HI", 93.6, 61.2, "t_outhi", 0.8))
-    g.append(gr_text("P1", 4.8, 54.2, "t_p1", 0.8))
-    g.append(gr_text("CN1", 18.3, 54.2, "t_cn1", 0.8))
-    g.append(gr_text("P3", 31.8, 54.2, "t_p3", 0.8))
+    g.append(gr_text("NANOVOLT DIVIDER Rev0", 58.6, 86.0, "t_title", 0.9, rot=90))
+    g.append(gr_text("P1", 11.4, 10.4, "t_p1", 0.8))
+    g.append(gr_text("CN1", 25.0, 10.4, "t_cn1", 0.8))
+    g.append(gr_text("P3", 38.6, 10.4, "t_p3", 0.8))
+    g.append(gr_text("CONTROL", 1.9, 30.0, "t_ctrl", 0.8, rot=90))
+    g.append(gr_text("PRECISION / QUIET", 1.9, 79.0, "t_prec", 0.8, rot=90))
+    g.append(gr_text("HV 450V", 40.5, 68.0, "t_hv", 0.9))
+    g.append(gr_text("NORM IN", 2.5, 58.5, "t_nin", 0.8))
+    g.append(gr_text("1R + TMP117", 24.0, 102.4, "t_1r", 0.8))
+    g.append(gr_text("OUT LO", 9.5, 100.6, "t_outlo", 0.8))
+    g.append(gr_text("OUT HI", 42.5, 100.6, "t_outhi", 0.8))
     # ---- zones ---------------------------------------------------------------------------------
     gnd = nets_by_name["GND"]
-    ctrl = [(0.3, 0.3), (CTRL_MAX_X, 0.3), (CTRL_MAX_X, H - 0.3), (0.3, H - 0.3)]
+    ctrl = [(0.3, 0.3), (W - 0.3, 0.3), (W - 0.3, CTRL_MAX_Y), (0.3, CTRL_MAX_Y)]
     g.append(zone_fill(gnd, "GND", "B.Cu", ctrl, "GND_control", "z_gnd"))
-    prec = [(SLOT_X[0], 0.0), (W, 0.0), (W, H), (SLOT_X[0], H)]
+    prec = [(0.0, CTRL_MAX_Y), (W, CTRL_MAX_Y), (W, H), (0.0, H)]
     g.append(zone_rule_area(prec, "precision_no_pour", "z_prec"))
-    g.append(zone_rule_area([(SLOT_X[0] - 1.0, 0.0), (SLOT_X[1] + 1.0, 0.0), (SLOT_X[1] + 1.0, 8.0), (SLOT_X[0] - 1.0, 8.0)],
-                            "top_bridge", "z_tb", copperpour="allowed"))
-    g.append(zone_rule_area([(SLOT_X[0] - 1.0, 54.0), (SLOT_X[1] + 1.0, 54.0), (SLOT_X[1] + 1.0, H), (SLOT_X[0] - 1.0, H)],
-                            "bottom_bridge", "z_bb", copperpour="allowed"))
+    g.append(zone_rule_area([(bx0, ny0 - 1.0), (bx1, ny0 - 1.0), (bx1, ny1 + 1.0), (bx0, ny1 + 1.0)],
+                            "bridge_1ohm", "z_b1r", copperpour="allowed"))
 
     netlines = "\n".join(f'\t(net {code} {q(name)})' for code, name in [(0, "")] + nets)
     body = "\n".join(items + ["\t" + x for x in g])

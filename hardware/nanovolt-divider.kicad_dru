@@ -20,7 +20,7 @@
 	(constraint clearance (min 0.1mm))
 	(condition "A.memberOfFootprint('U2') && B.memberOfFootprint('U2')"))
 
-# Coil drive lines cross the isolation slot only at the bridges; keep them narrow and on one layer.
-(rule "slot bridge tracks"
+# The 1 ohm strip is reached only through the centre bridge between the two notches; keep those tracks narrow.
+(rule "bridge tracks"
 	(constraint track_width (max 0.4mm))
-	(condition "A.intersectsArea('top_bridge') || A.intersectsArea('bottom_bridge')"))
+	(condition "A.intersectsArea('bridge_1ohm')"))

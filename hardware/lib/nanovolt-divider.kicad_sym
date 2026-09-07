@@ -54,9 +54,9 @@
     (exclude_from_sim no) (in_bom yes) (on_board yes) (in_pos_files yes) (duplicate_pin_numbers_are_jumpers no)
     (property "Reference" "SW" (at 0 5.08 0) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27))))
     (property "Value" "SW_3PDT" (at 0 -5.08 0) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27))))
-    (property "Footprint" "TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-3-9-5.08_1x09_P5.08mm_Horizontal" (at 0 0 0) (hide yes) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27))))
+    (property "Footprint" "nanovolt-divider:SW_3PDT_WirePads_3x3_P7.62mm" (at 0 0 0) (hide yes) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27))))
     (property "Datasheet" "~" (at 0 0 0) (hide yes) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27))))
-    (property "Description" "3PDT toggle switch, panel mount (NORMAL / HV selector). Footprint is a placeholder for the board-side wiring termination; select a 450 VDC rated switch." (at 0 0 0) (hide yes) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27))))
+    (property "Description" "3PDT toggle switch, panel mount (NORMAL / HV selector), wired to 3x3 solder pads on the board; select a 450 VDC rated switch." (at 0 0 0) (hide yes) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27))))
     (property "ki_keywords" "switch toggle 3PDT" (at 0 0 0) (hide yes) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27))))
     
     (symbol "SW_3PDT_1_1"

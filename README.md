@@ -11,7 +11,7 @@ The design rationale, architecture, relay rules, calibration model and Rev0 BOM 
 
 ## Status
 
-Rev0: architecture locked, hierarchical schematics drafted, PCB layout not started.
+Rev0: architecture locked, hierarchical schematics drafted, PCB placed (unrouted).
 
 ## Repository layout
 
@@ -23,8 +23,11 @@ hardware/                  KiCad 10 project
   nanovolt-divider.kicad_sch   root sheet: metrology topology (inputs, relays, high legs, 3PDT, 1 ohm, outputs)
   control.kicad_sch            ESP32 display-module harness, MCP23017, TMP117, power
   relay_channel.kicad_sch      generic latching-relay channel, instantiated 5x (K1..K5)
+  nanovolt-divider.kicad_pcb   board: 100 x 62 mm, 2 layers, placed, not yet routed
+  nanovolt-divider.kicad_dru   custom DRC rules (450 V clearance / creepage, DSBGA, slot bridges)
   lib/                         project-local symbol and footprint libraries
 tools/gen_schematics.py    bootstrap script that produced the first version of the schematics
+tools/gen_pcb.py           bootstrap script that produced the placed (unrouted) board
 ```
 
 ### Hierarchy
@@ -76,15 +79,34 @@ kicad-cli sch export pdf --output build/schematic.pdf hardware/nanovolt-divider.
 `tools/gen_schematics.py` generated the first version of all schematic files. It is kept for
 reference; the `.kicad_sch` files are the source of truth from here on and are edited in KiCad.
 
-## Open items before layout
+## Board
 
-* Footprints marked `[FOOTPRINT TBD]` in the schematic: Ohmite MOX-700 (R31, R32), Ohmite Slim-Mox
-  SM102 radial (R33, R34), Vishay RS-2C (R35). Placeholders are stock axial/box footprints.
-* Select the 450 VDC rated 3PDT toggle and shrouded HV banana jacks; the switch footprint is a
-  placeholder terminal block for the board-side wiring.
+`hardware/nanovolt-divider.kicad_pcb` is placed but unrouted:
+
+* 100 x 62 mm, two layers. Control section on the left (x < 44 mm), precision section on the
+  right, separated by a 1.6 mm routed slot with 8 mm bridges at top and bottom. Coil-drive lines
+  cross at the top bridge, the mode-sense lines at the bottom bridge; a DRC rule limits track width
+  on the bridges.
+* Relays K4, K1, K2, K3, K5 in one row along the top of the precision section (coil pins toward
+  the bridge), the five driver blocks directly across the slot from them.
+* HV input pads, R34 and the switch pads' HV column are spaced for 450 V; the `HV` netclass carries
+  3 mm clearance and a 4 mm creepage rule in the `.kicad_dru` file.
+* The 1 ohm low leg sits in the bottom-right corner behind an L-shaped slot, with the TMP117 between
+  the slot and the resistor body and the OUT HI / OUT LO wire pads at the resistor's own terminals.
+* GND pour on B.Cu is restricted to the control section; a no-pour keepout covers the precision
+  section so the analog return is never a plane.
+* Panel parts (banana jacks, 3PDT toggle) terminate on solder-wire pads. The switch pads are a 3 x 3
+  grid at 7.62 mm pitch (columns NORM / COM / HV, rows pole 1..3).
+
+DRC is clean apart from the unrouted ratsnest and silkscreen-over-pad warnings (reference
+designators still need tidying after routing).
+
+## Open items
+
+* Route the board (interactively, or Freerouting), then tidy silkscreen.
+* Select the 450 VDC rated 3PDT toggle and shrouded HV banana jacks.
 * Confirm the display module variant and its connector pinout (P1 / CN1 / P3) against the board in hand.
-* Schematic architecture / safety review, then PCB placement with the precision region isolated
-  from the control region.
+* Schematic architecture / safety review before ordering boards.
 
 ## Datasheets
 

@@ -326,9 +326,9 @@ def sw3pdt_symbol_text() -> str:
     (exclude_from_sim no) (in_bom yes) (on_board yes) (in_pos_files yes) (duplicate_pin_numbers_are_jumpers no)
     {_prop("Reference", "SW", 0, 5.08)}
     {_prop("Value", "SW_3PDT", 0, -5.08)}
-    {_prop("Footprint", "TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-3-9-5.08_1x09_P5.08mm_Horizontal", 0, 0, hide=True)}
+    {_prop("Footprint", "nanovolt-divider:SW_3PDT_WirePads_3x3_P7.62mm", 0, 0, hide=True)}
     {_prop("Datasheet", "~", 0, 0, hide=True)}
-    {_prop("Description", "3PDT toggle switch, panel mount (NORMAL / HV selector). Footprint is a placeholder for the board-side wiring termination; select a 450 VDC rated switch.", 0, 0, hide=True)}
+    {_prop("Description", "3PDT toggle switch, panel mount (NORMAL / HV selector), wired to 3x3 solder pads on the board; select a 450 VDC rated switch.", 0, 0, hide=True)}
     {_prop("ki_keywords", "switch toggle 3PDT", 0, 0, hide=True)}
     {pole(1, "1", "2", "3")}
     {pole(2, "4", "5", "6")}
@@ -424,6 +424,7 @@ class Sheet:
     paths: list  # list of (path, suffix) sheet-instance paths this file is used in
     items: list = field(default_factory=list)
     used: dict = field(default_factory=dict)
+    placed: list = field(default_factory=list)  # symbol instances (for the PCB generator)
     title: str = ""
     _n: int = 0
 
@@ -477,7 +478,10 @@ class Sheet:
         vx, vy = val_pos or (x + 2.54, y + 1.27)
         power = refs[0].startswith("#")
         m = f" (mirror {mirror})" if mirror else ""
-        lines = [f'(symbol (lib_id {q(lib_id)}) (at {fmt(x)} {fmt(y)} {angle}){m} (unit {unit}) (body_style 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (in_pos_files yes) (dnp no) (uuid "{self.key("sym:" + refs[0])}")']
+        sym_uuid = self.key("sym:" + refs[0])
+        self.placed.append(dict(uuid=sym_uuid, lib_id=lib_id, unit=unit, refs=list(refs), value=value, footprint=fp,
+                                datasheet=ds, description=desc, fields=dict(fields or {})))
+        lines = [f'(symbol (lib_id {q(lib_id)}) (at {fmt(x)} {fmt(y)} {angle}){m} (unit {unit}) (body_style 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (in_pos_files yes) (dnp no) (uuid "{sym_uuid}")']
 
         def P(n, v, px, py, hide=False, justify="left"):
             h = " (hide yes)" if hide else ""
@@ -542,12 +546,13 @@ class Sheet:
 
 FP_R1206 = "Resistor_SMD:R_1206_3216Metric"
 FP_C1206 = "Capacitor_SMD:C_1206_3216Metric"
-FP_MOX700 = "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal"   # TODO verify vs Ohmite MOX-700 drawing
-FP_SM102 = "Resistor_THT:R_Box_L14.0mm_W5.0mm_P9.00mm"                          # TODO verify vs Ohmite Slim-Mox SM102 drawing (radial, 14.7 x 2.5 x 8.6 mm)
-FP_RS02C = "Resistor_THT:R_Axial_DIN0411_L9.9mm_D3.6mm_P12.70mm_Horizontal"     # TODO verify vs Vishay RS-2C drawing
+FP_MOX700 = f"{PROJECT}:R_Axial_Ohmite_MOX700_L7.0mm_D2.7mm_P10.16mm_Horizontal"     # measured: body 7.0 x 2.7 mm, lead 0.6 mm
+FP_SM102 = f"{PROJECT}:R_Radial_Ohmite_SlimMox_SM102_L14.7mm_W2.5mm_P10.16mm"      # datasheet: 14.73 x 2.54 x 8.64 mm, pitch 10.16, lead 0.81
+FP_RS02C = f"{PROJECT}:R_Axial_Vishay_RS02C_L15.1mm_D5.6mm_P20.32mm_Horizontal"    # datasheet 30204: body 15.06 x 5.54 mm, lead 1.02
+FP_SW3PDT = f"{PROJECT}:SW_3PDT_WirePads_3x3_P7.62mm"
 FP_BANANA = "Connector_Wire:SolderWire-0.25sqmm_1x01_D0.65mm_OD1.7mm"           # panel jack wired to board
 FP_JST4 = "Connector_JST:JST_XH_B4B-XH-A_1x04_P2.50mm_Vertical"                # harness to display module (module side is 1.25 mm JST-style)
-TODO = " [FOOTPRINT TBD - verify against datasheet]"
+TODO = ""
 
 
 # --------------------------------------------------------------------------------------
@@ -1024,6 +1029,121 @@ def build_root(lib: SymbolLib) -> Sheet:
 
 
 # --------------------------------------------------------------------------------------
+# Additional project footprints (precision resistors, switch wiring pads)
+# --------------------------------------------------------------------------------------
+
+
+def _fp_common(name, descr, tags, body, ref_at, val_at):
+    """Wrap footprint body items (already-formatted lines) in a THT footprint definition."""
+    k = "fp:" + name
+    return f'''(footprint "{name}"
+  (version {FP_VERSION})
+  (generator "nanovolt-divider-gen")
+  (generator_version "{GEN_VERSION}")
+  (layer "F.Cu")
+  (descr {q(descr)})
+  (tags {q(tags)})
+  (property "Reference" "REF**" (at {ref_at[0]} {ref_at[1]} 0) (layer "F.SilkS") (uuid "{U(k + ":ref")}") (effects (font (size 1 1) (thickness 0.15))))
+  (property "Value" "{name}" (at {val_at[0]} {val_at[1]} 0) (layer "F.Fab") (uuid "{U(k + ":val")}") (effects (font (size 1 1) (thickness 0.15))))
+  (property "Datasheet" "" (at 0 0 0) (layer "F.Fab") (hide yes) (uuid "{U(k + ":ds")}") (effects (font (size 1 1) (thickness 0.15))))
+  (property "Description" "" (at 0 0 0) (layer "F.Fab") (hide yes) (uuid "{U(k + ":desc")}") (effects (font (size 1 1) (thickness 0.15))))
+  (attr through_hole)
+{chr(10).join(body)}
+  (embedded_fonts no)
+)
+'''
+
+
+def _fpl(name, layer, x1, y1, x2, y2, w):
+    return (f'  (fp_line (start {x1:.3f} {y1:.3f}) (end {x2:.3f} {y2:.3f}) (stroke (width {w}) (type solid)) (layer "{layer}") '
+            f'(uuid "{U(f"fp:{name}:l:{layer}:{x1:.3f}:{y1:.3f}:{x2:.3f}:{y2:.3f}")}"))')
+
+
+def _fprect(name, layer, x1, y1, x2, y2, w):
+    return [_fpl(name, layer, x1, y1, x2, y1, w), _fpl(name, layer, x2, y1, x2, y2, w),
+            _fpl(name, layer, x2, y2, x1, y2, w), _fpl(name, layer, x1, y2, x1, y1, w)]
+
+
+def _fppad(name, num, x, y, size, drill, shape="circle"):
+    return (f'  (pad "{num}" thru_hole {shape} (at {x:.3f} {y:.3f}) (size {size} {size}) (drill {drill}) (layers "*.Cu" "*.Mask") '
+            f'(remove_unused_layers no) (uuid "{U(f"fp:{name}:pad:{num}")}"))')
+
+
+def _fptext(name, txt, x, y, size=0.8, layer="F.SilkS"):
+    return (f'  (fp_text user {q(txt)} (at {x:.3f} {y:.3f} 0) (layer "{layer}") (uuid "{U(f"fp:{name}:t:{txt}:{x}:{y}")}") '
+            f'(effects (font (size {size} {size}) (thickness 0.12))))')
+
+
+def axial_footprint(name, descr, tags, pitch, body_l, body_d, lead_d):
+    """Horizontal axial resistor: pad 1 at origin, pad 2 at (pitch, 0), body centred between."""
+    drill = round(lead_d + 0.3, 2)
+    pad = round(drill + 0.7, 2)
+    cx = pitch / 2
+    hl, hd = body_l / 2, body_d / 2
+    body = [_fppad(name, 1, 0, 0, pad, drill, "rect"), _fppad(name, 2, pitch, 0, pad, drill)]
+    body += _fprect(name, "F.Fab", cx - hl, -hd, cx + hl, hd, 0.1)
+    body += _fprect(name, "F.SilkS", cx - hl - 0.12, -hd - 0.12, cx + hl + 0.12, hd + 0.12, 0.12)
+    body += [_fpl(name, "F.SilkS", pad / 2 + 0.25, 0, cx - hl - 0.12, 0, 0.12),
+             _fpl(name, "F.SilkS", cx + hl + 0.12, 0, pitch - pad / 2 - 0.25, 0, 0.12)]
+    cy = max(hd, pad / 2) + 0.25
+    body += _fprect(name, "F.CrtYd", -pad / 2 - 0.25, -cy, pitch + pad / 2 + 0.25, cy, 0.05)
+    body += [_fptext(name, "${REFERENCE}", cx, 0, 0.7, "F.Fab")]
+    return _fp_common(name, descr, tags, body, (cx, -cy - 0.9), (cx, cy + 0.9))
+
+
+def radial_box_footprint(name, descr, tags, pitch, body_l, body_w, lead_d):
+    """Standing radial box resistor: pads at (0,0) and (pitch,0), thin body outline centred between."""
+    drill = round(lead_d + 0.3, 2)
+    pad = round(drill + 0.8, 2)
+    cx = pitch / 2
+    hl, hw = body_l / 2, body_w / 2
+    body = [_fppad(name, 1, 0, 0, pad, drill, "rect"), _fppad(name, 2, pitch, 0, pad, drill)]
+    body += _fprect(name, "F.Fab", cx - hl, -hw, cx + hl, hw, 0.1)
+    body += _fprect(name, "F.SilkS", cx - hl - 0.12, -hw - 0.12, cx + hl + 0.12, hw + 0.12, 0.12)
+    cy = max(hw, pad / 2) + 0.25
+    body += _fprect(name, "F.CrtYd", cx - hl - 0.25, -cy, cx + hl + 0.25, cy, 0.05)
+    body += [_fptext(name, "${REFERENCE}", cx, 0, 0.6, "F.Fab")]
+    return _fp_common(name, descr, tags, body, (cx, -cy - 0.9), (cx, cy + 0.9))
+
+
+def sw3pdt_pads_footprint(name):
+    """3x3 solder pads for the panel-mount 3PDT toggle: columns NORM / COM / HV, rows pole 1..3.
+    Pad numbers match the SW_3PDT symbol: pole n -> NORM 3n-2, COM 3n-1, HV 3n."""
+    p = 7.62
+    body = []
+    for r in range(3):
+        for c in range(3):
+            num = 3 * r + c + 1
+            body.append(_fppad(name, num, c * p, r * p, 1.9, 1.1, "rect" if num == 1 else "circle"))
+    for c, t in enumerate(("NORM", "COM", "HV")):
+        body.append(_fptext(name, t, c * p, -2.3))
+    for r in range(3):
+        body.append(_fptext(name, f"P{r + 1}", -2.6, r * p))
+    body += _fprect(name, "F.Fab", -1.5, -1.5, 2 * p + 1.5, 2 * p + 1.5, 0.1)
+    body += _fprect(name, "F.CrtYd", -1.5, -1.5, 2 * p + 1.5, 2 * p + 1.5, 0.05)
+    return _fp_common(name, "Solder pads for the panel-mount 3PDT NORMAL/HV toggle harness; 7.62 mm pitch gives >5 mm pad spacing for the 450 V column",
+                      "switch 3PDT wire pads HV", body, (p, -4.0), (p, 2 * p + 3.5))
+
+
+PROJECT_FOOTPRINTS = {
+    "Relay_DPDT_Panasonic_TQ2_THT": tq2_footprint_text,
+    "R_Axial_Ohmite_MOX700_L7.0mm_D2.7mm_P10.16mm_Horizontal": lambda: axial_footprint(
+        "R_Axial_Ohmite_MOX700_L7.0mm_D2.7mm_P10.16mm_Horizontal",
+        "Ohmite MOX-700 precision metal film resistor, axial, body 7.0 x 2.7 mm (measured), lead 0.6 mm, 10.16 mm pitch",
+        "resistor axial Ohmite MOX700 precision", 10.16, 7.0, 2.7, 0.6),
+    "R_Radial_Ohmite_SlimMox_SM102_L14.7mm_W2.5mm_P10.16mm": lambda: radial_box_footprint(
+        "R_Radial_Ohmite_SlimMox_SM102_L14.7mm_W2.5mm_P10.16mm",
+        "Ohmite Slim-Mox SM102 (1 W, 5 kV) high-voltage thick film resistor, radial standing, 14.73 x 2.54 mm footprint, 8.64 mm tall, 10.16 mm lead pitch, 0.81 mm leads",
+        "resistor radial Ohmite Slim-Mox SM102 high voltage", 10.16, 14.73, 2.54, 0.81),
+    "R_Axial_Vishay_RS02C_L15.1mm_D5.6mm_P20.32mm_Horizontal": lambda: axial_footprint(
+        "R_Axial_Vishay_RS02C_L15.1mm_D5.6mm_P20.32mm_Horizontal",
+        "Vishay Dale RS-2C wirewound power resistor, axial, body 15.06 x 5.54 mm max (doc 30204), lead 1.02 mm, 20.32 mm pitch",
+        "resistor axial Vishay Dale RS-2C wirewound", 20.32, 15.06, 5.54, 1.02),
+    "SW_3PDT_WirePads_3x3_P7.62mm": lambda: sw3pdt_pads_footprint("SW_3PDT_WirePads_3x3_P7.62mm"),
+}
+
+
+# --------------------------------------------------------------------------------------
 # Project + tables
 # --------------------------------------------------------------------------------------
 
@@ -1036,8 +1156,13 @@ def project_json() -> str:
         "libraries": {"pinned_footprint_libs": [], "pinned_symbol_libs": []},
         "meta": {"filename": f"{PROJECT}.kicad_pro", "version": 3},
         "net_settings": {"classes": [{"name": "Default", "clearance": 0.2, "track_width": 0.25, "via_diameter": 0.6, "via_drill": 0.3,
-                                      "priority": 2147483647, "bus_width": 12, "line_style": 0, "wire_width": 6}],
-                         "meta": {"version": 4}, "net_colors": None, "netclass_assignments": None, "netclass_patterns": []},
+                                      "priority": 2147483647, "bus_width": 12, "line_style": 0, "wire_width": 6},
+                                     {"name": "HV", "clearance": 3.0, "track_width": 0.5, "via_diameter": 0.8, "via_drill": 0.4,
+                                      "priority": 0, "bus_width": 12, "line_style": 0, "wire_width": 6, "pcb_color": "rgb(255, 64, 64)"}],
+                         "meta": {"version": 4}, "net_colors": None, "netclass_assignments": None,
+                         "netclass_patterns": [{"netclass": "HV", "pattern": "Net-(J3-Pin_1)"},
+                                               {"netclass": "HV", "pattern": "Net-(J4-Pin_1)"},
+                                               {"netclass": "HV", "pattern": "Net-(SW1A-HV)"}]},
         "pcbnew": {"last_paths": {"gencad": "", "idf": "", "netlist": "", "plot": "", "pos_files": "", "specctra_dsn": "", "step": "", "svg": "", "vrml": ""},
                    "page_layout_descr_file": ""},
         "schematic": {"legacy_lib_dir": "", "legacy_lib_list": []},
@@ -1090,7 +1215,8 @@ def main():
     write(os.path.join(HW, "sym-lib-table"), SYM_TABLE)
     write(os.path.join(HW, "fp-lib-table"), FP_TABLE)
     write(os.path.join(HW, "lib", f"{PROJECT}.kicad_sym"), project_symbol_lib_text())
-    write(os.path.join(HW, "lib", f"{PROJECT}.pretty", "Relay_DPDT_Panasonic_TQ2_THT.kicad_mod"), tq2_footprint_text())
+    for name, fn in PROJECT_FOOTPRINTS.items():
+        write(os.path.join(HW, "lib", f"{PROJECT}.pretty", name + ".kicad_mod"), fn())
 
 
 if __name__ == "__main__":

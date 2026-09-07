@@ -53,11 +53,16 @@ multichannel / repeat-layout tooling can replicate the driver layout after one c
 |---|---|---|
 | K4 POLARITY | normal (`SRC_P` = `NORMAL_IN_P`) | inverted |
 | K1..K3 RANGE | open at both ends | range active (only one at a time) |
-| K5 INJECT | ISOLATE (1 ohm and DMM path untouched) | INJECT |
+| K5 INJECT | ISOLATE - both legs open (1 ohm and DMM path untouched) | INJECT |
 
 K1..K3 use **both** poles of their relay: pole A breaks the top of the high leg (`R*_IN`), pole B
 breaks the bottom (`R*_OUT`). A deselected resistor is therefore isolated at both ends and never
 loads `RANGE_BUS` - worth having on the 10 M range in particular.
+
+K5 does the same for the source as a whole: pole A breaks the high side (`RANGE_BUS` -> `INJ_NODE`)
+and pole B breaks the return (`SRC_RTN` -> `INJ_RTN`). In ISOLATE the programmable source is
+disconnected from the 1 ohm and the DMM path at both ends, so nothing of the source - not its output
+capacitance, not its leakage to earth - remains attached to the measurement node.
 
 ### Control wiring
 

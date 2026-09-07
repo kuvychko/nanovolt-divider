@@ -100,16 +100,20 @@ instance (K1 shown; K2-K5 identical):
 |---|---|
 | `/NORMAL_IN_P` | `J1.1` `K4.2(NC_A)` `K4.7(NO_B)` |
 | `/NORMAL_IN_N` | `J2.1` `K4.4(NO_A)` `K4.9(NC_B)` |
-| `/SRC_RTN` | `K4.8(COM_B)` `SW1.4` |
+| `/SRC_RTN` | `K4.8(COM_B)` `K5.8(COM_B)` |
 | `/INJ_NODE` | `K5.4(NO_A)` `SW1.1` |
+| `/INJ_RTN` | `K5.7(NO_B)` `SW1.4` |
 
 - [ ] **K4 RESET = normal polarity.** RESET puts both poles on NC, so `SRC_P` <- `A_NC` <- `J1`
       (NORMAL IN +) and `SRC_RTN` <- `B_NC` <- `J2`. Walk it once and confirm SET swaps **both**
       legs, not just one.
-- [ ] **K5 RESET = ISOLATE.** RESET puts pole A on `A_NC`, a no-connect, so `RANGE_BUS` is open and
-      the 1 ohm / DMM path is untouched. SET connects `RANGE_BUS` to `INJ_NODE`.
-- [ ] K5 pole B (`7`, `8`, `9`) is entirely unused. Confirm you do not want it breaking the return
-      leg too — today the return stays permanently connected.
+- [ ] **K5 RESET = ISOLATE, both legs.** Pole A breaks the high side (`RANGE_BUS` -> `INJ_NODE`) and
+      pole B breaks the return (`SRC_RTN` -> `INJ_RTN`). Both `A_NC` and `B_NC` are no-connect, so in
+      ISOLATE the source is fully detached from the measurement node — its output capacitance and any
+      leakage to earth included. Confirm both halves switch together and that you want no return
+      path at all in ISOLATE.
+- [ ] Confirm nothing else quietly bridges the source to `ANALOG_RTN` while K5 is RESET — the whole
+      point of breaking the return is lost if the DMM or the source chassis provides that path.
 - [ ] Confirm the intended truth table matches `README.md`, and that the firmware state machine will
       be written against these net names rather than "coil 1 / coil 2".
 

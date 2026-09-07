@@ -1040,8 +1040,13 @@ def build_root(lib: SymbolLib) -> Sheet:
              right=[("A_NC", "passive", 5.08), ("A_NO", "passive", 10.16), ("B_NC", "passive", 15.24),
                     ("B_NO", "passive", 20.32), ("SET", "input", 25.4), ("RESET", "input", 27.94)],
              page="7")
-    sh.noconn(ix, iy + 12.7)
-    for off in (5.08, 15.24, 20.32):
+    # Pole B breaks the return leg in step with pole A, so ISOLATE disconnects the programmable
+    # source from the measurement node at BOTH ends: SRC_RTN -> B_COM, B_NO -> INJ_RTN.
+    sh.wire(185.42, iy + 12.7, ix, iy + 12.7)
+    sh.label("SRC_RTN", 185.42, iy + 12.7, 180)
+    sh.wire(ix + 38.1, iy + 20.32, 238.76, iy + 20.32)
+    sh.label("INJ_RTN", 238.76, iy + 20.32)
+    for off in (5.08, 15.24):
         sh.noconn(ix + 38.1, iy + off)
     sh.wire(ix + 38.1, iy + 25.4, 236.22, iy + 25.4)
     sh.label("K5_SET", 236.22, iy + 25.4)
@@ -1065,9 +1070,13 @@ def build_root(lib: SymbolLib) -> Sheet:
     sh.wire(inj_node[0], inj_node[1], p1_norm[0], p1_norm[1])
     sh.label("INJ_NODE", 238.76, inj_node[1])
     assert inj_node[1] == p1_norm[1]
-    # analog return: SRC- -> pole 2 NORM (routed along the top of the sheet)
-    sh.poly(src_n, (101.6, src_n[1]), (101.6, 27.94), (243.84, 27.94), (243.84, p2_norm[1]), p2_norm)
-    sh.label("SRC_RTN", 101.6, 45.72)
+    # Analog return, in two switched halves. K4 B_COM -> SRC_RTN -> K5 B_COM, then K5 B_NO ->
+    # INJ_RTN -> pole 2 NORMAL. Carried by name: a polyline across this part of the sheet would
+    # have to cross INJ_NODE and HV_DIV.
+    sh.wire(src_n[0], src_n[1], 101.6, src_n[1])
+    sh.label("SRC_RTN", 101.6, src_n[1])
+    sh.wire(246.38, p2_norm[1], p2_norm[0], p2_norm[1])
+    sh.label("INJ_RTN", 246.38, p2_norm[1], 180)
     # mode sense pole: only the HV throw needs a board connection (R25 holds HV_SENSE low otherwise)
     sh.wire(p3_hv[0], p3_hv[1], 246.38, p3_hv[1])
     sh.label("MODE_SW_HV", 246.38, p3_hv[1], 180)
@@ -1120,7 +1129,8 @@ def build_root(lib: SymbolLib) -> Sheet:
     sh.text("Relay states (all relays 2-coil latching, pulsed only):\n"
             "  K4 POLARITY : RESET = normal (SRC_P = NORMAL_IN_P), SET = inverted\n"
             "  K1..K3 RANGE: SET = range active (one at a time, break-before-make), RESET = open at BOTH ends\n"
-            "  K5 INJECT   : SET = INJECT (high leg drives 1 ohm), RESET = ISOLATE (1 ohm + DMM path untouched)\n"
+            "  K5 INJECT   : SET = INJECT (high leg drives 1 ohm), RESET = ISOLATE - both legs open,\n"
+            "                the source is disconnected from the 1 ohm and the DMM path at both ends\n"
             "Each high leg is switched by both poles of its relay: pole A breaks R*_IN, pole B breaks R*_OUT,\n"
             "so a deselected resistor is isolated at both ends and never loads RANGE_BUS.\n"
             "Nominal factor k = 1 / (R_high + 1); actual factors come from calibration.\n"

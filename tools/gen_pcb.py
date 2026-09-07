@@ -3,8 +3,8 @@
 Bootstrap PCB generator for the nanovolt-divider Rev0 board.
 
 Produces hardware/nanovolt-divider.kicad_pcb with:
-  * board outline (60 x 103 mm portrait) with two edge notches that isolate the 1 ohm strip except
-    for a 10 mm centre bridge
+  * board outline (60 x 103 mm portrait) with two slots that isolate the 1 ohm strip except for a
+    10 mm centre bridge and 3 mm bridges at both edges
   * every schematic footprint placed with the design rules from docs/nanovolt_divider_rev0.md
     (warm/noisy control section left, precision section right, HV parts spaced, 1 ohm at the
     output corner with the TMP117 adjacent)
@@ -36,7 +36,8 @@ BOARD = os.path.join(HW, f"{PROJECT}.kicad_pcb")
 
 OX, OY = 50.0, 50.0          # board origin on the KiCad sheet
 W, H = 60.0, 103.0           # board size (portrait: control on top, precision below)
-NOTCH_Y = (87.7, 89.3)       # two edge notches isolating the 1 ohm strip
+NOTCH_Y = (87.7, 89.3)       # two slots isolating the 1 ohm strip
+EDGE_BRIDGE = 3.0            # material left at both board edges beside the slots
 NOTCH_BRIDGE = (25.0, 35.0)  # centre bridge left between the notches (MEAS, RTN, TMP117 lines)
 CTRL_MAX_Y = 42.0            # control section copper limit (GND pour); precision keepout starts here
 
@@ -414,12 +415,13 @@ def build():
         items.append(dump(footprint_instance(f"H{i}", comp, hx, hy, 0, nets_by_name, pin_net,
                                              extra_attr=("board_only", "exclude_from_pos_files", "exclude_from_bom")), 1))
 
-    # ---- outline (with the two 1 ohm notches) and the driver/relay slot -------------------------
+    # ---- outline and the two 1 ohm isolation slots -------------------------
     ny0, ny1 = NOTCH_Y
     bx0, bx1 = NOTCH_BRIDGE
-    outline = [(0, 0), (W, 0), (W, ny0), (bx1, ny0), (bx1, ny1), (W, ny1), (W, H), (0, H),
-               (0, ny1), (bx0, ny1), (bx0, ny0), (0, ny0)]
-    g = [gr_poly(outline, "Edge.Cuts", "outline")]
+    g = [gr_rect(0, 0, W, H, "Edge.Cuts", "outline")]
+    # two internal slots: 3 mm edge bridges on both sides plus the centre bridge
+    g.append(gr_rect(EDGE_BRIDGE, ny0, bx0, ny1, "Edge.Cuts", "slot_1ohm_left"))
+    g.append(gr_rect(bx1, ny0, W - EDGE_BRIDGE, ny1, "Edge.Cuts", "slot_1ohm_right"))
     # ---- silkscreen ----------------------------------------------------------------------------
     g.append(gr_text("NANOVOLT DIVIDER Rev0", 58.6, 86.0, "t_title", 0.9, rot=90))
     g.append(gr_text("P1", 11.4, 10.4, "t_p1", 0.8))

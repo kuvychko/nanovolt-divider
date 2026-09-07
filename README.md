@@ -89,8 +89,8 @@ reference; the `.kicad_sch` files are the source of truth from here on and are e
 * Quiet section, top to bottom: NORMAL IN pads and the three high-leg resistors, the 3PDT wiring
   pad grid (3 x 3, 7.62 mm pitch: columns NORM / COM / HV, rows pole 1..3) with R34 and the HV
   input pads, and finally the 1 ohm strip.
-* The 1 ohm strip is separated by two edge notches that leave a 10 mm centre bridge; MEAS, the
-  analog return, and the TMP117 lines cross there. The TMP117 sits over the resistor body and the
+* The 1 ohm strip is separated by two slots that leave a 10 mm centre bridge and 3 mm bridges at
+  both board edges for stiffness; MEAS, the analog return, and the TMP117 lines cross the centre one. The TMP117 sits over the resistor body and the
   OUT HI / OUT LO wire pads are at the resistor's own terminals.
 * HV input pads, R34 and the switch pads' HV column are spaced for 450 V; the `HV` netclass carries
   3 mm clearance and a 4 mm creepage rule in the `.kicad_dru` file.

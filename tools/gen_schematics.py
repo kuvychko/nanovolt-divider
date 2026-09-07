@@ -764,9 +764,9 @@ def build_control(lib: SymbolLib) -> Sheet:
         sh.wire(x, y + 3.81, x, y + 5.08)
         pwr("GND", x, y + 5.08)
 
-    cap(139.7, 71.12, "C1", "100n", "+3V3", "MCP23017 decoupling, 100 nF X7R 16 V (SH31B104K160CT) - verify package", "SH31B104K160CT")
-    cap(170.18, 45.72, "C3", "22u", "+5V", "5 V bulk, 22 uF 1206 MLCC (EMK316BB7226ML-T)", "EMK316BB7226ML-T")
-    cap(182.88, 45.72, "C4", "22u", "+3V3", "3.3 V bulk, 22 uF 1206 MLCC (EMK316BB7226ML-T)", "EMK316BB7226ML-T")
+    cap(139.7, 71.12, "C1", "100n", "+3V3", "MCP23017 decoupling, 100 nF X7R 16 V 1206 (SH31B104K160CT)", "SH31B104K160CT")
+    cap(170.18, 45.72, "C3", "22u", "+5V", "5 V bulk, 22 uF X7R 16 V 1206 MLCC (EMK316BB7226ML-T)", "EMK316BB7226ML-T")
+    cap(182.88, 45.72, "C4", "22u", "+3V3", "3.3 V bulk, 22 uF X7R 16 V 1206 MLCC (EMK316BB7226ML-T)", "EMK316BB7226ML-T")
     sh.wire(182.88, 40.64, 190.5, 40.64)
     sh.junction(182.88, 40.64)
     flag(190.5, 40.64, "#FLG03")
@@ -789,7 +789,7 @@ def build_control(lib: SymbolLib) -> Sheet:
     sh.wire(vp[0], vp[1], vp[0], vp[1] - 5.08)
     pwr("+3V3", vp[0], vp[1] - 5.08)
     sh.noconn(*alert)
-    cap(121.92, 165.1, "C2", "100n", "+3V3", "TMP117 decoupling, 100 nF X7R 16 V (SH31B104K160CT) - verify package", "SH31B104K160CT")
+    cap(121.92, 165.1, "C2", "100n", "+3V3", "TMP117 decoupling, 100 nF X7R 16 V 1206 (SH31B104K160CT)", "SH31B104K160CT")
 
     # ---- NORMAL/HV mode sense (3PDT pole 3) ------------------------------------------------
     # HV throw -> 10k -> +3V3 ; NORMAL throw -> 10k -> GND ; COM -> HV_SENSE with 100k pulldown.

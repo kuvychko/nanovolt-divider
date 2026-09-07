@@ -83,7 +83,6 @@ reference; the `.kicad_sch` files are the source of truth from here on and are e
 * Select the 450 VDC rated 3PDT toggle and shrouded HV banana jacks; the switch footprint is a
   placeholder terminal block for the board-side wiring.
 * Confirm the display module variant and its connector pinout (P1 / CN1 / P3) against the board in hand.
-* Confirm the 100 nF capacitor package (drawn as 1206).
 * Schematic architecture / safety review, then PCB placement with the precision region isolated
   from the control region.
 

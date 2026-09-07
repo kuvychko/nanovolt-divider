@@ -1,0 +1,92 @@
+{
+  "board": {
+    "design_settings": {
+      "defaults": {},
+      "rule_severities": {}
+    },
+    "layer_presets": [],
+    "viewports": []
+  },
+  "boards": [],
+  "cvpcb": {
+    "equivalence_files": []
+  },
+  "libraries": {
+    "pinned_footprint_libs": [],
+    "pinned_symbol_libs": []
+  },
+  "meta": {
+    "filename": "nanovolt-divider.kicad_pro",
+    "version": 3
+  },
+  "net_settings": {
+    "classes": [
+      {
+        "name": "Default",
+        "clearance": 0.2,
+        "track_width": 0.25,
+        "via_diameter": 0.6,
+        "via_drill": 0.3,
+        "priority": 2147483647,
+        "bus_width": 12,
+        "line_style": 0,
+        "wire_width": 6
+      }
+    ],
+    "meta": {
+      "version": 4
+    },
+    "net_colors": null,
+    "netclass_assignments": null,
+    "netclass_patterns": []
+  },
+  "pcbnew": {
+    "last_paths": {
+      "gencad": "",
+      "idf": "",
+      "netlist": "",
+      "plot": "",
+      "pos_files": "",
+      "specctra_dsn": "",
+      "step": "",
+      "svg": "",
+      "vrml": ""
+    },
+    "page_layout_descr_file": ""
+  },
+  "schematic": {
+    "legacy_lib_dir": "",
+    "legacy_lib_list": []
+  },
+  "sheets": [
+    [
+      "6b173215-4dcb-58a2-8716-bf25a1870e1e",
+      "Root"
+    ],
+    [
+      "79cb63cb-21fa-5c9c-a6c9-d5459b619d8d",
+      "CONTROL"
+    ],
+    [
+      "8b2f703b-bc2a-57a7-a0af-1777c2dccd85",
+      "RANGE_1E5 (K1)"
+    ],
+    [
+      "ca5908f3-4c97-5282-bada-2134c05fdbcc",
+      "RANGE_1E6 (K2)"
+    ],
+    [
+      "dbf42947-fcc0-55d1-a141-2e600289e7b8",
+      "RANGE_1E7 (K3)"
+    ],
+    [
+      "954fb01a-e68b-520c-a8e8-9001bb112147",
+      "POLARITY (K4)"
+    ],
+    [
+      "23323189-104e-5f1d-b069-422a92bb98d0",
+      "INJECT (K5)"
+    ]
+  ],
+  "text_variables": {}
+}

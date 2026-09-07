@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "nanovolt-divider")(type "KiCad")(uri "${KIPRJMOD}/lib/nanovolt-divider.kicad_sym")(options "")(descr "Project-local symbols"))
+)

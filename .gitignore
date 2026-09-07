@@ -1,0 +1,42 @@
+# --- KiCad ---
+# Backups and autosaves
+*-backups/
+*.kicad_sch-bak
+*.kicad_pcb-bak
+*.kicad_pro-bak
+*.bak
+*.bck
+_autosave-*
+\#auto_saved_files#
+*.lck
+*.kicad_prl
+fp-info-cache
+~*.lck
+
+# Generated outputs (regenerate from source)
+*.net
+*.drl
+*.gbr
+*.gbrjob
+*.pos
+*.rpt
+*.erc
+*.drc
+production/
+fabrication/
+
+# --- Datasheets and vendor files (copyrighted, do not redistribute) ---
+docs/datasheets/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+.vscode/
+.idea/
+
+# --- Python tooling ---
+__pycache__/
+*.pyc
+.venv/

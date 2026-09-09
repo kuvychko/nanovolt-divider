@@ -114,6 +114,39 @@ project footprints; re-run it after editing the script. It will **not** overwrit
 `nanovolt-divider.kicad_pro` - KiCad owns that file, and it holds the DRC severities and the `HV`
 netclass that the `.kicad_dru` rules depend on.
 
+### Regenerating the board produces a huge, meaningless diff
+
+`tools/gen_pcb.py` is **not idempotent**, and this has been rediscovered three times. `kicad-cli pcb
+upgrade` assigns fresh random UUIDs to the graphics it materialises inside stock footprints, so
+about 705 of the board's ~1521 UUIDs change on *every* run. Re-running the script with no edits at
+all still reports ~700 changed lines. On top of that `kicad-cli` writes CRLF while `.gitattributes`
+pins the repo to LF, so git warns about line endings too.
+
+Neither is a real change. Before you act on a board diff, normalise both and compare again:
+
+```python
+import re, io, subprocess
+strip = lambda t: re.sub(r'"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"', '"U"',
+                         t.replace("
+", "
+"))
+cur  = io.open("hardware/nanovolt-divider.kicad_pcb", "rb").read().decode("utf-8")
+head = subprocess.run(["git", "show", "HEAD:hardware/nanovolt-divider.kicad_pcb"],
+                      capture_output=True).stdout.decode("utf-8")
+print(strip(head) == strip(cur))    # True -> nothing changed; restore the file, do not commit it
+```
+
+Read both sides as bytes and decode UTF-8 explicitly. Decoding one side through
+`subprocess.run(text=True)` uses the locale codec and manufactures fake differences around non-ASCII
+characters - KiCad's stock `SolderWire` footprint description genuinely contains a U+FFFD, which is
+in the vendor file and not corruption.
+
+What actually proves a board change is real: the exported netlist, and an ERC/DRC comparison against
+the previous run. Not the file diff.
+
+`tools/gen_schematics.py` does not have this problem - it writes its files directly with derived
+UUIDs and never round-trips through `kicad-cli`, so re-running it leaves the working tree clean.
+
 ## Board
 
 `hardware/nanovolt-divider.kicad_pcb` is placed but unrouted:

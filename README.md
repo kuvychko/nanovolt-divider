@@ -101,7 +101,13 @@ Run ERC / exports from the command line:
 ```
 kicad-cli sch erc --severity-all --exit-code-violations hardware/nanovolt-divider.kicad_sch
 kicad-cli sch export pdf --output build/schematic.pdf hardware/nanovolt-divider.kicad_sch
+kicad-cli pcb drc --severity-error --severity-warning hardware/nanovolt-divider.kicad_pcb
 ```
+
+Neither generator script runs DRC - run it yourself with the command above. It will **not** come
+back clean while the board is unrouted: every net reports as unconnected, and the silkscreen
+reports over pads. Treat the current count as the baseline and check that a change does not add to
+it, rather than expecting zero.
 
 `tools/gen_schematics.py` generates all schematic files, the project symbol library and the
 project footprints; re-run it after editing the script. It will **not** overwrite an existing

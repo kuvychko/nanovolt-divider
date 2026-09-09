@@ -16,7 +16,19 @@ Produces hardware/nanovolt-divider.kicad_pcb with:
 No tracks are routed.  Run once, then route in KiCad; after that the .kicad_pcb is the source
 of truth and this script is historical.
 
-Usage: python tools/gen_pcb.py   (runs kicad-cli for the netlist, the format upgrade and DRC)
+Re-running is not idempotent: `kicad-cli pcb upgrade` assigns fresh random UUIDs to the graphics
+it materialises inside stock footprints, so ~705 of the board's ~1521 UUIDs change every run and
+the file reads as heavily modified even when nothing about the board did.  (The 816 the generator
+derives itself, via G.U(), are stable.)  Diff with UUIDs normalised before believing a change is
+real.
+
+Usage: python tools/gen_pcb.py
+
+It shells out to kicad-cli twice: once to export the schematic netlist it reads pad nets from, and
+once to upgrade the board it just wrote to the current file format.  It does NOT run DRC - run that
+yourself (the command is in README.md).  Expect a non-empty report: the board is unrouted, so every
+net shows as unconnected, and the silkscreen sits over pads that have no soldermask openings routed
+around them yet.  Compare against the previous run rather than expecting zero.
 """
 from __future__ import annotations
 

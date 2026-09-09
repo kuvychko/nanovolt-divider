@@ -373,40 +373,54 @@ def dgnd_symbol_text() -> str:
   )'''
 
 
-# Harness headers to the ESP32 display module.  Pin *names* carry the module's own labels so a wire
-# that lands on the wrong pin is visible in the schematic instead of looking plausibly correct.
+# Harness pigtail landings for the ESP32 display module.  Pin *names* carry the module's own labels
+# so a wire that lands on the wrong pin is visible in the schematic instead of looking plausibly
+# correct - which matters more now than it did with a keyed header, because the board end is
+# soldered and nothing mechanical stops a conductor going to the wrong pad.
 # UNVERIFIED against the board in hand - see README "confirm the display module variant".
+# Only the conductors actually used get a pin and a pad.  The pin *numbers* stay the module
+# connector's own numbering (P1 keeps 3/4, it is not renumbered 1/2) so the schematic still reads
+# "this wire lands on module P1 pin 3".  The unused conductors are snipped and heatshrunk at the
+# pigtail rather than landed on the board.
 ESP32_CONNECTORS = {
     "J_ESP32_P1": ("ESP32_DISP_P1",
-                   "Harness to ESP32-2432S028R (ELEGOO 2.8in) connector P1 (power in). Verify pinout against the module in hand.",
-                   [("1", "TX_IO1"), ("2", "RX_IO3"), ("3", "VIN_5V"), ("4", "GND")]),
+                   "Soldered pigtail to ESP32-2432S028R (ELEGOO 2.8in) connector P1 (power in). Only VIN and GND are used; "
+                   "TX (pin 1) and RX (pin 2) are cut back at the cable. Verify pinout against the module in hand.",
+                   [("3", "VIN_5V"), ("4", "GND")], "J_ESP32_P1_WirePads"),
     "J_ESP32_CN1": ("ESP32_DISP_CN1",
-                    "Harness to ESP32-2432S028R connector CN1 (I2C + 3V3). Verify pinout against the module in hand.",
-                    [("1", "GND"), ("2", "SCL_IO22"), ("3", "SDA_IO27"), ("4", "P3V3")]),
+                    "Soldered pigtail to ESP32-2432S028R connector CN1 (I2C + 3V3). All four conductors are used. "
+                    "Verify pinout against the module in hand.",
+                    [("1", "GND"), ("2", "SCL_IO22"), ("3", "SDA_IO27"), ("4", "P3V3")], "J_ESP32_CN1_WirePads"),
     "J_ESP32_P3": ("ESP32_DISP_P3",
-                   "Harness to ESP32-2432S028R connector P3 (GPIO). Verify pinout against the module in hand.",
-                   [("1", "GND"), ("2", "IO35"), ("3", "IO22_DUP"), ("4", "IO21_BL")]),
+                   "Soldered pigtail to ESP32-2432S028R connector P3 (GPIO). Only GND and IO35 (HV_SENSE) are used; the "
+                   "duplicate IO22 (pin 3) and the backlight IO21 (pin 4) are cut back at the cable. Verify pinout "
+                   "against the module in hand.",
+                   [("1", "GND"), ("2", "IO35")], "J_ESP32_P3_WirePads"),
 }
 
 
 def esp32_connector_symbol_text(name) -> str:
-    """1x4 harness header.  Pin geometry is identical to Connector_Generic:Conn_01x04 (x=-5.08,
-    y=2.54/0/-2.54/-5.08, length 3.81) so it is a drop-in replacement that only renames the pins."""
-    value, desc, pins = ESP32_CONNECTORS[name]
-    body = ("\n      ").join(_pin("passive", -5.08, 2.54 - 2.54 * i, 0, pname, num, length=3.81)
+    """1xN harness pigtail landing.  Pin geometry follows Connector_Generic:Conn_01xNN (x=-5.08,
+    2.54 mm pitch, length 3.81) so these stay drop-in replacements that only rename the pins.  The
+    body height tracks the pin count, so a 2-pin symbol closes up instead of leaving a 4-pin
+    rectangle hanging below the last pin."""
+    value, desc, pins, fp = ESP32_CONNECTORS[name]
+    top = 2.54 * (len(pins) - 1) / 2.0 + 1.27      # body top, 1.27 above the first pin
+    bot = top - 2.54 * len(pins)                   # body bottom, 1.27 below the last
+    body = ("\n      ").join(_pin("passive", -5.08, top - 1.27 - 2.54 * i, 0, pname, num, length=3.81)
                                for i, (num, pname) in enumerate(pins))
     return f'''
   (symbol {q(name)}
     (pin_names (offset 1.016))
     (exclude_from_sim no) (in_bom yes) (on_board yes) (in_pos_files yes) (duplicate_pin_numbers_are_jumpers no)
-    {_prop("Reference", "J", 0, 6.35)}
-    {_prop("Value", value, 0, -8.89)}
-    {_prop("Footprint", FP_JST4, 0, 0, hide=True)}
+    {_prop("Reference", "J", 0, top + 2.54)}
+    {_prop("Value", value, 0, bot - 2.54)}
+    {_prop("Footprint", f"{PROJECT}:{fp}", 0, 0, hide=True)}
     {_prop("Datasheet", "~", 0, 0, hide=True)}
     {_prop("Description", desc, 0, 0, hide=True)}
     {_prop("ki_keywords", "connector harness esp32 display", 0, 0, hide=True)}
     (symbol "{name}_1_1"
-      (rectangle (start -1.27 3.81) (end 1.27 -6.35) {STROKE} (fill (type background)))
+      (rectangle (start -1.27 {top}) (end 1.27 {bot}) {STROKE} (fill (type background)))
       {body}
     )
     (embedded_fonts no)
@@ -634,7 +648,12 @@ FP_SM102 = f"{PROJECT}:R_Radial_Ohmite_SlimMox_SM102_L14.7mm_W2.5mm_P10.16mm"   
 FP_RS02C = f"{PROJECT}:R_Axial_Vishay_RS02C_L15.1mm_D5.6mm_P20.32mm_Horizontal"    # datasheet 30204: body 15.06 x 5.54 mm, lead 1.02
 FP_SW3PDT = f"{PROJECT}:SW_3PDT_WirePads_Split"
 FP_BANANA = "Connector_Wire:SolderWire-0.25sqmm_1x01_D0.65mm_OD1.7mm"           # panel jack wired to board
-FP_JST4 = "Connector_JST:JST_XH_B4B-XH-A_1x04_P2.50mm_Vertical"                # harness to display module (module side is 1.25 mm JST-style)
+# The display-module harness is soldered at the board end (see harness_pads_footprint): the module
+# side is a 1.25 mm-class connector, so a board-side 2.50 mm XH header would have meant crimping a
+# bespoke pitch-bridging cable for a joint that never needs to unmate.
+FP_J7 = f"{PROJECT}:J_ESP32_P1_WirePads"
+FP_J8 = f"{PROJECT}:J_ESP32_CN1_WirePads"
+FP_J9 = f"{PROJECT}:J_ESP32_P3_WirePads"
 TODO = ""
 
 
@@ -745,14 +764,18 @@ def build_control(lib: SymbolLib) -> Sheet:
     def flag(x, y, ref):
         sh.symbol("power:PWR_FLAG", x, y, ref, "PWR_FLAG", ref_pos=(x, y - 6.35), val_pos=(x, y - 3.81))
 
-    # ---- ESP32 display module harness connectors ---------------------------------------
-    # J1 = module P1 (UART / VIN). mirror y -> pins on the right, pin 1 on top.
-    sh.symbol(JP1, 38.1, 45.72, "J7", "ESP32_DISP_P1", mirror="y", footprint=FP_JST4,
-              description="Harness to ESP32-2432S028R (ELEGOO 2.8in) connector P1: 1 TX(IO1), 2 RX(IO3), 3 VIN(5V), 4 GND",
-              ref_pos=(33.02, 39.37), val_pos=(27.94, 41.91))
+    # ---- ESP32 display module harness pigtails ------------------------------------------
+    # These are soldered wire landings, not headers: the module's own cable keeps its connector at
+    # the module end.  Only the used conductors have a pin and a pad; the rest are cut at the cable.
+    # All three GND wires are kept deliberately - J7's returns the pulsed coil current (2 x 40 mA),
+    # J9's is the reference for HV_SENSE, J8's serves I2C.  Same net, but three conductors cut the
+    # cable-side shared IR drop.  Do not collapse them to one wire.
+    # J7 = module P1 (VIN / GND). mirror y -> pins on the right, lowest pin number on top.
+    sh.symbol(JP1, 38.1, 45.72, "J7", "ESP32_DISP_P1", mirror="y", footprint=FP_J7,
+              description="Soldered pigtail to ESP32-2432S028R (ELEGOO 2.8in) connector P1: 3 VIN(5V), 4 GND. "
+                          "TX(IO1) pin 1 and RX(IO3) pin 2 are cut back at the cable.",
+              ref_pos=(33.02, 40.64), val_pos=(27.94, 43.18))
     p = lambda k: sh.pinpos(JP1, 38.1, 45.72, 0, k, mirror="y")
-    sh.noconn(*p("1"))
-    sh.noconn(*p("2"))
     vin, gnd = p("3"), p("4")
     sh.poly(vin, (50.8, vin[1]), (50.8, 35.56))
     sh.junction(50.8, 35.56)
@@ -765,10 +788,11 @@ def build_control(lib: SymbolLib) -> Sheet:
     sh.wire(55.88, 58.42, 63.5, 58.42)
     flag(63.5, 58.42, "#FLG02")
 
-    # J2 = module CN1 (I2C + 3V3). angle 180 -> pins on the right, pin 1 at the bottom.
-    sh.symbol(JCN1, 38.1, 76.2, "J8", "ESP32_DISP_CN1", angle=180, footprint=FP_JST4,
-              description="Harness to ESP32-2432S028R connector CN1: 1 GND, 2 IO22 (SCL), 3 IO27 (SDA), 4 3V3",
-              ref_pos=(33.02, 67.31), val_pos=(27.94, 69.85))
+    # J8 = module CN1 (I2C + 3V3). angle 180 -> pins on the right, pin 1 at the bottom.
+    # All four conductors are used, so this one keeps its full pad count.
+    sh.symbol(JCN1, 38.1, 76.2, "J8", "ESP32_DISP_CN1", angle=180, footprint=FP_J8,
+              description="Soldered pigtail to ESP32-2432S028R connector CN1: 1 GND, 2 IO22 (SCL), 3 IO27 (SDA), 4 3V3",
+              ref_pos=(33.02, 66.04), val_pos=(27.94, 68.58))
     p = lambda k: sh.pinpos(JCN1, 38.1, 76.2, 180, k)
     g, scl, sda, v33 = p("1"), p("2"), p("3"), p("4")
     sh.poly(v33, (48.26, v33[1]), (48.26, 63.5))
@@ -780,14 +804,13 @@ def build_control(lib: SymbolLib) -> Sheet:
     sh.wire(sda[0], sda[1], 53.34, sda[1])
     sh.label("SDA", 53.34, sda[1])
 
-    # J3 = module P3 (GPIO). angle 180.
-    sh.symbol(JP3, 38.1, 106.68, "J9", "ESP32_DISP_P3", angle=180, footprint=FP_JST4,
-              description="Harness to ESP32-2432S028R connector P3: 1 GND, 2 IO35 (input only, HV_SENSE), 3 IO22 (dup. SCL, n/c), 4 IO21 (backlight, n/c)",
-              ref_pos=(33.02, 97.79), val_pos=(27.94, 100.33))
+    # J9 = module P3 (GPIO). angle 180.
+    sh.symbol(JP3, 38.1, 106.68, "J9", "ESP32_DISP_P3", angle=180, footprint=FP_J9,
+              description="Soldered pigtail to ESP32-2432S028R connector P3: 1 GND, 2 IO35 (input only, HV_SENSE). "
+                          "The duplicate IO22 (pin 3) and the backlight IO21 (pin 4) are cut back at the cable.",
+              ref_pos=(33.02, 101.6), val_pos=(27.94, 104.14))
     p = lambda k: sh.pinpos(JP3, 38.1, 106.68, 180, k)
     g, io35 = p("1"), p("2")
-    sh.noconn(*p("3"))
-    sh.noconn(*p("4"))
     sh.poly(g, (48.26, g[1]), (48.26, 116.84))
     pwr(DGND, 48.26, 116.84)
     sh.wire(io35[0], io35[1], 53.34, io35[1])
@@ -1154,7 +1177,7 @@ def build_root(lib: SymbolLib) -> Sheet:
 # --------------------------------------------------------------------------------------
 
 
-def _fp_common(name, descr, tags, body, ref_at, val_at):
+def _fp_common(name, descr, tags, body, ref_at, val_at, ref_layer="F.SilkS"):
     """Wrap footprint body items (already-formatted lines) in a THT footprint definition."""
     k = "fp:" + name
     return f'''(footprint "{name}"
@@ -1164,7 +1187,7 @@ def _fp_common(name, descr, tags, body, ref_at, val_at):
   (layer "F.Cu")
   (descr {q(descr)})
   (tags {q(tags)})
-  (property "Reference" "REF**" (at {ref_at[0]} {ref_at[1]} 0) (layer "F.SilkS") (uuid "{U(k + ":ref")}") (effects (font (size 1 1) (thickness 0.15))))
+  (property "Reference" "REF**" (at {ref_at[0]} {ref_at[1]} 0) (layer "{ref_layer}") (uuid "{U(k + ":ref")}") (effects (font (size 1 1) (thickness 0.15))))
   (property "Value" "{name}" (at {val_at[0]} {val_at[1]} 0) (layer "F.Fab") (uuid "{U(k + ":val")}") (effects (font (size 1 1) (thickness 0.15))))
   (property "Datasheet" "" (at 0 0 0) (layer "F.Fab") (hide yes) (uuid "{U(k + ":ds")}") (effects (font (size 1 1) (thickness 0.15))))
   (property "Description" "" (at 0 0 0) (layer "F.Fab") (hide yes) (uuid "{U(k + ":desc")}") (effects (font (size 1 1) (thickness 0.15))))
@@ -1266,6 +1289,50 @@ def sw3pdt_pads_footprint(name):
                       "switch 3PDT wire pads HV", body, (1.9, -3.2), (1.9, 7.62 + 2.6))
 
 
+def harness_pads_footprint(name):
+    """Solder pads for one ESP32 display-module pigtail.
+
+    The board end of the harness is soldered, not mated: the module's own supplied cable keeps its
+    connector at the module end and lands its bare conductors here.  That removes the 2.50 mm XH
+    header the board used to carry, which never mated with anything anyway - the module side is a
+    1.25 mm-class connector, so an XH header meant crimping a bespoke cable to bridge the pitch.
+
+    Only the used conductors get a pad, and each pad keeps the *module connector's* pin number, so
+    the silk reads as a map onto P1/CN1/P3 rather than a renumbered 1..n row.
+
+    0.8 mm drill / 1.6 mm pad suits the 28-24 AWG pigtail wire.  (SW1's pads are 1.1 mm because
+    they take much thicker panel wire; that would be a sloppy fit for ribbon conductors.)  Pitch is
+    2.54 mm - wide enough to hand-solder eight separate wires in a row without bridging.
+    """
+    value, descr, pins, _fp = ESP32_CONNECTORS[HARNESS_PAD_SOURCE[name]]
+    module_conn = value.rsplit("_", 1)[-1]      # ESP32_DISP_CN1 -> CN1
+    body = []
+    for i, (num, pname) in enumerate(pins):
+        x = PAD_PITCH * i
+        body.append(_fppad(name, num, x, 0.0, 1.6, 0.8, "rect" if i == 0 else "circle"))
+        # Silk carries the module pin number (0.8 mm, the board minimum, and it has to fit a
+        # 2.54 mm pitch); the signal name goes on F.Fab, which has no minimum-height constraint.
+        body.append(_fptext(name, str(num), x, -1.5, 0.8))
+        body.append(_fptext(name, pname, x, 3.6, 0.5, "F.Fab"))
+    x1, x2 = -1.5, PAD_PITCH * (len(pins) - 1) + 1.5
+    cx = (x1 + x2) / 2
+    # This row sits hard against the top board edge, so there is exactly one usable silk line below
+    # the pads and none above beyond the pin numbers.  It carries the *module* connector name, not
+    # the refdes: someone landing eight bare conductors needs to know which cable this is, and
+    # "CN1" answers that where "J8" does not.  The refdes goes on F.Fab for assembly docs.
+    # y=1.7 is the whole budget: the pads' own copper ends at 0.8 and U1's top pad row is
+    # 0.6 mm past the other side of this text.  Do not drift it without re-running DRC.
+    body.append(_fptext(name, module_conn, cx, 1.7, 0.8))
+    body += _fprect(name, "F.Fab", x1, -1.2, x2, 1.2, 0.1)
+    body += _fprect(name, "F.CrtYd", x1 - 0.25, -1.45, x2 + 0.25, 1.45, 0.05)
+    return _fp_common(name, descr, "connector harness esp32 display solder wire pads",
+                      body, (cx, -2.8), (cx, 4.6), ref_layer="F.Fab")
+
+
+PAD_PITCH = 2.54
+HARNESS_PAD_SOURCE = {fp: sym for sym, (_v, _d, _p, fp) in ESP32_CONNECTORS.items()}
+
+
 PROJECT_FOOTPRINTS = {
     "Relay_DPDT_Panasonic_TQ2_THT": tq2_footprint_text,
     "R_Axial_Ohmite_MOX700_L7.0mm_D2.7mm_P10.16mm_Horizontal": lambda: axial_footprint(
@@ -1281,6 +1348,7 @@ PROJECT_FOOTPRINTS = {
         "Vishay Dale RS-2C wirewound power resistor, axial, body 15.06 x 5.54 mm max (doc 30204), lead 1.02 mm, 20.32 mm pitch",
         "resistor axial Vishay Dale RS-2C wirewound", 20.32, 15.06, 5.54, 1.02),
     "SW_3PDT_WirePads_Split": lambda: sw3pdt_pads_footprint("SW_3PDT_WirePads_Split"),
+    **{fp: (lambda f=fp: harness_pads_footprint(f)) for fp in HARNESS_PAD_SOURCE},
 }
 
 

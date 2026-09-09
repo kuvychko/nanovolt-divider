@@ -3,7 +3,7 @@
 Bootstrap PCB generator for the nanovolt-divider Rev0 board.
 
 Produces hardware/nanovolt-divider.kicad_pcb with:
-  * board outline (60 x 103 mm portrait) with two slots that isolate the 1 ohm strip except for a
+  * board outline (60 x 94 mm portrait) with two slots that isolate the 1 ohm strip except for a
     10 mm centre bridge and 3 mm bridges at both edges
   * every schematic footprint placed with the design rules from docs/nanovolt_divider_rev0.md
     (control cluster on top, then one self-contained cell per relay - drivers, relay and its own
@@ -35,11 +35,17 @@ PROJECT = G.PROJECT
 BOARD = os.path.join(HW, f"{PROJECT}.kicad_pcb")
 
 OX, OY = 50.0, 50.0          # board origin on the KiCad sheet
-W, H = 60.0, 100.0           # board size (portrait: control on top, precision below)
-NOTCH_Y = (85.0, 86.6)       # two slots isolating the 1 ohm strip
+W, H = 60.0, 94.0            # board size (portrait: control on top, precision below).  6 mm shorter
+                             # than Rev0's 100 mm: the display harness is soldered pigtails now, so
+                             # the top row is flat pads instead of three JST headers with a 5.75 mm
+                             # body, and everything below it shifted up by SHIFT_Y.
+SHIFT_Y = 6.0                # uniform upward shift applied to every row below the harness pads.  A
+                             # single translation keeps all the reviewed relative spacing - slot
+                             # geometry, HV island separation, the 1 ohm strip - exactly as it was.
+NOTCH_Y = (79.0, 80.6)       # two slots isolating the 1 ohm strip
 EDGE_BRIDGE = 3.0            # material left at both board edges beside the slots
 NOTCH_BRIDGE = (25.0, 35.0)  # centre bridge left between the notches (MEAS, RTN, TMP117 lines)
-DGND_MAX_Y = 42.0            # DGND pour limit: it follows the digital circuitry (control + coil
+DGND_MAX_Y = 36.0            # DGND pour limit: it follows the digital circuitry (control + coil
                              # drivers), not an arbitrary cut across the board.  There is no blanket
                              # keepout below it any more - only the 1 ohm island is kept clear.
 
@@ -52,12 +58,20 @@ RELAY_X = {"K4": 9.6, "K1": 19.8, "K2": 30.0, "K3": 40.2, "K5": 50.4}   # relay 
 RELAY_Y = 50.0
 
 
+# Harness pad row: eight live conductors in one line at the top edge, grouped P1 | CN1 | P3 with
+# ~5 mm between groups so three ribbons land side by side without their conductors crossing.
+# Footprint origin is the lowest-numbered pad; pads run left to right at PAD_PITCH (2.54 mm).
+# Kept clear of the M3 holes at x = 3 and x = 57.
+HARNESS_Y = 2.5
+HARNESS_X = {"J7": 20.6, "J8": 28.6, "J9": 41.3}   # 2 + 4 + 2 pads -> the row spans x 20.60..43.84
+
+
 def placement() -> dict:
     P = {}
-    # ---- row 1: display-module harness connectors (JST XH, pin 1 at the footprint origin) ----------
-    P["J7"] = (11.4, 5.0, 0)                    # P1  (5 V / GND)
-    P["J8"] = (25.0, 5.0, 0)                    # CN1 (I2C / 3V3)
-    P["J9"] = (38.6, 5.0, 0)                    # P3  (IO35 HV_SENSE)
+    # ---- row 1: display-module harness pigtail pads (flat, no body, no mating envelope) -----------
+    P["J7"] = (HARNESS_X["J7"], HARNESS_Y, 0)   # P1  pads 3,4   (5 V / GND)
+    P["J8"] = (HARNESS_X["J8"], HARNESS_Y, 0)   # CN1 pads 1-4   (GND / SCL / SDA / 3V3)
+    P["J9"] = (HARNESS_X["J9"], HARNESS_Y, 0)   # P3  pads 1,2   (GND / IO35 HV_SENSE)
     # ---- row 2: MCP23017 horizontal, flanked by caps and pull-ups ------------------------------------
     P["U1"] = (30.0, 16.5, 90)
     P["C1"] = (17.5, 13.5, 90)                  # 100n at VDD
@@ -68,7 +82,9 @@ def placement() -> dict:
     P["R23"] = (46.5, 19.0, 90)                 # ~RESET pull-up
     P["R24"] = (50.5, 13.5, 90)                 # mode sense: HV throw -> 3V3
     P["R25"] = (50.5, 19.0, 90)                 # mode sense pulldown
-    P["C5"] = (54.5, 13.5, 90)                  # HV_SENSE filter, next to J9
+    P["C5"] = (54.5, 19.0, 90)                  # HV_SENSE filter, paired with R25 (its pulldown).
+                                                # Not on the 13.5 sub-row any more: after SHIFT_Y
+                                                # that lands inside the top-right M3 hole keepout.
     # ---- row 3: coil drivers, one SET and one RESET column above each relay ---------------------------
     for n, kref in enumerate(("K1", "K2", "K3", "K4", "K5"), 1):
         kx = RELAY_X[kref]
@@ -106,13 +122,19 @@ def placement() -> dict:
     P["J5"] = (45.5, 95.0, 0)                   # DIVIDER OUT HI at the pad-2 end
     P["U2"] = (30.0, 89.5, 0)                   # TMP117 over the resistor body
     P["C2"] = (34.5, 89.5, 0)
+    # Everything except the harness pads moves up by SHIFT_Y.  Doing it as one translation here,
+    # rather than editing every literal above, keeps this table readable against the Rev0 review
+    # notes and guarantees no row drifts relative to another.
+    for ref, (x, y, rot) in P.items():
+        if ref not in HARNESS_X:
+            P[ref] = (x, y - SHIFT_Y, rot)
     return P
 
 
 # The two lower holes sit ABOVE the slots: a screw on the 1 ohm island would add a thermal and
 # mechanical-stress path straight to the precision resistor.  The island hangs on the two 3 mm
 # edge bridges plus the 10 mm centre bridge, which is ample for a 15 mm strip.
-MOUNTING_HOLES = [(3.0, 3.0), (57.0, 3.0), (3.0, 81.0), (57.0, 81.0)]
+MOUNTING_HOLES = [(3.0, 3.0), (57.0, 3.0), (3.0, 75.0), (57.0, 75.0)]
 
 
 # --------------------------------------------------------------------------------------
@@ -435,18 +457,19 @@ def build():
     g.append(gr_rect(EDGE_BRIDGE, ny0, bx0, ny1, "Edge.Cuts", "slot_1ohm_left"))
     g.append(gr_rect(bx1, ny0, W - EDGE_BRIDGE, ny1, "Edge.Cuts", "slot_1ohm_right"))
     # ---- silkscreen ----------------------------------------------------------------------------
-    g.append(gr_text("NANOVOLT DIVIDER Rev0", 58.6, 40.0, "t_title", 0.9, rot=90))
-    g.append(gr_text("P1", 11.4, 10.4, "t_p1", 0.8))
-    g.append(gr_text("CN1", 25.0, 10.4, "t_cn1", 0.8))
-    g.append(gr_text("P3", 38.6, 10.4, "t_p3", 0.8))
-    g.append(gr_text("CONTROL", 1.9, 22.0, "t_ctrl", 0.8, rot=90))
-    g.append(gr_text("RANGE CELLS", 1.9, 50.0, "t_cells", 0.8, rot=90))
-    g.append(gr_text("HV 450V", 47.0, 58.5, "t_hv", 0.9))
-    g.append(gr_text("NORM IN", 2.5, 58.5, "t_nin", 0.8))
-    g.append(gr_text("SW 3PDT", 31.0, 71.5, "t_sw", 0.8))
-    g.append(gr_text("1R + TMP117", 24.0, 99.4, "t_1r", 0.8))
-    g.append(gr_text("OUT LO", 9.5, 98.6, "t_outlo", 0.8))
-    g.append(gr_text("OUT HI", 42.5, 98.6, "t_outhi", 0.8))
+    g.append(gr_text("NANOVOLT DIVIDER Rev0", 58.6, 37.0, "t_title", 0.9, rot=90))
+    # No harness group labels here: the P1 / CN1 / P3 name and the module pin numbers are silk on
+    # the harness footprints themselves, which keeps them attached to the pads if the row moves.
+    for txt, x, y, key, size, rot in (
+            ("CONTROL", 1.9, 22.0, "t_ctrl", 0.8, 90),
+            ("RANGE CELLS", 1.9, 50.0, "t_cells", 0.8, 90),
+            ("HV 450V", 47.0, 58.5, "t_hv", 0.9, 0),
+            ("NORM IN", 2.5, 58.5, "t_nin", 0.8, 0),
+            ("SW 3PDT", 31.0, 71.5, "t_sw", 0.8, 0),
+            ("1R + TMP117", 24.0, 99.4, "t_1r", 0.8, 0),
+            ("OUT LO", 9.5, 98.6, "t_outlo", 0.8, 0),
+            ("OUT HI", 42.5, 98.6, "t_outhi", 0.8, 0)):
+        g.append(gr_text(txt, x, y - SHIFT_Y, key, size, rot=rot))
     # ---- zones ---------------------------------------------------------------------------------
     gnd = nets_by_name["DGND"]
     ctrl = [(0.3, 0.3), (W - 0.3, 0.3), (W - 0.3, DGND_MAX_Y), (0.3, DGND_MAX_Y)]

@@ -23,7 +23,7 @@ hardware/                  KiCad 10 project
   nanovolt-divider.kicad_sch   root sheet: metrology topology (inputs, relays, high legs, 3PDT, 1 ohm, outputs)
   control.kicad_sch            ESP32 display-module harness, MCP23017, TMP117, power
   relay_channel.kicad_sch      generic latching-relay channel, instantiated 5x (K1..K5)
-  nanovolt-divider.kicad_pcb   board: 60 x 100 mm, 2 layers, placed, not yet routed
+  nanovolt-divider.kicad_pcb   board: 60 x 94 mm, 2 layers, placed, not yet routed
   nanovolt-divider.kicad_dru   custom DRC rules (450 V clearance / creepage, DSBGA, 1 ohm bridge)
   lib/                         project-local symbol and footprint libraries
 tools/gen_schematics.py    bootstrap script that produced the first version of the schematics
@@ -68,6 +68,16 @@ capacitance, not its leakage to earth - remains attached to the measurement node
 
 * Controller: integrated 2.8" ESP32 touch-TFT module (ESP32-2432S028R type, ELEGOO), off-board,
   connected by three harnesses (P1: 5 V / GND, CN1: I2C + 3V3, P3: IO35 mode sense).
+* Those harnesses are the module's own pigtails, **soldered** to pads at the board end - there is no
+  board-side connector. The module end keeps its connector, so the display still unplugs. This is
+  why: the module side is a 1.25 mm-class connector, so a board-side header would have meant
+  crimping a bespoke pitch-bridging cable for a joint that never needs to unmate, and the panel
+  jacks (`J1`-`J3`, `J5`, `J6`) and the 3PDT toggle are already hard-wired the same way.
+* Only the eight live conductors have pads: `J7` = P1 pins 3/4, `J8` = CN1 pins 1-4, `J9` = P3
+  pins 1/2. The pads keep the *module's* pin numbering rather than being renumbered 1..n. All three
+  GND wires are run: P1's returns the pulsed coil current, P3's is the `HV_SENSE` reference, CN1's
+  serves I2C. Same net, but three conductors cut the cable-side shared IR drop - do not collapse
+  them to one wire.
 * MCP23017 (I2C 0x20) GPA0..GPA7 + GPB0..GPB1 drive the ten coil lines K1..K5 SET/RESET.
 * TMP117 (I2C 0x48) sits next to the 1 ohm resistor, thermal proximity only.
 * The third pole of the NORMAL/HV toggle drives `HV_SENSE` (IO35): the HV throw pulls it high
@@ -80,10 +90,11 @@ capacitance, not its leakage to earth - remains attached to the measurement node
 
 Open `hardware/nanovolt-divider.kicad_pro` in KiCad 10. The project library
 `hardware/lib/nanovolt-divider.kicad_sym` holds the TQ2-L2-5V relay, the 3PDT switch, the `DGND`
-power symbol and the three ESP32 harness headers - the headers carry the module's own pin names
+power symbol and the three ESP32 harness pigtail landings - these carry the module's own pin names
 (`SCL_IO22`, `IO35`, ...) rather than `Pin_1..Pin_4`, so a wire on the wrong pin is visible in the
-schematic instead of looking plausibly correct. Footprints for the relay, the precision resistors
-and the switch pads are in `hardware/lib/nanovolt-divider.pretty`. Everything else is stock KiCad.
+schematic instead of looking plausibly correct. Footprints for the relay, the precision resistors,
+the switch pads and the harness pads are in `hardware/lib/nanovolt-divider.pretty`. Everything else
+is stock KiCad.
 
 Run ERC / exports from the command line:
 
@@ -101,7 +112,7 @@ netclass that the `.kicad_dru` rules depend on.
 
 `hardware/nanovolt-divider.kicad_pcb` is placed but unrouted:
 
-* 60 x 100 mm portrait, two layers, laid out top-down: display-module harness connectors, the
+* 60 x 94 mm portrait, two layers, laid out top-down: display-module harness pads, the
   MCP23017 (horizontal, caps and pull-ups in columns on both sides), ten coil-driver columns, then
   one self-contained cell per relay.
 * **Range cells.** Each relay carries its SET/RESET driver pair directly above it and its own
@@ -155,7 +166,11 @@ silkscreen-over-pad warnings (reference designators still need tidying after rou
 * Select the 3PDT toggle: break-before-make, 450 VDC rated, with pole-to-pole isolation good
   enough that pole 3 (3.3 V `HV_SENSE`) sits beside a 450 V pole. Confirm which lug row the lever
   selects as NORMAL before wiring the panel. Shrouded HV banana jacks still to choose.
-* Confirm the display module variant and its connector pinout (P1 / CN1 / P3) against the board in hand.
+* Confirm the display module variant and its connector pinout (P1 / CN1 / P3) against the board in
+  hand. With soldered pigtails there is no keyed housing at the board end, so this continuity check
+  is the only thing standing between a mis-landed wire and 5 V on an I2C pin.
+* Confirm the pigtail conductor gauge fits the 0.8 mm pad drill, and decide how the cable is strain
+  relieved at the board end - the board no longer has a housing taking that load.
 * Verify pad numbering on the MOX-700, Slim-Mox SM102 and RS-2C footprints against the parts in
   hand. The TQ2 relay footprint is already checked (pads 1-5 / 6-10 in two rows at 2.54 mm, 7.62 mm
   apart, DIP order with 1 opposite 10).

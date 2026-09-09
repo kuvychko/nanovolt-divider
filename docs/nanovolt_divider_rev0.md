@@ -469,7 +469,8 @@ The same sheet is instantiated five times. KiCad's multi-channel/repeat-layout w
 | 1 | Stock instrument enclosure | RF-transparent body preferred, machinable metal front panel | TBD |
 | 1 | Internal compartment divider | Plastic / FR4 / 3D printed | To design |
 | 1 | TFT mounting bezel | Optional 3D-printed bezel | To design |
-| misc. | PCB standoffs, harnesses, headers | Mechanical integration | TBD |
+| misc. | PCB standoffs, harnesses | Mechanical integration | TBD |
+| - | *(no board-side harness headers)* | Display-module pigtails solder straight to `J7`/`J8`/`J9` pads | n/a |
 
 ---
 

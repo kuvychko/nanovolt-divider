@@ -202,7 +202,8 @@ instance (K1 shown; K2-K5 identical):
 
 ## 7. Power
 
-- [ ] `+5V` comes from the display module USB `VIN` (`J7.3`) and feeds only the ten relay coils.
+- [ ] `+5V` comes from the display module USB `VIN` (`J7.3`, soldered pigtail) and feeds only the
+      ten relay coils.
       Confirm the module regulator and the USB supply tolerate a 40 mA, 10-20 ms pulse.
 - [ ] `+3V3` comes from the module LDO (`J8.4`) and feeds `U1`, `U2` and the pull-ups. Confirm the
       LDO has headroom for that on top of the display.
@@ -218,7 +219,22 @@ instance (K1 shown; K2-K5 identical):
 - [ ] **ELEGOO module connector pinout.** `J7`/`J8`/`J9` assume P1 = TX/RX/VIN/GND,
       CN1 = GND/IO22/IO27/3V3, P3 = GND/IO35/IO22/IO21. **These are unverified.** Do a continuity
       check on the board in hand — CYD revisions vary. The symbols carry the module pin names so a
-      mismatch is visible; correct them if wrong.
+      mismatch is visible; correct them if wrong. This check now carries more weight than it used
+      to: the harness is **soldered** at the board end, so there is no keyed housing and nothing
+      but this continuity check stands between a mis-landed wire and 5 V on an I2C pin.
+- [ ] **Harness conductor count.** Only the eight live conductors have pads — `J7` = P1 pins 3/4,
+      `J8` = CN1 pins 1–4, `J9` = P3 pins 1/2 — and each pad keeps the *module's* pin number rather
+      than being renumbered 1..n. Confirm the cut conductors (P1 pins 1/2, P3 pins 3/4) are snipped
+      and insulated at the pigtail, not left bare near the board.
+- [ ] **All three GND wires are run.** They are one net, but they are not redundant: P1's ground
+      returns the pulsed coil current (2 × 40 mA), P3's is the reference for `HV_SENSE`, CN1's
+      serves I2C. Collapsing them to one wire pushes coil pulse current through the sense return.
+      Confirm three separate conductors land.
+- [ ] **Pigtail gauge vs. pad drill.** Pads are 0.8 mm drill / 1.6 mm pad, sized for 28–24 AWG
+      ribbon. Offer a real pigtail up to a 1:1 plot before ordering.
+- [ ] **Strain relief at the board end.** The board no longer has a connector housing taking the
+      cable load, and 28 AWG conductors fatigue. Decide how the harness is anchored (tie-down,
+      adhesive, or a service loop) before the board is fixed in the enclosure.
 - [ ] **3PDT lever-to-throw mapping.** Which lug row the lever selects as NORMAL depends on the
       part, which has not been chosen. Confirm before wiring the panel; `README.md` records the
       assumed mapping.
@@ -230,6 +246,11 @@ instance (K1 shown; K2-K5 identical):
 - [ ] **`SW_3PDT_WirePads_Split`** has seven pads, not nine. Confirm the two absent lugs (6 and 7)
       are the ones you intend to wire panel-to-panel and leave unused, and that the pad-to-lug
       silkscreen labelling is right.
+- [ ] **`J_ESP32_P1/CN1/P3_WirePads`** pad numbering: 2, 4 and 2 pads respectively, numbered with
+      the module's pin numbers (`J7` reads 3, 4 — it has no pads 1/2). Silk carries the module
+      connector name (`P1`/`CN1`/`P3`) and the pin numbers; the refdes is on F.Fab because the row
+      sits hard against the top board edge and there is only one usable silk line below the pads.
+      Confirm that labelling reads correctly on a 1:1 plot.
 - [ ] TMP117 is a **DSBGA-6 at 0.4 mm pitch**. Confirm you can assemble it, and that the relaxed
       0.1 mm intra-footprint DRC exception in `.kicad_dru` is acceptable to your fab.
 

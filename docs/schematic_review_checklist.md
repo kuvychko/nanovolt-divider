@@ -26,12 +26,12 @@ it blank.
 
 ## 0. Set-up
 
-- [ ] Open `hardware/nanovolt-divider.kicad_pro` in KiCad 10.
-- [ ] Confirm Board Setup -> Net Classes lists **`HV`** alongside `Default`, with patterns
-      `/HV_IN_P` and `/HV_DIV`. *(This has silently vanished twice. If it is missing, every 450 V
-      rule in `.kicad_dru` matches nothing and DRC still reports "0 violations".)*
-- [ ] Have to hand: Panasonic TQ2 datasheet (ASCTB14E), Ohmite MOX-700 and Slim-Mox drawings,
+- [x] Open `hardware/nanovolt-divider.kicad_pro` in KiCad 10.
+- [x] Have to hand: Panasonic TQ2 datasheet (ASCTB14E), Ohmite MOX-700 and Slim-Mox drawings,
       Vishay RS-2C drawing, and the physical ELEGOO display module.
+- [x] Only `Default` remains in Board Setup -> Net Classes. The `HV` class and the 450 V
+      clearance/creepage rules in `.kicad_dru` went with the HV divider — nothing on this board
+      exceeds the source voltage any more.
 
 ---
 
@@ -48,22 +48,22 @@ instance (K1 shown; K2-K5 identical):
 | `+5V` | `K1.1(S+)` `D1.1(K)` |
 | coil drive `Net-(D1-A)` | `Q1.3(C)` `K1.5(S-)` `D1.2(A)` |
 
-- [ ] **Emitter to ground, collector to coil.** `Q1.2` is the emitter and sits on `DGND`; `Q1.3` is
+- [x] **Emitter to ground, collector to coil.** `Q1.2` is the emitter and sits on `DGND`; `Q1.3` is
       the collector and drives the coil. A low-side NPN switch, not the reverse.
-- [ ] **Coil polarity.** `+5V` on pin **1** (S+) with the transistor on pin **5** (S-) for the SET
+- [x] **Coil polarity.** `+5V` on pin **1** (S+) with the transistor on pin **5** (S-) for the SET
       coil; `+5V` on pin **10** (R+) with the transistor on pin **6** (R-) for RESET.
-- [ ] **Flyback diode orientation.** `D1.1` is the **cathode** and goes to `+5V`; `D1.2` is the
+- [x] **Flyback diode orientation.** `D1.1` is the **cathode** and goes to `+5V`; `D1.2` is the
       anode and goes to the collector. Reversed diodes short the 5 V rail through the coil.
-- [ ] **Contact mapping matches the datasheet.** Pole A: `3` COM, `2` NC, `4` NO. Pole B: `8` COM,
+- [x] **Contact mapping matches the datasheet.** Pole A: `3` COM, `2` NC, `4` NO. Pole B: `8` COM,
       `9` NC, `7` NO. Check against ASCTB14E "Schematic (bottom view), 2 coil latching" — note it
       is a **bottom** view.
-- [ ] **Latching, not monostable.** Confirm the part really is TQ2-**L2**-5V (two coils), not
+- [x] **Latching, not monostable.** Confirm the part really is TQ2-**L2**-5V (two coils), not
       TQ2-5V. A single-coil part needs holding current, which this circuit never provides.
-- [ ] Base drive is (3.3 - 0.8 V) / 1 k = **2.5 mA**; the coil needs 40 mA, so beta >= 16. The
+- [x] Base drive is (3.3 - 0.8 V) / 1 k = **2.5 mA**; the coil needs 40 mA, so beta >= 16. The
       MMBT2222A is comfortably above that. Confirm you are happy with the margin at low temperature.
-- [ ] `R2` (10 k) pulldown holds the driver off while the MCP23017 is in reset. Confirm that still
-      holds given `U1` RESET is tied high through `R23` (see section 6).
-- [ ] Coil is 125 ohm / 40 mA at 5 V. Confirm the firmware contract: **pulse 10-20 ms, never hold.**
+- [x] `R2` (10 k) pulldown holds the driver off while the MCP23017 is in reset. Confirm that still
+      holds given `U1` RESET is tied high through `R23` (see section 5).
+- [x] Coil is 125 ohm / 40 mA at 5 V. Confirm the firmware contract: **pulse 10-20 ms, never hold.**
 
 ---
 
@@ -77,19 +77,19 @@ instance (K1 shown; K2-K5 identical):
 | `/R10M_IN` / `/R10M_OUT` | `K3.4`+`R33.1` / `K3.7`+`R33.2` |
 | `/RANGE_BUS` | `K1.8` `K2.8` `K3.8` `K5.3` |
 
-- [ ] **Both poles switch each high leg:** `SRC_P -> A_COM -> A_NO -> R -> B_NO -> B_COM ->
+- [x] **Both poles switch each high leg:** `SRC_P -> A_COM -> A_NO -> R -> B_NO -> B_COM ->
       RANGE_BUS`. A deselected resistor is open at *both* ends, so it cannot load or leak into
       `RANGE_BUS`.
-- [ ] `A_NC` and `B_NC` on K1-K3 are no-connect (six nets, one pin each). Confirm you want nothing
+- [x] `A_NC` and `B_NC` on K1-K3 are no-connect (six nets, one pin each). Confirm you want nothing
       parked on the NC contacts.
-- [ ] Ratio is `k = R35 / (R_high + R35)` = 1/100001, 1/1000001, 1/10000001 — nominal 1e-5 / 1e-6 /
+- [x] Ratio is `k = R35 / (R_high + R35)` = 1/100001, 1/1000001, 1/10000001 — nominal 1e-5 / 1e-6 /
       1e-7. Confirm the **actual** ratios come from calibration, not these nominals.
-- [ ] **Only one range relay may be SET at a time.** Nothing in the hardware enforces this; two
+- [x] **Only one range relay may be SET at a time.** Nothing in the hardware enforces this; two
       closed ranges put resistors in parallel and silently change the ratio. Confirm the firmware
       is the only interlock and that you accept that.
-- [ ] Leakage on the 1e-7 range: with a 10 M high leg, ~1 G of board leakage is a 1 % error on that
-      range alone. Decide whether you want a guard ring or a conformal-coat step, or accept it.
-- [ ] Power in the high legs at your maximum source voltage — confirm it is far below the MOX-700
+- [x] Leakage on the 1e-7 range: with a 10 M high leg, ~1 G of board leakage is a 1 % error on that
+      range alone. Decide whether you want a guard ring or a conformal-coat step, or accept it. ACCEPT THE LEAKAGE.
+- [x] Power in the high legs at your maximum source voltage — confirm it is far below the MOX-700
       and Slim-Mox ratings, and further below the level where self-heating shifts the ratio.
 
 ---
@@ -101,20 +101,21 @@ instance (K1 shown; K2-K5 identical):
 | `/NORMAL_IN_P` | `J1.1` `K4.2(NC_A)` `K4.7(NO_B)` |
 | `/NORMAL_IN_N` | `J2.1` `K4.4(NO_A)` `K4.9(NC_B)` |
 | `/SRC_RTN` | `K4.8(COM_B)` `K5.8(COM_B)` |
-| `/INJ_NODE` | `K5.4(NO_A)` `SW1.1` |
-| `/INJ_RTN` | `K5.7(NO_B)` `SW1.4` |
+| `/MEAS_NODE` | `K5.4(NO_A)` `R35.2` `J5.1` |
+| `/ANALOG_RTN` | `K5.7(NO_B)` `R35.1` `J6.1` |
 
-- [ ] **K4 RESET = normal polarity.** RESET puts both poles on NC, so `SRC_P` <- `A_NC` <- `J1`
+- [x] **K4 RESET = normal polarity.** RESET puts both poles on NC, so `SRC_P` <- `A_NC` <- `J1`
       (NORMAL IN +) and `SRC_RTN` <- `B_NC` <- `J2`. Walk it once and confirm SET swaps **both**
       legs, not just one.
-- [ ] **K5 RESET = ISOLATE, both legs.** Pole A breaks the high side (`RANGE_BUS` -> `INJ_NODE`) and
-      pole B breaks the return (`SRC_RTN` -> `INJ_RTN`). Both `A_NC` and `B_NC` are no-connect, so in
+- [x] **K5 RESET = ISOLATE, both legs.** Pole A breaks the high side (`RANGE_BUS` -> `MEAS_NODE`)
+      and pole B breaks the return (`SRC_RTN` -> `ANALOG_RTN`). Both `A_NC` and `B_NC` are
+      no-connect, so in
       ISOLATE the source is fully detached from the measurement node — its output capacitance and any
       leakage to earth included. Confirm both halves switch together and that you want no return
       path at all in ISOLATE.
-- [ ] Confirm nothing else quietly bridges the source to `ANALOG_RTN` while K5 is RESET — the whole
+- [x] Confirm nothing else quietly bridges the source to `ANALOG_RTN` while K5 is RESET — the whole
       point of breaking the return is lost if the DMM or the source chassis provides that path.
-- [ ] Confirm the intended truth table matches `README.md`, and that the firmware state machine will
+- [x] Confirm the intended truth table matches `README.md`, and that the firmware state machine will
       be written against these net names rather than "coil 1 / coil 2".
 
 ---
@@ -123,60 +124,35 @@ instance (K1 shown; K2-K5 identical):
 
 | Net | Members |
 |---|---|
-| `/MEAS_NODE` | `J5.1` `R35.2` `SW1.2` |
-| `/ANALOG_RTN` | `J6.1` `R35.1` `SW1.5` |
+| `/MEAS_NODE` | `J5.1` `K5.4` `R35.2` |
+| `/ANALOG_RTN` | `J6.1` `K5.7` `R35.1` |
 
-- [ ] **Work out where thermal EMF actually matters.** Current flows source -> high leg -> `SW1`
-      pole 1 -> `R35` -> `SW1` pole 2 -> source, so EMF in the relay and switch *contacts* sits in
-      the drive loop and is divided by `k` along with the source. The **undivided** path is only
+- [x] **Work out where thermal EMF actually matters.** Current flows source -> high leg -> `K5`
+      pole A -> `R35` -> `K5` pole B -> source, so EMF in the relay *contacts* sits in the drive
+      loop and is divided by `k` along with the source. The **undivided** path is only
       `J5 -> R35 -> J6`. Confirm that reasoning, then confirm those three parts and the copper
       between them are the only place low-thermal construction is required.
-- [ ] `J5`/`J6` tap `R35`'s own terminals rather than sharing the `SW1` pads. Confirm the Kelvin
-      connection is where you want it.
-- [ ] Nothing switches below the measurement node. Confirm no relay, jumper or test point has crept
+- [x] `J5`/`J6` tap `R35`'s own terminals directly. Confirm the Kelvin connection is where you
+      want it.
+- [x] Nothing switches below the measurement node. Confirm no relay, jumper or test point has crept
       into `MEAS_NODE` / `ANALOG_RTN`.
-- [ ] `R35` is a 2.5 W part running at microwatts. Confirm you chose it for stability and derating,
+- [x] `R35` is a 2.5 W part running at microwatts. Confirm you chose it for stability and derating,
       and check its **thermal EMF per degree C** against your target resolution.
-- [ ] `U2` (TMP275) is thermally coupled to `R35` but electrically on `DGND`/`+3V3`. Confirm there
+- [x] `U2` (TMP275) is thermally coupled to `R35` but electrically on `DGND`/`+3V3`. Confirm there
       is no galvanic path from the sensor into the analog return. It sits on the 1 ohm island above
       `R35` rather than over the resistor body - a SOIC-8 does not fit in that gap. Confirm the
       island alone couples it closely enough for the ratio correction you intend.
 
 ---
 
-## 5. HV path (450 VDC service)
-
-| Net | Members | Netclass |
-|---|---|---|
-| `/HV_IN_P` | `J3.1` `R34.1` | HV |
-| `/HV_DIV` | `R34.2` `SW1.3` | HV |
-
-- [ ] `R34` (10 M Slim-Mox) at 450 V draws **45 uA** and dissipates **20 mW** — far inside the 1 W
-      rating, and the SM102 5 kV rating covers the standoff. Confirm both numbers.
-- [ ] Output at 450 V is 45 uA x 1 ohm = **45 uV**. Confirm that is the range you expect.
-- [ ] **`HV_DIV` floats to the full 450 V** when the toggle is in NORMAL and the HV supply is still
-      connected. That is why it is on the HV netclass despite sitting at microvolts in use. Confirm
-      the reasoning.
-- [ ] **HV IN- has no board connection.** It is wired panel-to-panel, HV IN- jack -> `SW1` pole 2 HV
-      lug (lug 6). Confirm that is what you want and that the panel wire is rated and routed for it.
-- [ ] HV netclass patterns are the two net names spelled out, **never `HV*`** — a wildcard would
-      sweep in `HV_SENSE`, a 3.3 V logic line. Confirm both patterns are present.
-- [ ] **Prove the rules bite** rather than trusting a clean DRC: drag an HV pad within 3 mm of a
-      neighbour and confirm `Rule: HV clearance` / `HV creepage` appear. Undo afterwards.
-- [ ] Shrouded safety banana jacks for HV IN — still to be selected.
-
----
-
-## 6. Control section
+## 5. Control section
 
 | Net | Members |
 |---|---|
-| `+3V3` | `C1.1` `C2.1` `C4.1` `J8.4` `R21.1` `R22.1` `R23.1` `R24.2` `U1.9` `U2.B1` |
-| `DGND` | 35 pins, incl. `U1.10` `U1.15` `U1.16` `U1.17` `U2.B2` `U2.C1` |
-| `/CONTROL/SCL` | `J8.2` `R22.2` `U1.12` `U2.A2` |
-| `/CONTROL/SDA` | `J8.3` `R21.2` `U1.13` `U2.A1` |
-| `/HV_SENSE` | `C5.1` `J9.2` `R25.1` `SW1.8` |
-| `/MODE_SW_HV` | `R24.1` `SW1.9` |
+| `+3V3` | `C1.1` `C2.1` `C4.1` `J8.4` `R21.1` `R22.1` `R23.1` `U1.9` `U2.8` |
+| `DGND` | 32 pins, incl. `U1.10` `U1.15` `U1.16` `U1.17` `U2.4` `U2.5` `U2.6` `U2.7` |
+| `/CONTROL/SCL` | `J8.2` `R22.2` `U1.12` `U2.2` |
+| `/CONTROL/SDA` | `J8.3` `R21.2` `U1.13` `U2.1` |
 
 - [ ] **MCP23017 address.** `A0`/`A1`/`A2` (15/16/17) all on `DGND` -> **0x20**. Confirm no clash
       with anything else on the bus.
@@ -193,18 +169,10 @@ instance (K1 shown; K2-K5 identical):
       nothing in the firmware can pulse two at once.
 - [ ] I2C pull-ups are 4.7 k to 3.3 V (~0.7 mA sink). Confirm the display module does **not** also
       fit pull-ups on IO22/IO27 — doubled-up pull-ups over-stiffen the bus.
-- [ ] **Mode sense polarity.** HV throw -> `R24` (10 k) -> `+3V3`; `R25` (100 k) to `DGND` always.
-      So `HV_SENSE` **high (~3.0 V) = HV**, low = NORMAL. The NORMAL throw has no resistor and no
-      pad. Confirm 3.0 V clears IO35's input-high threshold.
-- [ ] Decide the mid-transition behaviour you want: with a break-before-make switch `SW1.8` floats
-      and `R25` pulls `HV_SENSE` low, so firmware momentarily reads **NORMAL**. `C5` (10 nF x 100 k
-      = 1 ms) filters the harness but does not change that. Decide whether to debounce in firmware.
-- [ ] IO35 is **input-only with no internal pull** on ESP32. Confirm `R25` is genuinely the only
-      thing defining the level.
 
 ---
 
-## 7. Power
+## 6. Power
 
 - [ ] `+5V` comes from the display module USB `VIN` (`J7.3`, soldered pigtail) and feeds only the
       ten relay coils.
@@ -218,39 +186,30 @@ instance (K1 shown; K2-K5 identical):
 
 ---
 
-## 8. Physical reality — the part a tool cannot check
+## 7. Physical reality — the part a tool cannot check
 
-- [ ] **ELEGOO module connector pinout.** `J7`/`J8`/`J9` assume P1 = TX/RX/VIN/GND,
-      CN1 = GND/IO22/IO27/3V3, P3 = GND/IO35/IO22/IO21. **These are unverified.** Do a continuity
+- [ ] **ELEGOO module connector pinout.** `J7`/`J8` assume P1 = TX/RX/VIN/GND and
+      CN1 = GND/IO22/IO27/3V3. **These are unverified.** Do a continuity
       check on the board in hand — CYD revisions vary. The symbols carry the module pin names so a
       mismatch is visible; correct them if wrong. This check now carries more weight than it used
       to: the harness is **soldered** at the board end, so there is no keyed housing and nothing
       but this continuity check stands between a mis-landed wire and 5 V on an I2C pin.
-- [ ] **Harness conductor count.** Only the eight live conductors have pads — `J7` = P1 pins 3/4,
-      `J8` = CN1 pins 1–4, `J9` = P3 pins 1/2 — and each pad keeps the *module's* pin number rather
-      than being renumbered 1..n. Confirm the cut conductors (P1 pins 1/2, P3 pins 3/4) are snipped
-      and insulated at the pigtail, not left bare near the board.
-- [ ] **All three GND wires are run.** They are one net, but they are not redundant: P1's ground
-      returns the pulsed coil current (2 × 40 mA), P3's is the reference for `HV_SENSE`, CN1's
-      serves I2C. Collapsing them to one wire pushes coil pulse current through the sense return.
-      Confirm three separate conductors land.
+- [ ] **Harness conductor count.** Only the six live conductors have pads — `J7` = P1 pins 3/4 and
+      `J8` = CN1 pins 1–4 — and each pad keeps the *module's* pin number rather than being
+      renumbered 1..n. Confirm the cut conductors (P1 pins 1/2, and the whole P3 pigtail) are
+      snipped and insulated at the pigtail, not left bare near the board.
+- [ ] **Both GND wires are run.** They are one net, but they are not redundant: P1's ground returns
+      the pulsed coil current (2 × 40 mA) and CN1's serves I2C. Collapsing them to one wire pushes
+      coil pulse current through the I2C return. Confirm two separate conductors land.
 - [ ] **Pigtail gauge vs. pad drill.** Pads are 0.8 mm drill / 1.6 mm pad, sized for 28–24 AWG
       ribbon. Offer a real pigtail up to a 1:1 plot before ordering.
 - [ ] **Strain relief at the board end.** The board no longer has a connector housing taking the
       cable load, and 28 AWG conductors fatigue. Decide how the harness is anchored (tie-down,
       adhesive, or a service loop) before the board is fixed in the enclosure.
-- [ ] **3PDT lever-to-throw mapping.** Which lug row the lever selects as NORMAL depends on the
-      part, which has not been chosen. Confirm before wiring the panel; `README.md` records the
-      assumed mapping.
-- [ ] **3PDT selection.** Break-before-make, 450 VDC rated, with pole-to-pole isolation good enough
-      that pole 3 (3.3 V `HV_SENSE`) can sit beside a 450 V pole.
 - [ ] **Custom footprint pad numbering** against the physical parts: MOX-700 (`R31`, `R32`),
-      Slim-Mox SM102 (`R33`, `R34`), RS-2C (`R35`). The TQ2 relay footprint is already checked
+      Slim-Mox SM102 (`R33`), RS-2C (`R35`). The TQ2 relay footprint is already checked
       (pads 1-5 / 6-10 in two rows at 2.54 mm, 7.62 mm apart, DIP order with 1 opposite 10).
-- [ ] **`SW_3PDT_WirePads_Split`** has seven pads, not nine. Confirm the two absent lugs (6 and 7)
-      are the ones you intend to wire panel-to-panel and leave unused, and that the pad-to-lug
-      silkscreen labelling is right.
-- [ ] **`J_ESP32_P1/CN1/P3_WirePads`** pad numbering: 2, 4 and 2 pads respectively, numbered with
+- [ ] **`J_ESP32_P1/CN1_WirePads`** pad numbering: 2 and 4 pads respectively, numbered with
       the module's pin numbers (`J7` reads 3, 4 — it has no pads 1/2). Silk carries the module
       connector name (`P1`/`CN1`/`P3`) and the pin numbers; the refdes is on F.Fab because the row
       sits hard against the top board edge and there is only one usable silk line below the pads.
@@ -262,7 +221,7 @@ instance (K1 shown; K2-K5 identical):
 
 ---
 
-## 9. Failure modes to think through
+## 8. Failure modes to think through
 
 - [ ] **Power-up.** Latching relays hold their last state through a power cycle. What does the
       instrument do when it wakes in an unknown relay state — read back, or force a known state?
@@ -271,10 +230,6 @@ instance (K1 shown; K2-K5 identical):
       half-transferred. Decide whether that is tolerable or needs a re-assert on boot.
 - [ ] **MCP23017 reset during operation.** All GPIOs go high-Z, the 10 k pulldowns hold the drivers
       off, and the relays keep their state. Confirm that is safe, not merely quiet.
-- [ ] **Switch in transit.** HV and normal paths are both open briefly. Confirm nothing is damaged
-      by the open circuit and that the DMM reading is simply discarded.
-- [ ] **HV connected while in NORMAL.** `HV_DIV` floats to 450 V against a board otherwise sitting
-      at microvolts. Confirm the creepage and the operator sequence you intend to document.
 
 ---
 
@@ -286,10 +241,9 @@ instance (K1 shown; K2-K5 identical):
 | 2 Range topology | | |
 | 3 Polarity / inject | | |
 | 4 Measurement node | | |
-| 5 HV path | | |
-| 6 Control | | |
-| 7 Power | | |
-| 8 Physical reality | | |
-| 9 Failure modes | | |
+| 5 Control | | |
+| 6 Power | | |
+| 7 Physical reality | | |
+| 8 Failure modes | | |
 
-Re-run ERC and DRC after any change, and re-confirm the `HV` netclass survived.
+Re-run ERC and DRC after any change.

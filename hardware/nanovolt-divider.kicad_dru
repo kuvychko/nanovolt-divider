@@ -1,20 +1,5 @@
 (version 1)
 
-# 450 VDC service on the HV input path (netclass "HV": HV IN +, HV IN -, R34 output to the 3PDT).
-# IPC-2221 B4 (external, uncoated, 301-500 V) asks for 2.5 mm; 3 mm clearance and 4 mm creepage
-# leave margin for the solder-mask-free pads and the panel wiring.
-(rule "HV clearance"
-	(constraint clearance (min 3.0mm))
-	(condition "A.NetClass == 'HV' || B.NetClass == 'HV'"))
-
-(rule "HV creepage"
-	(constraint creepage (min 4.0mm))
-	(condition "A.NetClass == 'HV' && B.NetClass != 'HV'"))
-
-(rule "HV edge clearance"
-	(constraint edge_clearance (min 1.5mm))
-	(condition "A.NetClass == 'HV'"))
-
 # The 1 ohm strip is reached only through the centre bridge between the two notches; keep those tracks narrow.
 (rule "bridge tracks"
 	(constraint track_width (max 0.4mm))

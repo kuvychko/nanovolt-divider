@@ -3,7 +3,7 @@
 Bootstrap PCB generator for the nanovolt-divider Rev0 board.
 
 Produces hardware/nanovolt-divider.kicad_pcb with:
-  * board outline (60 x 94 mm portrait) with two slots that isolate the 1 ohm strip except for a
+  * board outline (60 x 83 mm portrait) with two slots that isolate the 1 ohm strip except for a
     10 mm centre bridge and 3 mm bridges at both edges
   * every schematic footprint placed with the design rules from docs/nanovolt_divider_rev0.md
     (control cluster on top, then one self-contained cell per relay - drivers, relay and its own
@@ -47,14 +47,16 @@ PROJECT = G.PROJECT
 BOARD = os.path.join(HW, f"{PROJECT}.kicad_pcb")
 
 OX, OY = 50.0, 50.0          # board origin on the KiCad sheet
-W, H = 60.0, 94.0            # board size (portrait: control on top, precision below).  6 mm shorter
-                             # than Rev0's 100 mm: the display harness is soldered pigtails now, so
-                             # the top row is flat pads instead of three JST headers with a 5.75 mm
-                             # body, and everything below it shifted up by SHIFT_Y.
+W, H = 60.0, 83.0            # board size (portrait: control on top, precision below).  11 mm shorter
+                             # than it was before the HV divider came out.  Row 7 (the 3PDT wire pads
+                             # and the HV island) is gone outright, and with J1/J2 moved up beside K4
+                             # the lower mounting holes could follow the slots up by the same 11 mm.
+                             # What stops it going further is R31-R33: the high legs hang 12.7 mm
+                             # below their relays and their courtyards reach y 67.7.
 SHIFT_Y = 6.0                # uniform upward shift applied to every row below the harness pads.  A
                              # single translation keeps all the reviewed relative spacing - slot
                              # geometry, HV island separation, the 1 ohm strip - exactly as it was.
-NOTCH_Y = (79.0, 80.6)       # two slots isolating the 1 ohm strip
+NOTCH_Y = (68.0, 69.6)       # two slots isolating the 1 ohm strip
 EDGE_BRIDGE = 3.0            # material left at both board edges beside the slots
 NOTCH_BRIDGE = (25.0, 35.0)  # centre bridge left between the notches (MEAS, RTN, TMP275 lines)
 DGND_MAX_Y = 36.0            # DGND pour limit: it follows the digital circuitry (control + coil
@@ -70,12 +72,13 @@ RELAY_X = {"K4": 9.6, "K1": 19.8, "K2": 30.0, "K3": 40.2, "K5": 50.4}   # relay 
 RELAY_Y = 50.0
 
 
-# Harness pad row: eight live conductors in one line at the top edge, grouped P1 | CN1 | P3 with
-# ~5 mm between groups so three ribbons land side by side without their conductors crossing.
+# Harness pad row: six live conductors in one line at the top edge, grouped P1 | CN1 with
+# ~5 mm between groups so both ribbons land side by side without their conductors crossing.
+# P3 went with the HV mode sense - IO35 was the only thing it carried.
 # Footprint origin is the lowest-numbered pad; pads run left to right at PAD_PITCH (2.54 mm).
 # Kept clear of the M3 holes at x = 3 and x = 57.
 HARNESS_Y = 2.5
-HARNESS_X = {"J7": 20.6, "J8": 28.6, "J9": 41.3}   # 2 + 4 + 2 pads -> the row spans x 20.60..43.84
+HARNESS_X = {"J7": 24.6, "J8": 32.6}               # 2 + 4 pads -> the row spans x 24.60..40.24
 
 
 def placement() -> dict:
@@ -83,7 +86,6 @@ def placement() -> dict:
     # ---- row 1: display-module harness pigtail pads (flat, no body, no mating envelope) -----------
     P["J7"] = (HARNESS_X["J7"], HARNESS_Y, 0)   # P1  pads 3,4   (5 V / GND)
     P["J8"] = (HARNESS_X["J8"], HARNESS_Y, 0)   # CN1 pads 1-4   (GND / SCL / SDA / 3V3)
-    P["J9"] = (HARNESS_X["J9"], HARNESS_Y, 0)   # P3  pads 1,2   (GND / IO35 HV_SENSE)
     # ---- row 2: MCP23017 horizontal, flanked by caps and pull-ups ------------------------------------
     P["U1"] = (30.0, 16.5, 90)
     P["C1"] = (17.5, 13.5, 90)                  # 100n at VDD
@@ -92,11 +94,6 @@ def placement() -> dict:
     P["R21"] = (42.5, 19.0, 90)                 # SDA pull-up
     P["R22"] = (46.5, 13.5, 90)                 # SCL pull-up
     P["R23"] = (46.5, 19.0, 90)                 # ~RESET pull-up
-    P["R24"] = (50.5, 13.5, 90)                 # mode sense: HV throw -> 3V3
-    P["R25"] = (50.5, 19.0, 90)                 # mode sense pulldown
-    P["C5"] = (54.5, 19.0, 90)                  # HV_SENSE filter, paired with R25 (its pulldown).
-                                                # Not on the 13.5 sub-row any more: after SHIFT_Y
-                                                # that lands inside the top-right M3 hole keepout.
     # ---- row 3: coil drivers, one SET and one RESET column above each relay ---------------------------
     for n, kref in enumerate(("K1", "K2", "K3", "K4", "K5"), 1):
         kx = RELAY_X[kref]
@@ -118,32 +115,29 @@ def placement() -> dict:
     P["R31"] = (RELAY_X["K1"], 61.0, 270)       # 100k (MOX-700)  under K1
     P["R32"] = (RELAY_X["K2"], 61.0, 270)       # 1M   (MOX-700)  under K2
     P["R33"] = (RELAY_X["K3"], 61.0, 270)       # 10M  (Slim-Mox) under K3
-    # ---- row 6: NORMAL IN pads (beside K4, the polarity relay) ---------------------------------------
-    P["J1"] = (3.0, 62.0, 0)                    # NORMAL IN +
-    P["J2"] = (3.0, 68.0, 0)                    # NORMAL IN -
-    # ---- row 7: 3PDT wire pads and the HV island -----------------------------------------------------
-    # SW1 is one footprint in two pieces: a 2x3 low-voltage cluster here, and pad 3 (HV_DIV) 15.24 mm
-    # to the right, inside the HV island.  HV IN- has no pad at all - it is wired panel-to-panel.
-    P["SW1"] = (23.5, 74.0, 0)                  # LV pads at y 74 / 77.81 / 81.62, x 23.5 / 27.31;
-                                                # HV pad 3 at (38.74, 77.81), clear of every LV pad
-    P["R34"] = (56.0, 64.0, 270)                # HV 10M, vertical: pad 1 (HV_IN_P) top, pad 2 (HV_DIV) bottom
-    P["J3"] = (48.0, 64.0, 0)                   # HV IN +, on the HV_IN_P net with R34 pad 1
-    # ---- row 8: 1 ohm strip behind the slots ---------------------------------------------------------
+    # ---- row 6: NORMAL IN pads, genuinely beside K4 now rather than below it -------------------------
+    # They used to sit under the relay row, which put them directly above the left mounting hole and
+    # pinned it - and through it the slots and the whole 1 ohm island - 10 mm lower than it needed to
+    # be.  In the 4.85 mm strip left of K4 they clear the hole entirely, and the run to K4's pole A /
+    # pole B contacts gets shorter into the bargain.
+    P["J1"] = (2.5, 48.0, 0)                    # NORMAL IN +, beside K4 pin 7 (pole B NO)
+    P["J2"] = (2.5, 54.0, 0)                    # NORMAL IN -, beside K4 pin 9 (pole B NC)
+    # ---- row 7: 1 ohm strip behind the slots ---------------------------------------------------------
     # The 1 ohm row sits 1.5 mm lower than it did with the TMP117.  A SOIC-8 courtyard is 5.4 mm
     # tall and the band between the slots and R35 was 5.38 mm, so U2 had to gain room somewhere;
     # taking it from the bottom margin keeps the slots, the mounting holes and everything above
     # them exactly where the Rev0 review left them.  R35's silk still clears the board edge by
     # 0.6 mm and its pads by 2.5 mm.
-    P["R35"] = (19.84, 96.5, 0)                 # 1 ohm (RS-2C), pads at x = 19.84 / 40.16
-    P["J6"] = (14.5, 96.5, 0)                   # DIVIDER OUT LO at the pad-1 end
-    P["J5"] = (45.5, 96.5, 0)                   # DIVIDER OUT HI at the pad-2 end
+    P["R35"] = (19.84, 85.5, 0)                 # 1 ohm (RS-2C), pads at x = 19.84 / 40.16
+    P["J6"] = (14.5, 85.5, 0)                   # DIVIDER OUT LO at the pad-1 end
+    P["J5"] = (45.5, 85.5, 0)                   # DIVIDER OUT HI at the pad-2 end
     # TMP275 in SOIC-8 is 7.4 x 5.4 mm over the courtyard, far larger than the TMP117 DSBGA it
     # replaced, so it no longer fits in the gap over the resistor body.  It sits on the same
     # thermally isolated island, centred on the resistor's midpoint, 0.7 mm below the slots and
     # 0.8 mm above R35's courtyard - the island is what couples it to R35, not the millimetre of
     # air over the body.
-    P["U2"] = (30.0, 90.0, 0)                   # TMP275 (SOIC-8) on the 1 ohm island, above R35
-    P["C2"] = (37.5, 90.0, 0)
+    P["U2"] = (30.0, 79.0, 0)                   # TMP275 (SOIC-8) on the 1 ohm island, above R35
+    P["C2"] = (37.5, 79.0, 0)
     # Everything except the harness pads moves up by SHIFT_Y.  Doing it as one translation here,
     # rather than editing every literal above, keeps this table readable against the Rev0 review
     # notes and guarantees no row drifts relative to another.
@@ -169,7 +163,7 @@ REF_OVERRIDE = {
 # The two lower holes sit ABOVE the slots: a screw on the 1 ohm island would add a thermal and
 # mechanical-stress path straight to the precision resistor.  The island hangs on the two 3 mm
 # edge bridges plus the 10 mm centre bridge, which is ample for a 15 mm strip.
-MOUNTING_HOLES = [(3.0, 3.0), (57.0, 3.0), (3.0, 75.0), (57.0, 75.0)]
+MOUNTING_HOLES = [(3.0, 3.0), (57.0, 3.0), (3.0, 63.0), (57.0, 63.0)]
 
 
 # --------------------------------------------------------------------------------------
@@ -384,21 +378,6 @@ SETUP = '''(setup
 
 DRU = '''(version 1)
 
-# 450 VDC service on the HV input path (netclass "HV": HV IN +, HV IN -, R34 output to the 3PDT).
-# IPC-2221 B4 (external, uncoated, 301-500 V) asks for 2.5 mm; 3 mm clearance and 4 mm creepage
-# leave margin for the solder-mask-free pads and the panel wiring.
-(rule "HV clearance"
-	(constraint clearance (min 3.0mm))
-	(condition "A.NetClass == 'HV' || B.NetClass == 'HV'"))
-
-(rule "HV creepage"
-	(constraint creepage (min 4.0mm))
-	(condition "A.NetClass == 'HV' && B.NetClass != 'HV'"))
-
-(rule "HV edge clearance"
-	(constraint edge_clearance (min 1.5mm))
-	(condition "A.NetClass == 'HV'"))
-
 # The 1 ohm strip is reached only through the centre bridge between the two notches; keep those tracks narrow.
 (rule "bridge tracks"
 	(constraint track_width (max 0.4mm))
@@ -498,15 +477,16 @@ def build():
     # the harness footprints themselves, which keeps them attached to the pads if the row moves.
     for txt, x, y, key, size, rot in (
             ("CONTROL", 1.9, 22.0, "t_ctrl", 0.8, 90),
-            ("RANGE CELLS", 1.9, 50.0, "t_cells", 0.8, 90),
-            ("HV 450V", 47.0, 58.5, "t_hv", 0.9, 0),
-            ("NORM IN", 2.5, 58.5, "t_nin", 0.8, 0),
-            ("SW 3PDT", 31.0, 71.5, "t_sw", 0.8, 0),
+            # RANGE CELLS moved to the right edge: J1/J2 now occupy the left strip beside the relays.
+            ("RANGE CELLS", 57.5, 56.0, "t_cells", 0.8, 90),
+            # Vertical: at the 0.8 mm minimum text height 'NORM IN' is 6.2 mm long, and the strip
+            # left of K4's pad column is only 4.99 mm wide.  It runs up the margin above J1 instead.
+            ("NORM IN", 1.2, 51.5, "t_nin", 0.8, 90),
             # The island labels moved above the resistor when the 1 ohm row dropped 1.5 mm: R35's
             # own silk outline now reaches y 93.4 and there is no legible line left below it.
-            ("1R + TMP275", 16.0, 90.0, "t_1r", 0.8, 0),
-            ("OUT LO", 9.5, 93.0, "t_outlo", 0.8, 0),
-            ("OUT HI", 42.5, 93.0, "t_outhi", 0.8, 0)):
+            ("1R + TMP275", 16.0, 79.0, "t_1r", 0.8, 0),
+            ("OUT LO", 9.5, 82.0, "t_outlo", 0.8, 0),
+            ("OUT HI", 42.5, 82.0, "t_outhi", 0.8, 0)):
         g.append(gr_text(txt, x, y - SHIFT_Y, key, size, rot=rot))
     # ---- zones ---------------------------------------------------------------------------------
     gnd = nets_by_name["DGND"]

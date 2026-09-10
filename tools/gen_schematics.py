@@ -307,48 +307,6 @@ def tq2_symbol_text() -> str:
   )'''
 
 
-def sw3pdt_symbol_text() -> str:
-    """Generic 3PDT toggle, 3 units. Per pole: NORM throw, COM, HV throw. Lug numbering 1-9 is a placeholder
-    until the physical switch is chosen.
-
-    Two lugs are deliberately absent from the symbol because they carry no board connection:
-      lug 6 (pole 2, HV throw)  - wired panel-to-panel from the HV IN- jack straight to the switch
-      lug 7 (pole 3, NORM throw)- unused; R25 (100k) already holds HV_SENSE low outside the HV throw
-    A lug with no pad must have no pin, or KiCad reports a missing pad on every netlist update.
-    The panel wiring is documented in a text block on the root sheet."""
-    def pole(unit, norm, com, hv):
-        pins = [_pin("passive", -5.08, 0, 0, "COM", com)]
-        if norm:
-            pins.append(_pin("passive", 5.08, 2.54, 180, "NORM", norm))
-        if hv:
-            pins.append(_pin("passive", 5.08, -2.54, 180, "HV", hv))
-        off = "" if (norm and hv) else '''
-      (text "off-board lug" (at 6.35 0 0) (effects (font (size 0.762 0.762)) (justify left)))'''
-        return f'''
-    (symbol "SW_3PDT_{unit}_1"
-      (circle (center -2.032 0) (radius 0.508) {STROKE} (fill (type none)))
-      (circle (center 2.032 2.54) (radius 0.508) {STROKE} (fill (type none)))
-      (circle (center 2.032 -2.54) (radius 0.508) {STROKE} (fill (type none)))
-      (polyline (pts (xy -1.524 0.254) (xy 1.524 2.286)) {STROKE} (fill (type none))){off}
-      {chr(10).join("      " + x for x in pins).strip()}
-    )'''
-    return f'''
-  (symbol "SW_3PDT"
-    (pin_names (offset 1.016))
-    (exclude_from_sim no) (in_bom yes) (on_board yes) (in_pos_files yes) (duplicate_pin_numbers_are_jumpers no)
-    {_prop("Reference", "SW", 0, 5.08)}
-    {_prop("Value", "SW_3PDT", 0, -5.08)}
-    {_prop("Footprint", "nanovolt-divider:SW_3PDT_WirePads_Split", 0, 0, hide=True)}
-    {_prop("Datasheet", "~", 0, 0, hide=True)}
-    {_prop("Description", "3PDT toggle switch, panel mount (NORMAL / HV selector), wired to solder pads on the board; select a break-before-make 450 VDC rated switch. Lugs 6 (HV IN-) and 7 (unused) have no board connection.", 0, 0, hide=True)}
-    {_prop("ki_keywords", "switch toggle 3PDT", 0, 0, hide=True)}
-    {pole(1, "1", "2", "3")}
-    {pole(2, "4", "5", None)}
-    {pole(3, None, "8", "9")}
-    (embedded_fonts no)
-  )'''
-
-
 def tmp275_symbol_text() -> str:
     """TI TMP275, I2C temperature sensor in SOIC-8 (D package).
 
@@ -436,11 +394,6 @@ ESP32_CONNECTORS = {
                     "Soldered pigtail to ESP32-2432S028R connector CN1 (I2C + 3V3). All four conductors are used. "
                     "Verify pinout against the module in hand.",
                     [("1", "GND"), ("2", "SCL_IO22"), ("3", "SDA_IO27"), ("4", "P3V3")], "J_ESP32_CN1_WirePads"),
-    "J_ESP32_P3": ("ESP32_DISP_P3",
-                   "Soldered pigtail to ESP32-2432S028R connector P3 (GPIO). Only GND and IO35 (HV_SENSE) are used; the "
-                   "duplicate IO22 (pin 3) and the backlight IO21 (pin 4) are cut back at the cable. Verify pinout "
-                   "against the module in hand.",
-                   [("1", "GND"), ("2", "IO35")], "J_ESP32_P3_WirePads"),
 }
 
 
@@ -474,7 +427,7 @@ def esp32_connector_symbol_text(name) -> str:
 
 def project_symbol_lib_text() -> str:
     return (f'(kicad_symbol_lib (version {SYM_VERSION}) (generator "nanovolt-divider-gen") (generator_version "{GEN_VERSION}")'
-            f'{tq2_symbol_text()}{sw3pdt_symbol_text()}{tmp275_symbol_text()}{dgnd_symbol_text()}'
+            f'{tq2_symbol_text()}{tmp275_symbol_text()}{dgnd_symbol_text()}'
             + "".join(esp32_connector_symbol_text(n) for n in ESP32_CONNECTORS)
             + "\n)\n")
 
@@ -691,14 +644,12 @@ FP_C1206 = "Capacitor_SMD:C_1206_3216Metric"
 FP_MOX700 = f"{PROJECT}:R_Axial_Ohmite_MOX700_L7.0mm_D2.7mm_P10.16mm_Horizontal"     # measured: body 7.0 x 2.7 mm, lead 0.6 mm
 FP_SM102 = f"{PROJECT}:R_Radial_Ohmite_SlimMox_SM102_L14.7mm_W2.5mm_P10.16mm"      # datasheet: 14.73 x 2.54 x 8.64 mm, pitch 10.16, lead 0.81
 FP_RS02C = f"{PROJECT}:R_Axial_Vishay_RS02C_L15.1mm_D5.6mm_P20.32mm_Horizontal"    # datasheet 30204: body 15.06 x 5.54 mm, lead 1.02
-FP_SW3PDT = f"{PROJECT}:SW_3PDT_WirePads_Split"
 FP_BANANA = "Connector_Wire:SolderWire-0.25sqmm_1x01_D0.65mm_OD1.7mm"           # panel jack wired to board
 # The display-module harness is soldered at the board end (see harness_pads_footprint): the module
 # side is a 1.25 mm-class connector, so a board-side 2.50 mm XH header would have meant crimping a
 # bespoke pitch-bridging cable for a joint that never needs to unmate.
 FP_J7 = f"{PROJECT}:J_ESP32_P1_WirePads"
 FP_J8 = f"{PROJECT}:J_ESP32_CN1_WirePads"
-FP_J9 = f"{PROJECT}:J_ESP32_P3_WirePads"
 TODO = ""
 
 
@@ -797,7 +748,6 @@ def build_control(lib: SymbolLib) -> Sheet:
                title="Control: ESP32 display module interface, MCP23017 relay drivers, TMP275")
     JP1 = f"{PROJECT}:J_ESP32_P1"     # module P1  (power in)
     JCN1 = f"{PROJECT}:J_ESP32_CN1"   # module CN1 (I2C + 3V3)
-    JP3 = f"{PROJECT}:J_ESP32_P3"     # module P3  (GPIO)
     R = "Device:R"
     C = "Device:C"
     pw = [0]
@@ -812,9 +762,9 @@ def build_control(lib: SymbolLib) -> Sheet:
     # ---- ESP32 display module harness pigtails ------------------------------------------
     # These are soldered wire landings, not headers: the module's own cable keeps its connector at
     # the module end.  Only the used conductors have a pin and a pad; the rest are cut at the cable.
-    # All three GND wires are kept deliberately - J7's returns the pulsed coil current (2 x 40 mA),
-    # J9's is the reference for HV_SENSE, J8's serves I2C.  Same net, but three conductors cut the
-    # cable-side shared IR drop.  Do not collapse them to one wire.
+    # Both GND wires are kept deliberately - J7's returns the pulsed coil current (2 x 40 mA) and
+    # J8's serves I2C.  Same net, but two conductors cut the cable-side shared IR drop.  Do not
+    # collapse them to one wire.  (A third, J9/P3, went with the HV mode sense in Rev0.)
     # J7 = module P1 (VIN / GND). mirror y -> pins on the right, lowest pin number on top.
     sh.symbol(JP1, 38.1, 45.72, "J7", "ESP32_DISP_P1", mirror="y", footprint=FP_J7,
               description="Soldered pigtail to ESP32-2432S028R (ELEGOO 2.8in) connector P1: 3 VIN(5V), 4 GND. "
@@ -848,18 +798,6 @@ def build_control(lib: SymbolLib) -> Sheet:
     sh.label("SCL", 53.34, scl[1])
     sh.wire(sda[0], sda[1], 53.34, sda[1])
     sh.label("SDA", 53.34, sda[1])
-
-    # J9 = module P3 (GPIO). angle 180.
-    sh.symbol(JP3, 38.1, 106.68, "J9", "ESP32_DISP_P3", angle=180, footprint=FP_J9,
-              description="Soldered pigtail to ESP32-2432S028R connector P3: 1 GND, 2 IO35 (input only, HV_SENSE). "
-                          "The duplicate IO22 (pin 3) and the backlight IO21 (pin 4) are cut back at the cable.",
-              ref_pos=(33.02, 101.6), val_pos=(27.94, 104.14))
-    p = lambda k: sh.pinpos(JP3, 38.1, 106.68, 180, k)
-    g, io35 = p("1"), p("2")
-    sh.poly(g, (48.26, g[1]), (48.26, 116.84))
-    pwr(DGND, 48.26, 116.84)
-    sh.wire(io35[0], io35[1], 53.34, io35[1])
-    sh.label("HV_SENSE", 53.34, io35[1])
 
     # ---- I2C pull-ups ------------------------------------------------------------------
     for (x, ref, net) in ((83.82, "R21", "SDA"), (93.98, "R22", "SCL")):
@@ -963,47 +901,17 @@ def build_control(lib: SymbolLib) -> Sheet:
     pwr("+3V3", vp[0], vp[1] - 5.08)
     cap(128.27, 165.1, "C2", "100n", "+3V3", "TMP275 decoupling, 100 nF X7R 16 V 1206 (SH31B104K160CT)", "SH31B104K160CT")
 
-    # ---- NORMAL/HV mode sense (3PDT pole 3) ------------------------------------------------
-    # HV throw -> 10k -> +3V3 ; COM -> HV_SENSE with a 100k pulldown and a 10 nF filter.
-    # The NORMAL throw needs neither a resistor nor a board pad: R25 alone holds HV_SENSE low whenever
-    # COM is not on the HV throw, including while a break-before-make switch is in transit.  C5 stiffens
-    # the 100k source impedance against pickup on the harness run to IO35.
-    sh.hlabel("MODE_SW_HV", "passive", 38.1, 134.62, 180)
-    sh.symbol(R, 48.26, 134.62, "R24", "10k", angle=90, footprint=FP_R1206, ref_pos=(45.72, 132.08), val_pos=(45.72, 138.43))
-    sh.wire(38.1, 134.62, 44.45, 134.62)
-    sh.poly((52.07, 134.62), (55.88, 134.62), (55.88, 129.54))
-    pwr("+3V3", 55.88, 129.54)
-    sh.hlabel("HV_SENSE", "passive", 38.1, 142.24, 180)
-    sh.wire(38.1, 142.24, 66.04, 142.24)
-    sh.junction(66.04, 142.24)
-    sh.wire(66.04, 142.24, 71.12, 142.24)
-    sh.label("HV_SENSE", 71.12, 142.24)
-    sh.symbol(R, 66.04, 149.86, "R25", "100k", footprint=FP_R1206, ref_pos=(68.58, 148.59), val_pos=(68.58, 151.13))
-    sh.wire(66.04, 142.24, 66.04, 146.05)
-    sh.wire(66.04, 153.67, 66.04, 157.48)
-    pwr(DGND, 66.04, 157.48)
-    sh.wire(66.04, 142.24, 76.2, 142.24)
-    sh.symbol(C, 76.2, 149.86, "C5", "10n", footprint=FP_C1206, ref_pos=(78.74, 148.59), val_pos=(78.74, 151.13),
-              description="HV_SENSE filter, 10 nF X7R 1206; damps pickup on the IO35 harness run")
-    sh.wire(76.2, 142.24, 76.2, 146.05)
-    sh.wire(76.2, 153.67, 76.2, 157.48)
-    pwr(DGND, 76.2, 157.48)
-
     # ---- notes -------------------------------------------------------------------------------
     sh.text("ESP32 2.8in touch display module (ESP32-2432S028R type, ELEGOO) - off-board, connected by 3 harnesses:\n"
             "  P1 : TX / RX / VIN(5V) / GND   -> VIN is the module's USB 5 V rail; it powers the relay coils (+5V).\n"
             "  CN1: GND / IO22 / IO27 / 3V3    -> I2C: SCL = IO22, SDA = IO27. 3V3 from the module LDO feeds U1, U2, pull-ups.\n"
-            "  P3 : GND / IO35 / IO22 / IO21   -> IO35 (input only) reads HV_SENSE. IO22 duplicate and IO21 (backlight) left open.\n"
             "I2C addresses: MCP23017 0x20 (A2:A0 = 000), TMP275 0x48 (A2:A0 = GND). 4.7k pull-ups to 3V3 on this board.\n"
-            "MCP23017 GPA0..GPA7, GPB0, GPB1 -> K1..K5 SET/RESET coil drivers (see relay_channel sheets). GPB2..GPB7 spare.\n"
-            "MODE_SW_HV / HV_SENSE: third pole of the front-panel 3PDT NORMAL/HV toggle. HV position pulls HV_SENSE high through 10k (~3.0 V);\n"
-            "NORMAL position and switch-in-transit leave it low through R25 (100k); C5 (10 nF) filters the harness run. IO35 has no internal pull.\n"
-            "The NORMAL lug of pole 3 and the HV lug of pole 2 have no board connection - see the panel-wiring note on the root sheet.",
+            "MCP23017 GPA0..GPA7, GPB0, GPB1 -> K1..K5 SET/RESET coil drivers (see relay_channel sheets).\n"
+            "MCP23017 GPB2..GPB7 are spare; the ESP32 side has no board connection beyond P1 and CN1.",
             172.72, 143.51, 1.0)
     sh.text("ESP32 display module harness", 25.4, 30.48, 2.0)
     sh.text("MCP23017 -> relay coil drivers", 66.04, 80.01, 2.0)
     sh.text("Temperature sensor (near 1 ohm)", 86.36, 152.4, 2.0)
-    sh.text("NORMAL / HV mode sense", 25.4, 125.73, 2.0)
     return sh
 
 
@@ -1017,7 +925,6 @@ def build_root(lib: SymbolLib) -> Sheet:
                title="Programmable nanovolt divider / precision attenuator - system")
     J = "Connector_Generic:Conn_01x01"
     R = "Device:R"
-    SW = "nanovolt-divider:SW_3PDT"
     RC = "relay_channel.kicad_sch"
 
     def jack(x, y, ref, value, angle, desc):
@@ -1123,11 +1030,11 @@ def build_root(lib: SymbolLib) -> Sheet:
                     ("B_NO", "passive", 20.32), ("SET", "input", 25.4), ("RESET", "input", 27.94)],
              page="7")
     # Pole B breaks the return leg in step with pole A, so ISOLATE disconnects the programmable
-    # source from the measurement node at BOTH ends: SRC_RTN -> B_COM, B_NO -> INJ_RTN.
+    # source from the measurement node at BOTH ends: SRC_RTN -> B_COM, B_NO -> ANALOG_RTN.
     sh.wire(185.42, iy + 12.7, ix, iy + 12.7)
     sh.label("SRC_RTN", 185.42, iy + 12.7, 180)
     sh.wire(ix + 38.1, iy + 20.32, 238.76, iy + 20.32)
-    sh.label("INJ_RTN", 238.76, iy + 20.32)
+    sh.label("ANALOG_RTN", 238.76, iy + 20.32)
     for off in (5.08, 15.24):
         sh.noconn(ix + 38.1, iy + off)
     sh.wire(ix + 38.1, iy + 25.4, 236.22, iy + 25.4)
@@ -1136,45 +1043,16 @@ def build_root(lib: SymbolLib) -> Sheet:
     sh.label("K5_RESET", 236.22, iy + 27.94)
     inj_node = (ix + 38.1, iy + 10.16)
 
-    # ---- 3PDT NORMAL / HV selector -------------------------------------------------------------
-    swx = 259.08
-    sh.symbol(SW, swx, 88.9, "SW1", "SW_3PDT NORMAL/HV", angle=180, unit=1, ref_pos=(swx - 3.81, 82.55), val_pos=(swx - 12.7, 97.79))
-    sh.symbol(SW, swx, 60.96, "SW1", "SW_3PDT NORMAL/HV", angle=180, unit=2, ref_pos=(swx - 3.81, 54.61), val_pos=(swx - 12.7, 69.85), hide_value=True)
-    sh.symbol(SW, swx, 132.08, "SW1", "SW_3PDT NORMAL/HV", angle=180, unit=3, ref_pos=(swx - 3.81, 125.73), val_pos=(swx - 12.7, 140.97), hide_value=True)
-    sp = lambda unit, num: sh.pinpos(SW, swx, {1: 88.9, 2: 60.96, 3: 132.08}[unit], 180, num)
-    # Lug 6 (pole 2 HV) and lug 7 (pole 3 NORM) are not on the symbol: they carry no board
-    # connection, so they get no pad.  See the panel-wiring note at the bottom of this sheet.
-    p1_norm, p1_com, p1_hv = sp(1, "1"), sp(1, "2"), sp(1, "3")
-    p2_norm, p2_com = sp(2, "4"), sp(2, "5")
-    p3_com, p3_hv = sp(3, "8"), sp(3, "9")
-    assert p1_norm[1] > p1_hv[1] and p1_norm[0] < p1_com[0], (p1_norm, p1_com, p1_hv)
-    # NORMAL path: INJECT relay output -> pole 1 NORM
-    sh.wire(inj_node[0], inj_node[1], p1_norm[0], p1_norm[1])
-    sh.label("INJ_NODE", 238.76, inj_node[1])
-    assert inj_node[1] == p1_norm[1]
-    # Analog return, in two switched halves. K4 B_COM -> SRC_RTN -> K5 B_COM, then K5 B_NO ->
-    # INJ_RTN -> pole 2 NORMAL. Carried by name: a polyline across this part of the sheet would
-    # have to cross INJ_NODE and HV_DIV.
+    # K4 pole B common is the source return: K4 B_COM -> SRC_RTN -> K5 B_COM.  Carried by name
+    # rather than a polyline, which would have to cross the whole range-relay column.
     sh.wire(src_n[0], src_n[1], 101.6, src_n[1])
     sh.label("SRC_RTN", 101.6, src_n[1])
-    sh.wire(246.38, p2_norm[1], p2_norm[0], p2_norm[1])
-    sh.label("INJ_RTN", 246.38, p2_norm[1], 180)
-    # mode sense pole: only the HV throw needs a board connection (R25 holds HV_SENSE low otherwise)
-    sh.wire(p3_hv[0], p3_hv[1], 246.38, p3_hv[1])
-    sh.label("MODE_SW_HV", 246.38, p3_hv[1], 180)
-    sh.wire(p3_com[0], p3_com[1], 271.78, p3_com[1])
-    sh.label("HV_SENSE", 271.78, p3_com[1])
 
-    # ---- HV input path ----------------------------------------------------------------------------
-    # HV IN - is wired panel-to-panel (jack -> SW1 pole 2 HV lug) and never touches the board.
-    hv_p = jack(111.76, 35.56, "J3", "HV IN +", 180, "Front panel shrouded safety banana jack, HV input + (450 VDC service)")
-    sh.symbol(R, 127.0, 35.56, "R34", "10M", angle=90, footprint=FP_SM102,
-              description="Ohmite Slim-Mox SM102, 10 MOhm 1%, dedicated HV divider high leg (~45 uA / 20 mW at 450 V)" + TODO,
-              fields={"MPN": "SM102031005FE", "Manufacturer": "Ohmite"}, ref_pos=(124.46, 30.48), val_pos=(124.46, 40.64))
-    sh.wire(hv_p[0], hv_p[1], 123.19, 35.56)
-    sh.label("HV_IN_P", 119.38, 35.56)
-    sh.poly((130.81, 35.56), (238.76, 35.56), (238.76, p1_hv[1]), p1_hv)
-    sh.label("HV_DIV", 182.88, 35.56)
+    # A_NO is the measurement node itself.  There is no source selector any more: the HV divider
+    # was removed with Rev0 (its ratio was capped by the shared 1 ohm low leg, and any value light
+    # enough not to drag down a Geiger supply left too little signal), so nothing switches here.
+    sh.wire(inj_node[0], inj_node[1], 238.76, inj_node[1])
+    sh.label("MEAS_NODE", 238.76, inj_node[1])
 
     # ---- measurement node, 1 ohm low leg, output ---------------------------------------------------
     rlx = 289.56
@@ -1184,22 +1062,22 @@ def build_root(lib: SymbolLib) -> Sheet:
     rl_top, rl_bot = sh.pinpos(R, rlx, 76.2, 0, "1"), sh.pinpos(R, rlx, 76.2, 0, "2")
     out_hi = jack(307.34, 88.9, "J5", "DIVIDER OUT HI", 0, "Front panel banana jack, divider output HI (to DMM HI)")
     out_lo = jack(307.34, 60.96, "J6", "DIVIDER OUT LO", 0, "Front panel banana jack, divider output LO (to DMM LO)")
-    sh.wire(p1_com[0], p1_com[1], rlx, p1_com[1])
-    sh.label("MEAS_NODE", 274.32, p1_com[1])
-    sh.junction(rlx, p1_com[1])
-    sh.wire(rlx, p1_com[1], rl_bot[0], rl_bot[1])
-    sh.wire(rlx, p1_com[1], out_hi[0], out_hi[1])
-    sh.wire(p2_com[0], p2_com[1], rlx, p2_com[1])
-    sh.label("ANALOG_RTN", 274.32, p2_com[1])
-    sh.junction(rlx, p2_com[1])
-    sh.wire(rlx, p2_com[1], rl_top[0], rl_top[1])
-    sh.wire(rlx, p2_com[1], out_lo[0], out_lo[1])
+    hi_y, lo_y = out_hi[1], out_lo[1]
+    sh.wire(274.32, hi_y, rlx, hi_y)
+    sh.label("MEAS_NODE", 274.32, hi_y)
+    sh.junction(rlx, hi_y)
+    sh.wire(rlx, hi_y, rl_bot[0], rl_bot[1])
+    sh.wire(rlx, hi_y, out_hi[0], out_hi[1])
+    sh.wire(274.32, lo_y, rlx, lo_y)
+    sh.label("ANALOG_RTN", 274.32, lo_y)
+    sh.junction(rlx, lo_y)
+    sh.wire(rlx, lo_y, rl_top[0], rl_top[1])
+    sh.wire(rlx, lo_y, out_lo[0], out_lo[1])
 
     # ---- control sheet ------------------------------------------------------------------------------
     cx, cy = 55.88, 177.8
     right = [(n, "output", 5.08 + 2.54 * i) for i, n in enumerate(
         ["K1_SET", "K1_RESET", "K2_SET", "K2_RESET", "K3_SET", "K3_RESET", "K4_SET", "K4_RESET", "K5_SET", "K5_RESET"])]
-    right += [("HV_SENSE", "passive", 30.48), ("MODE_SW_HV", "passive", 33.02)]
     sh.sheet("CONTROL", "control.kicad_sch", CONTROL_UUID, cx, cy, 60.96, 45.72, right=right, page="2")
     for (n, _, off) in right:
         sh.wire(cx + 60.96, cy + off, 124.46, cy + off)
@@ -1217,16 +1095,8 @@ def build_root(lib: SymbolLib) -> Sheet:
             "so a deselected resistor is isolated at both ends and never loads RANGE_BUS.\n"
             "Nominal factor k = 1 / (R_high + 1); actual factors come from calibration.\n"
             "Nothing switches below the measurement node: the 1 ohm low leg, its pads, and OUT HI/LO are permanent.\n"
-            "ANALOG_RTN / SRC_RTN are never tied to DGND, the control-section ground.\n"
-            "HV path: 3PDT pole 1 selects the measurement node source, pole 2 selects the return, pole 3 reports the mode.\n"
-            "HV_IN_P / R34 / SW1 must be rated and laid out for 450 VDC (creepage, clearance, shrouded jacks).",
+            "ANALOG_RTN / SRC_RTN are never tied to DGND, the control-section ground.",
             160.02, 215.9, 1.27)
-    sh.text("Panel wiring - NOT on the board, so it does not appear in the netlist:\n"
-            "  HV IN - jack        -> SW1 pole 2, HV lug (lug 6). The board has no HV IN - pad.\n"
-            "  SW1 pole 3, NORM lug (lug 7) -> unused; R25 (100k, control sheet) already holds HV_SENSE low.\n"
-            "Every other SW1 lug lands on a board pad. Confirm the lever-to-throw mapping on the physical\n"
-            "switch before wiring: which row is NORMAL depends on the part, which has not been selected yet.",
-            160.02, 236.22, 1.27)
     sh.text("1 ohm low leg - TMP275 (U2) mounted adjacent", 283.0, 70.0, 1.0)
     return sh
 
@@ -1309,45 +1179,6 @@ def radial_box_footprint(name, descr, tags, pitch, body_l, body_w, lead_d):
     return _fp_common(name, descr, tags, body, (cx, -cy - 0.9), (cx, cy + 0.9))
 
 
-def sw3pdt_pads_footprint(name):
-    """Solder pads for the panel-mount 3PDT NORMAL/HV toggle.
-
-    These are wire-landing pads, not the switch: there is no reason for them to copy the switch's
-    3x3 lug geometry, and doing so cost ~18 x 18 mm and put a 450 V pad 7.62 mm from MEAS_NODE.
-
-    Two lugs have no pad at all because they are wired panel-to-panel (see the SW_3PDT symbol):
-      lug 6 - pole 2 HV throw, goes straight to the HV IN- jack
-      lug 7 - pole 3 NORM throw, unused
-    The remaining seven split into a tight low-voltage cluster and one isolated HV pad:
-      9 MODE_SW_HV   8 HV_SENSE     3.3 V logic, kept at the far end from the measurement pads
-      1 INJ_NODE     2 MEAS_NODE    normal-path injection and the measurement node
-      4 SRC_RTN      5 ANALOG_RTN   the analog return
-      3 HV_DIV       alone, >11 mm away - it floats to 450 V when the toggle is in NORMAL
-    """
-    LV = [(9, 0.00, 0.00, "MODE_SW_HV"), (8, 3.81, 0.00, "HV_SENSE"),
-          (1, 0.00, 3.81, "INJ_NODE"),   (2, 3.81, 3.81, "MEAS_NODE"),
-          (4, 0.00, 7.62, "SRC_RTN"),    (5, 3.81, 7.62, "ANALOG_RTN")]
-    HVX, HVY = 15.24, 3.81
-    body = [_fppad(name, num, x, y, 1.9, 1.1, "rect" if num == 1 else "circle") for num, x, y, _ in LV]
-    body.append(_fppad(name, 3, HVX, HVY, 1.9, 1.1))
-    # Silk carries the lug number only (0.8 mm, the board minimum, and it has to fit a 3.81 mm
-    # pitch); the net each lug lands on goes on F.Fab, which has no minimum-height constraint.
-    for num, x, y, net in LV:
-        body.append(_fptext(name, str(num), x - 1.5, y - 1.5, 0.8))
-        body.append(_fptext(name, net, x + 1.3, y + 1.4, 0.5, "F.Fab"))
-    body.append(_fptext(name, "3", HVX - 1.5, HVY - 1.5, 0.8))
-    body.append(_fptext(name, "HV_DIV 450V", HVX, HVY + 2.2, 0.8))
-    body.append(_fptext(name, "HV_DIV 450V", HVX, HVY - 2.2, 0.5, "F.Fab"))
-    body += _fprect(name, "F.Fab", -1.4, -1.4, 3.81 + 1.4, 7.62 + 1.4, 0.1)
-    body += _fprect(name, "F.CrtYd", -1.4, -1.4, 3.81 + 1.4, 7.62 + 1.4, 0.05)
-    body += _fprect(name, "F.Fab", HVX - 1.4, HVY - 1.4, HVX + 1.4, HVY + 1.4, 0.1)
-    body += _fprect(name, "F.CrtYd", HVX - 1.4, HVY - 1.4, HVX + 1.4, HVY + 1.4, 0.05)
-    return _fp_common(name, "Solder pads for the panel-mount 3PDT NORMAL/HV toggle harness. Lugs 6 and 7 are wired "
-                            "panel-to-panel and have no pad; lug 3 (HV_DIV, up to 450 V) is separated from the "
-                            "low-voltage cluster by more than the 4 mm creepage the HV netclass requires.",
-                      "switch 3PDT wire pads HV", body, (1.9, -3.2), (1.9, 7.62 + 2.6))
-
-
 def harness_pads_footprint(name):
     """Solder pads for one ESP32 display-module pigtail.
 
@@ -1359,9 +1190,9 @@ def harness_pads_footprint(name):
     Only the used conductors get a pad, and each pad keeps the *module connector's* pin number, so
     the silk reads as a map onto P1/CN1/P3 rather than a renumbered 1..n row.
 
-    0.8 mm drill / 1.6 mm pad suits the 28-24 AWG pigtail wire.  (SW1's pads are 1.1 mm because
-    they take much thicker panel wire; that would be a sloppy fit for ribbon conductors.)  Pitch is
-    2.54 mm - wide enough to hand-solder eight separate wires in a row without bridging.
+    0.8 mm drill / 1.6 mm pad suits the 28-24 AWG pigtail wire; the panel jacks take much thicker
+    wire and get their own larger pads.  Pitch is 2.54 mm - wide enough to hand-solder six separate
+    wires in a row without bridging.
     """
     value, descr, pins, _fp = ESP32_CONNECTORS[HARNESS_PAD_SOURCE[name]]
     module_conn = value.rsplit("_", 1)[-1]      # ESP32_DISP_CN1 -> CN1
@@ -1406,7 +1237,6 @@ PROJECT_FOOTPRINTS = {
         "R_Axial_Vishay_RS02C_L15.1mm_D5.6mm_P20.32mm_Horizontal",
         "Vishay Dale RS-2C wirewound power resistor, axial, body 15.06 x 5.54 mm max (doc 30204), lead 1.02 mm, 20.32 mm pitch",
         "resistor axial Vishay Dale RS-2C wirewound", 20.32, 15.06, 5.54, 1.02),
-    "SW_3PDT_WirePads_Split": lambda: sw3pdt_pads_footprint("SW_3PDT_WirePads_Split"),
     **{fp: (lambda f=fp: harness_pads_footprint(f)) for fp in HARNESS_PAD_SOURCE},
 }
 
@@ -1423,14 +1253,12 @@ def project_json() -> str:
         "cvpcb": {"equivalence_files": []},
         "libraries": {"pinned_footprint_libs": [], "pinned_symbol_libs": []},
         "meta": {"filename": f"{PROJECT}.kicad_pro", "version": 3},
+        # No HV netclass any more: the 450 V divider left Rev0, so there is nothing on the board
+        # that needs 3 mm clearance or 4 mm creepage.  The .kicad_dru rules went with it.
         "net_settings": {"classes": [{"name": "Default", "clearance": 0.2, "track_width": 0.25, "via_diameter": 0.6, "via_drill": 0.3,
-                                      "priority": 2147483647, "bus_width": 12, "line_style": 0, "wire_width": 6},
-                                     {"name": "HV", "clearance": 3.0, "track_width": 0.5, "via_diameter": 0.8, "via_drill": 0.4,
-                                      "priority": 0, "bus_width": 12, "line_style": 0, "wire_width": 6, "pcb_color": "rgb(255, 64, 64)"}],
+                                      "priority": 2147483647, "bus_width": 12, "line_style": 0, "wire_width": 6}],
                          "meta": {"version": 4}, "net_colors": None, "netclass_assignments": None,
-                         "netclass_patterns": [{"netclass": "HV", "pattern": "Net-(J3-Pin_1)"},
-                                               {"netclass": "HV", "pattern": "Net-(J4-Pin_1)"},
-                                               {"netclass": "HV", "pattern": "Net-(SW1A-HV)"}]},
+                         "netclass_patterns": []},
         "pcbnew": {"last_paths": {"gencad": "", "idf": "", "netlist": "", "plot": "", "pos_files": "", "specctra_dsn": "", "step": "", "svg": "", "vrml": ""},
                    "page_layout_descr_file": ""},
         "schematic": {"legacy_lib_dir": "", "legacy_lib_list": []},

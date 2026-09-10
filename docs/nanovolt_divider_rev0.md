@@ -5,7 +5,7 @@
 **Date:** 2026-09-06  
 **Status:** Architecture locked; schematic and PCB layout next  
 **Primary use:** calibrated low-level DC injection and sub-LSB metrology with an external precision DMM  
-**Secondary use:** passive measurement of a ~450 V Geiger-counter power supply
+**Scope note:** a second, passive path for measuring a ~450 V Geiger-counter supply was specified for Rev0 and then removed - see §4.3.
 
 ---
 
@@ -45,12 +45,7 @@ The precision signal path should remain as passive and electrically quiet as pra
    - `ISOLATE`: high-side source is disconnected while the DMM remains connected across the same 1 Ω resistor
    - provides a physically meaningful zero without perturbing the low-voltage measurement path
 
-5. **Dedicated high-voltage input**
-   - intended for a ~450 V Geiger-counter supply
-   - fixed divider using a dedicated 10 MΩ high leg and the shared 1 Ω low leg
-   - nominal attenuation approximately `1e-7`
-   - selected by a **physical 3PDT NORMAL/HV toggle switch**
-   - the HV path does **not** rely on the small TQ relays for switching 450 V
+5. **~~Dedicated high-voltage input~~** — *removed, see §4.3*
 
 6. **Temperature monitoring**
    - one TMP275 located adjacent to the 1 Ω resistor
@@ -62,7 +57,6 @@ The precision signal path should remain as passive and electrically quiet as pra
 
 7. **Stored calibration**
    - calibrated divider multiplier for each normal range
-   - calibrated multiplier for the HV range
    - reference temperature
    - optional measured temperature coefficient for each range
    - calibration metadata stored in nonvolatile memory
@@ -73,7 +67,6 @@ The precision signal path should remain as passive and electrically quiet as pra
      - range
      - polarity
      - injection/isolation
-   - physical 3PDT NORMAL/HV selector remains independent of firmware
    - display shows active mode, range, polarity, output state, calibrated factor, temperature, and communications status
 
 9. **Remote control**
@@ -94,7 +87,6 @@ Not planned for Rev0:
 - closed-loop output regulation
 - internal DMM/ADC as the metrology reference
 - automatic PSU control inside the instrument
-- programmable switching of the 450 V input with the TQ relays
 - sub-nanovolt absolute-accuracy claims
 - complex active analog circuitry in the precision signal path
 
@@ -158,30 +150,30 @@ selected high leg -> OPEN
 
 This preserves the same 1 Ω resistor, PCB traces, solder joints, output connector, cable, and DMM terminals. Only the intentionally injected current is removed.
 
-### 4.3 High-voltage path
+### 4.3 High-voltage path — removed
 
-The HV input is a separate passive path:
+Rev0 originally carried a second passive input for a ~450 V Geiger-counter supply: a dedicated
+10 MΩ high leg into the **shared** 1 Ω low leg, selected by a physical 3PDT NORMAL/HV toggle. It
+has been removed. The reasoning is recorded here because the numbers are the useful part:
 
-```text
-HV IN + -> dedicated 10 MΩ high leg -> measurement node -> 1 Ω -> HV IN -
-                                               |             |
-                                             OUT HI        OUT LO
-```
+- Sharing the 1 Ω leg capped the ratio. At 10 MΩ the divider drew 45 µA and delivered **45 µV**
+  out; more output meant a smaller high leg, and 1 MΩ draws 450 µA where 10 MΩ draws 45 µA.
+- A Geiger supply is built to source microamps into a tube that draws almost none, so its output
+  impedance is high — often set by a deliberate series anode resistor. Against a 1 MΩ source
+  impedance a 10 MΩ divider already reads 9 % low, and a 1 MΩ divider reads 50 % low. That error
+  tracks the supply's operating point, so calibration cannot remove it.
+- The HV path had **no polarity reversal** — K4 serves the NORMAL input only — so thermal EMF and
+  DMM offset could not be nulled by ABBA the way they are on the normal ranges. More output was
+  exactly what that path needed, and the shared 1 Ω leg was the one thing that would not give it.
 
-At 450 V:
+A dedicated fixed divider is free of all three constraints, because it chooses its own low leg. The
+450 V measurement therefore moves out of this instrument, and Rev0 stays single-purpose.
 
-- divider current is approximately 45 µA,
-- output is approximately 45 µV,
-- dissipation in the 10 MΩ resistor is approximately 20 mW.
-
-The dedicated HV 10 MΩ resistor is planned to be the same Ohmite `SM102031005FE` used for the normal `1e-7` range.
-
-A physical **3PDT toggle** selects NORMAL vs HV operation:
-
-- two poles perform analog selection,
-- the third pole reports NORMAL/HV state to the ESP32.
-
-**Safety requirement:** the selected switch, banana sockets, wiring, PCB creepage, and clearances must be suitable for the intended 450 VDC service. The HV path should remain physically distinct from the low-voltage control section.
+Removed with it: `R34`, `J3`, `SW1` and the panel toggle, `R24`/`R25`/`C5`, the `J9`/P3 harness,
+the `HV` netclass and its clearance/creepage rules, and 11 mm of board height. `SW1`'s two analog
+poles were only ever selecting between the normal path and the HV path, so with the HV path gone
+both collapse to plain nets: K5's `A_NO` lands directly on `MEAS_NODE` and its `B_NO` directly on
+`ANALOG_RTN`. The ISOLATE function is untouched — K5 was always what performed it.
 
 ---
 
@@ -206,24 +198,16 @@ flowchart LR
         NIN --> POL --> RSEL --> RH --> INJ
     end
 
-    subgraph HV["HV Divider"]
-        HVIN["HV IN\nup to ~450 V"]
-        RHS["Dedicated\n10 MΩ"]
-        HVIN --> RHS
-    end
-
-    SEL["3PDT\nNORMAL / HV"]
     NODE["Measurement node"]
     RL["1 Ω precision low leg"]
     OUT["DIVIDER OUT\n+ / -"]
 
-    NORMAL --> SEL
-    HV --> SEL
-    SEL --> NODE --> RL --> OUT
+    NORMAL --> NODE --> RL --> OUT
 
     IO -. "10 relay-coil control lines" .-> NORMAL
     T -. "thermal proximity only; no analog connection" .-> RL
 ```
+
 
 ---
 
@@ -276,7 +260,6 @@ The same I²C bus is used for the TMP275 (address 0x48, `A2`/`A1`/`A0` all on `D
 4. Range changes use break-before-make.
 5. Polarity changes occur while isolated.
 6. Relay coils are pulsed only briefly; they are never continuously energized.
-7. In HV mode, normal relay-based source controls are disabled or clearly marked unavailable.
 
 ---
 
@@ -299,7 +282,6 @@ The enclosure should have two physically distinct regions.
 - 1 Ω resistor
 - TMP275
 - output connector
-- HV divider components
 
 A physical divider wall inside the enclosure is desirable for airflow isolation, thermal isolation, and wiring organization.
 
@@ -403,10 +385,7 @@ nanovolt-divider.kicad_sch        # root / system architecture
 The root sheet owns the actual metrology topology:
 
 - NORMAL input
-- HV input
-- 3PDT selector
 - 100 kΩ / 1 MΩ / 10 MΩ divider network
-- dedicated HV 10 MΩ leg
 - 1 Ω low leg
 - output terminals
 
@@ -439,7 +418,6 @@ The same sheet is instantiated five times. KiCad's multi-channel/repeat-layout w
 | 1 | Ohmite 100 kΩ metal film | `MOX70031003BZE` | Normal `1e-5` range, 0.1%, 5 ppm/°C | **Purchased** |
 | 1 | Ohmite 1 MΩ metal film | `MOX70031004BYE` | Normal `1e-6` range, 0.1%, 10 ppm/°C | **Purchased** |
 | 1 | Ohmite 10 MΩ thick film | `SM102031005FE` | Normal `1e-7` range, 1% | **Purchased** |
-| 1 | Ohmite 10 MΩ thick film | `SM102031005FE` | Dedicated HV divider leg | **To order** |
 | 5 | Panasonic latching relay | `TQ2-L2-5V-3` | K1–K5 | 1 purchased; **4 more required** |
 | 1 | TI temperature sensor, SOIC-8 | `TMP275AIDR` | Temperature of 1 Ω region, I²C 0x48 | **To order** (the purchased `TMP117MAIYBGR` is DSBGA-6 and cannot be hand-soldered) |
 
@@ -453,7 +431,6 @@ The same sheet is instantiated five times. KiCad's multi-channel/repeat-layout w
 | 10 | 10 kΩ resistor, 1206 | existing stock/library | Base pulldown | On hand / source TBD |
 | 1 | MCP23017 | TBD | I²C GPIO expander for relay controls | **To order** |
 | 1 | Integrated 2.8" ESP32 touch TFT | ELEGOO / ESP32 2.8" ILI9341-type module | UI, Wi-Fi, USB, controller | Planned / status TBD |
-| 1 | 3PDT toggle switch | TBD | Physical NORMAL/HV selection; 450 VDC suitability required | **To select/order** |
 
 ### 11.3 Decoupling / power
 
@@ -468,7 +445,6 @@ The same sheet is instantiated five times. KiCad's multi-channel/repeat-layout w
 | Qty | Item | Notes | Status |
 |---:|---|---|---|
 | 2 | Normal-input banana sockets | + / − | To select |
-| 2 | HV-input safety banana sockets | Prefer shrouded; appropriate for 450 VDC | To select |
 | 2 | Output banana sockets | + / − | To select |
 | 1 | Stock instrument enclosure | RF-transparent body preferred, machinable metal front panel | TBD |
 | 1 | Internal compartment divider | Plastic / FR4 / 3D printed | To design |
@@ -495,9 +471,7 @@ Additional Rev0 procurement is expected to include:
 
 - four more TQ2-L2-5V-3 relays,
 - one `TMP275AIDR` (SOIC-8) in place of the DSBGA-6 TMP117,
-- one additional `SM102031005FE` 10 MΩ resistor for the HV leg,
 - MCP23017,
-- HV-rated 3PDT selector,
 - banana sockets,
 - enclosure/mechanical hardware.
 
@@ -513,8 +487,10 @@ Additional Rev0 procurement is expected to include:
 6. **Separate digital/warm electronics physically from the precision divider.**
 7. **Calibrate actual ratios; do not depend on nominal resistor tolerance.**
 8. **Measure temperature before attempting temperature correction.**
-9. **Keep the 450 V path physically and electrically distinct from the small-relay network.**
-10. **Favor simple, inspectable circuitry over unnecessary analog sophistication.**
+9. **Favor simple, inspectable circuitry over unnecessary analog sophistication.**
+10. **Keep the instrument single-purpose.** A capability that has to share the 1 Ω low leg inherits
+    its constraints; if those constraints make it a poor version of the thing, it belongs in its own
+    box. This is what retired the 450 V path — see §4.3.
 
 ---
 
@@ -526,7 +502,6 @@ Additional Rev0 procurement is expected to include:
 4. Instantiate the relay channel five times.
 5. Implement and ERC-check one relay channel.
 6. Build the control sheet around the ESP32 module, MCP23017, and TMP275.
-7. Complete the precision/HV signal path on the root sheet.
-8. Select the HV-rated 3PDT switch and safety banana sockets.
+7. Complete the precision signal path on the root sheet.
 9. Assign real footprints from component datasheets.
 10. Perform a schematic architecture/safety review before starting PCB placement.

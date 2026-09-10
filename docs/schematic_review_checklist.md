@@ -211,9 +211,9 @@ instance (K1 shown; K2-K5 identical):
       (pads 1-5 / 6-10 in two rows at 2.54 mm, 7.62 mm apart, DIP order with 1 opposite 10).
 - [ ] **`J_ESP32_P1/CN1_WirePads`** pad numbering: 2 and 4 pads respectively, numbered with
       the module's pin numbers (`J7` reads 3, 4 — it has no pads 1/2). Silk carries the module
-      connector name (`P1`/`CN1`/`P3`) and the pin numbers; the refdes is on F.Fab because the row
-      sits hard against the top board edge and there is only one usable silk line below the pads.
-      Confirm that labelling reads correctly on a 1:1 plot.
+      connector name (`P1`/`CN1`) and the pin numbers; the refdes is on F.Fab because the two groups
+      are stacked with only one usable silk line each. Confirm that labelling reads correctly on a
+      1:1 plot, and that `P1` above `CN1` is the order you want the two pigtails to enter in.
 - [ ] `U2` is a **SOIC-8 at 1.27 mm pitch** (`TMP275AIDR`), chosen so the board can be
       hand-soldered; it replaced a DSBGA-6 TMP117 and the 0.1 mm intra-footprint DRC exception went
       with it. Confirm the +/-0.5 C absolute accuracy and 0.0625 C resolution are enough for the

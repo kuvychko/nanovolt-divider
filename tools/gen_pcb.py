@@ -3,7 +3,7 @@
 Bootstrap PCB generator for the nanovolt-divider Rev0 board.
 
 Produces hardware/nanovolt-divider.kicad_pcb with:
-  * board outline (60 x 72.5 mm portrait) with two slots that isolate the 1 ohm strip except for a
+  * board outline (60 x 69.1 mm portrait) with two slots that isolate the 1 ohm strip except for a
     10 mm centre bridge and 3 mm bridges at both edges
   * every schematic footprint placed with the design rules from docs/nanovolt_divider_rev0.md
     (control cluster on top, then one self-contained cell per relay - drivers, relay and its own
@@ -47,19 +47,21 @@ PROJECT = G.PROJECT
 BOARD = os.path.join(HW, f"{PROJECT}.kicad_pcb")
 
 OX, OY = 50.0, 50.0          # board origin on the KiCad sheet
-W, H = 60.0, 72.5            # board size (portrait: control on top, precision below).  21.5 mm shorter
+W, H = 60.0, 69.1            # board size (portrait: control on top, precision below).  24.9 mm shorter
                              # than it was before the HV divider came out.  Row 7 (the 3PDT wire pads
                              # and the HV island) is gone outright, and with J1/J2 moved up beside K4
                              # the lower mounting holes could follow the slots up by the same 20 mm.
-                             # The last 9 mm came from laying R31-R33 flat (see row 5): standing
+                             # 9 mm more came from laying R31-R33 flat (see row 5): standing
                              # vertically they reached y 67.7 and were what held the slots down.
-SHIFT_Y = 6.0                # uniform upward shift applied to every row below the harness pads.  A
+                             # The last 3.4 mm came from folding the harness pads into the MCP23017
+                             # row (see row 1) instead of giving them a row of their own.
+SHIFT_Y = 9.4                # uniform upward shift applied to every row below the harness pads.  A
                              # single translation keeps all the reviewed relative spacing - slot
                              # geometry, HV island separation, the 1 ohm strip - exactly as it was.
-NOTCH_Y = (57.5, 59.1)       # two slots isolating the 1 ohm strip
+NOTCH_Y = (54.1, 55.7)       # two slots isolating the 1 ohm strip
 EDGE_BRIDGE = 3.0            # material left at both board edges beside the slots
 NOTCH_BRIDGE = (25.0, 35.0)  # centre bridge left between the notches (MEAS, RTN, TMP275 lines)
-DGND_MAX_Y = 36.0            # DGND pour limit: it follows the digital circuitry (control + coil
+DGND_MAX_Y = 32.6            # DGND pour limit: it follows the digital circuitry (control + coil
                              # drivers), not an arbitrary cut across the board.  There is no blanket
                              # keepout below it any more - only the 1 ohm island is kept clear.
 
@@ -72,28 +74,38 @@ RELAY_X = {"K4": 9.6, "K1": 19.8, "K2": 30.0, "K3": 40.2, "K5": 50.4}   # relay 
 RELAY_Y = 50.0
 
 
-# Harness pad row: six live conductors in one line at the top edge, grouped P1 | CN1 with
-# ~5 mm between groups so both ribbons land side by side without their conductors crossing.
+# Harness pads: six live conductors, grouped P1 | CN1, in the left end of the control band rather
+# than in a row of their own.  They are 2.9 mm tall against U1's 11.9, so beside it they cost no
+# height at all - which is the whole 3.4 mm.  P1 and CN1 are separate 4-pin connectors on the
+# module, so these are two independent pigtails and nothing has to cross.
 # P3 went with the HV mode sense - IO35 was the only thing it carried.
 # Footprint origin is the lowest-numbered pad; pads run left to right at PAD_PITCH (2.54 mm).
-# Kept clear of the M3 holes at x = 3 and x = 57.
-HARNESS_Y = 2.5
-HARNESS_X = {"J7": 24.6, "J8": 32.6}               # 2 + 4 pads -> the row spans x 24.60..40.24
+# Kept clear of the M2 hole at x = 3.
+# P1 stacked above CN1 rather than beside it.  Side by side the two groups are 17.2 mm wide, and
+# once every column's designator is counted the band needs 48.2 mm of the 49.1 mm between the top
+# mounting holes - it does not fit.  Stacked the block is 11.1 mm wide and 7.7 mm tall, which still
+# clears U1's 11.9 mm band, so the width comes free.  They are separate 4-pin connectors on the
+# module and therefore separate pigtails, so one landing above the other crosses nothing.
+HARNESS_POS = {"J7": (7.9, 2.2),                   # P1  pads 3,4   - upper, x 6.45..12.49
+               "J8": (7.9, 7.0)}                   # CN1 pads 1-4   - lower, x 6.45..17.57
 
 
 def placement() -> dict:
     P = {}
     # ---- row 1: display-module harness pigtail pads (flat, no body, no mating envelope) -----------
-    P["J7"] = (HARNESS_X["J7"], HARNESS_Y, 0)   # P1  pads 3,4   (5 V / GND)
-    P["J8"] = (HARNESS_X["J8"], HARNESS_Y, 0)   # CN1 pads 1-4   (GND / SCL / SDA / 3V3)
-    # ---- row 2: MCP23017 horizontal, flanked by caps and pull-ups ------------------------------------
-    P["U1"] = (30.0, 16.5, 90)
-    P["C1"] = (17.5, 13.5, 90)                  # 100n at VDD
-    P["C3"] = (17.5, 19.0, 90)                  # 22u 5 V bulk
-    P["C4"] = (42.5, 13.5, 90)                  # 22u 3V3 bulk
-    P["R21"] = (42.5, 19.0, 90)                 # SDA pull-up
-    P["R22"] = (46.5, 13.5, 90)                 # SCL pull-up
-    P["R23"] = (46.5, 19.0, 90)                 # ~RESET pull-up
+    for _ref, (_hx, _hy) in HARNESS_POS.items():
+        P[_ref] = (_hx, _hy, 0)
+    # ---- row 1 continued: MCP23017 horizontal, flanked by caps and pull-ups, right of the harness ----
+    # The whole control band is now one row: [H1] J7 J8 | C1/C3 | U1 | C4/R21 | R22/R23 [H2], which
+    # fits x 6.45..53.73 of the 49.1 mm between the two top mounting holes.  The gaps are set
+    # by each column's *designator*, which sits 1.85 mm to its left, not by the parts.
+    P["U1"] = (34.4, 16.5, 90)
+    P["C1"] = (21.2, 13.5, 90)                  # 100n at VDD
+    P["C3"] = (21.2, 19.0, 90)                  # 22u 5 V bulk
+    P["C4"] = (47.6, 13.5, 90)                  # 22u 3V3 bulk
+    P["R21"] = (47.6, 19.0, 90)                 # SDA pull-up
+    P["R22"] = (52.6, 13.5, 90)                 # SCL pull-up
+    P["R23"] = (52.6, 19.0, 90)                 # ~RESET pull-up
     # ---- row 3: coil drivers, one SET and one RESET column above each relay ---------------------------
     for n, kref in enumerate(("K1", "K2", "K3", "K4", "K5"), 1):
         kx = RELAY_X[kref]
@@ -148,7 +160,7 @@ def placement() -> dict:
     # rather than editing every literal above, keeps this table readable against the Rev0 review
     # notes and guarantees no row drifts relative to another.
     for ref, (x, y, rot) in P.items():
-        if ref not in HARNESS_X:
+        if ref not in HARNESS_POS:
             P[ref] = (x, y - SHIFT_Y, rot)
     return P
 
@@ -178,7 +190,7 @@ REF_OVERRIDE = {
 # The two lower holes sit ABOVE the slots: a screw on the 1 ohm island would add a thermal and
 # mechanical-stress path straight to the precision resistor.  The island hangs on the two 3 mm
 # edge bridges plus the 10 mm centre bridge, which is ample for a 15 mm strip.
-MOUNTING_HOLES = [(3.0, 3.0), (57.0, 3.0), (3.0, 54.0), (57.0, 54.0)]
+MOUNTING_HOLES = [(3.0, 3.0), (57.0, 3.0), (3.0, 50.6), (57.0, 50.6)]
 
 
 # --------------------------------------------------------------------------------------
@@ -487,7 +499,7 @@ def build():
     g.append(gr_rect(EDGE_BRIDGE, ny0, bx0, ny1, "Edge.Cuts", "slot_1ohm_left"))
     g.append(gr_rect(bx1, ny0, W - EDGE_BRIDGE, ny1, "Edge.Cuts", "slot_1ohm_right"))
     # ---- silkscreen ----------------------------------------------------------------------------
-    g.append(gr_text("NANOVOLT DIVIDER Rev0", 58.6, 37.0, "t_title", 0.9, rot=90))
+    g.append(gr_text("NANOVOLT DIVIDER Rev0", 58.6, 33.6, "t_title", 0.9, rot=90))
     # No harness group labels here: the P1 / CN1 / P3 name and the module pin numbers are silk on
     # the harness footprints themselves, which keeps them attached to the pads if the row moves.
     for txt, x, y, key, size, rot in (

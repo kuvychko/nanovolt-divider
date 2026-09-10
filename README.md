@@ -43,7 +43,7 @@ hardware/                  KiCad 10 project
   nanovolt-divider.kicad_sch   root sheet: metrology topology (inputs, relays, high legs, 1 ohm, outputs)
   control.kicad_sch            ESP32 display-module harness, MCP23017, TMP275, power
   relay_channel.kicad_sch      generic latching-relay channel, instantiated 5x (K1..K5)
-  nanovolt-divider.kicad_pcb   board: 60 x 72.5 mm, 2 layers, placed, not yet routed
+  nanovolt-divider.kicad_pcb   board: 60 x 69.1 mm, 2 layers, placed, not yet routed
   nanovolt-divider.kicad_dru   custom DRC rules (1 ohm bridge track width)
   lib/                         project-local symbol and footprint libraries
 tools/gen_schematics.py    bootstrap script that produced the first version of the schematics
@@ -171,9 +171,15 @@ UUIDs and never round-trips through `kicad-cli`, so re-running it leaves the wor
 
 `hardware/nanovolt-divider.kicad_pcb` is placed but unrouted:
 
-* 60 x 72.5 mm portrait, two layers, laid out top-down: display-module harness pads, the
-  MCP23017 (horizontal, caps and pull-ups in columns on both sides), ten coil-driver columns, the
-  five relays, then the three high legs flat in one row.
+* 60 x 69.1 mm portrait, two layers, laid out top-down: one control band, ten coil-driver columns,
+  the five relays, then the three high legs flat in one row.
+* **The control band is a single row**, not a harness row above an MCP23017 row:
+  `[H1] P1/CN1 | C1,C3 | U1 | C4,R21 | R22,R23 [H2]`. The harness pads are 2.9 mm tall against
+  `U1`'s 11.9, so putting them beside it rather than above it costs no height at all - 3.4 mm off
+  the board. `P1` is stacked above `CN1`: side by side the two groups are 17.2 mm wide and the band
+  needs 48.2 mm of the 49.1 mm available, which does not fit. They are separate 4-pin connectors on
+  the module and therefore separate pigtails, so one landing above the other crosses nothing. What
+  sets the column gaps is each column's *designator*, which sits 1.85 mm to its left, not the parts.
 * **Driver cells.** Each relay carries its SET/RESET driver pair directly above it, so
   `RANGE_BUS` runs as one short chain across the three cells instead of a long row-to-row bus.
 * **The three high legs lie flat in one row** under the relays, rather than standing vertically
@@ -187,7 +193,7 @@ UUIDs and never round-trips through `kicad-cli`, so re-running it leaves the wor
 * **M2 mounting holes, not M3.** The hole is 1 mm smaller but the courtyard radius drops
   3.45 -> 2.45, and both ends of that count: the top sets how close the hole sits under `K4`/`K5`,
   the bottom sets how close the slots sit under the hole. Worth 1.5 mm of board height for screws
-  that only hold a 60 x 72.5 mm board in an enclosure. The lower pair now sits in the same band as
+  that only hold a 60 x 69.1 mm board in an enclosure. The lower pair now sits in the same band as
   the high-leg row, flanking it at the board edges.
 * There is no strict warm/quiet partition any more. The relay coils are pulsed for 10-20 ms and
   never held, so their average dissipation is ~0 and co-locating them with the range resistors

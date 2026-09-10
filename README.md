@@ -174,12 +174,19 @@ UUIDs and never round-trips through `kicad-cli`, so re-running it leaves the wor
 * 60 x 69.1 mm portrait, two layers, laid out top-down: one control band, ten coil-driver columns,
   the five relays, then the three high legs flat in one row.
 * **The control band is a single row**, not a harness row above an MCP23017 row:
-  `[H1] P1/CN1 | C1,C3 | U1 | C4,R21 | R22,R23 [H2]`. The harness pads are 2.9 mm tall against
+  `[H1] P1/CN1 | C3,C4 | R21,R22 | U1 | R23,C1 [H2]`. The harness pads are 2.9 mm tall against
   `U1`'s 11.9, so putting them beside it rather than above it costs no height at all - 3.4 mm off
   the board. `P1` is stacked above `CN1`: side by side the two groups are 17.2 mm wide and the band
   needs 48.2 mm of the 49.1 mm available, which does not fit. They are separate 4-pin connectors on
   the module and therefore separate pigtails, so one landing above the other crosses nothing. What
   sets the column gaps is each column's *designator*, which sits 1.85 mm to its left, not the parts.
+* **The passive columns follow the nets.** `U1`'s `VDD`/`VSS`/`SCL`/`SDA` are all on its lower pad
+  row at x 36-41 and `~RESET` on the upper row; power and I2C both arrive at the harness on the far
+  left. So the bulk caps sit at the power entry, the I2C pull-ups sit between `CN1` and `U1` - so
+  the bus runs left to right instead of doubling back past the chip, which is what it did when they
+  were on the far side - and `C1` sits right of `U1`, the closest slot to its mid-row power pins.
+  Measured against the previous arrangement: SCL bus 56.1 -> 35.3 mm, SDA 41.1 -> 34.5 mm,
+  `C4` to the 3V3 entry 32.1 -> 7.2 mm, `C1` to `VDD` 16.3 -> 11.2 mm.
 * **Driver cells.** Each relay carries its SET/RESET driver pair directly above it, so
   `RANGE_BUS` runs as one short chain across the three cells instead of a long row-to-row bus.
 * **The three high legs lie flat in one row** under the relays, rather than standing vertically

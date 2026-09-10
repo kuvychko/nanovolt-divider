@@ -96,16 +96,31 @@ def placement() -> dict:
     for _ref, (_hx, _hy) in HARNESS_POS.items():
         P[_ref] = (_hx, _hy, 0)
     # ---- row 1 continued: MCP23017 horizontal, flanked by caps and pull-ups, right of the harness ----
-    # The whole control band is now one row: [H1] J7 J8 | C1/C3 | U1 | C4/R21 | R22/R23 [H2], which
-    # fits x 6.45..53.73 of the 49.1 mm between the two top mounting holes.  The gaps are set
-    # by each column's *designator*, which sits 1.85 mm to its left, not by the parts.
-    P["U1"] = (34.4, 16.5, 90)
-    P["C1"] = (21.2, 13.5, 90)                  # 100n at VDD
-    P["C3"] = (21.2, 19.0, 90)                  # 22u 5 V bulk
-    P["C4"] = (47.6, 13.5, 90)                  # 22u 3V3 bulk
-    P["R21"] = (47.6, 19.0, 90)                 # SDA pull-up
-    P["R22"] = (52.6, 13.5, 90)                 # SCL pull-up
-    P["R23"] = (52.6, 19.0, 90)                 # ~RESET pull-up
+    # The whole control band is one row - [H1] P1/CN1 | L1 | L2 | U1 | R1 [H2] - filling x 6.45..53.75
+    # of the 49.1 mm between the two top mounting holes.  The gaps are set by each column's
+    # *designator*, which sits 1.85 mm to its left, not by the parts.
+    #
+    # Two columns left of U1 and one right, because that is where the nets are.  U1's VDD(9),
+    # VSS(10), SCL(12) and SDA(13) are all on its lower pad row at x 36.3..41.4, and ~RESET(18) on
+    # the upper row at x 38.9; power and I2C both enter at the harness on the far left.  So:
+    #   L1, at the power entry : C3 22u 5 V bulk and C4 22u 3V3 bulk, closest to J7's VIN pad and
+    #                            J8's 3V3 pad.  C3 is the reservoir for the 40 mA coil pulses.
+    #   L2, adjacent to U1     : R21 SDA and R22 SCL pull-ups.  Both now sit on the CN1 -> U1 path,
+    #                            so the bus runs left to right instead of doubling back past the
+    #                            chip - they used to be right of U1, a stub 5-11 mm beyond pin 13.
+    #   R1, right of U1        : C1 100n across VDD/VSS in the lower slot, level with pins 9/10, and
+    #                            R23 the 10k ~RESET pull-up in the upper, level with pin 18.
+    # C1 sits right of U1, not left, because U1's power pins are mid-row at x 41.4: 10.0 mm from R1
+    # against 13.8 mm from L2.  It is not as close as a decoupler should be, but U1 is 18.4 mm wide
+    # with its power pins in the middle and the band has no room below it - 10 mm is the best on
+    # offer, on a static 3.3 V rail drawing ~1 mA.
+    P["U1"] = (39.5, 16.5, 90)
+    P["C3"] = (21.4, 13.5, 90)                  # L1 upper: 22u 5 V bulk
+    P["C4"] = (21.4, 19.0, 90)                  # L1 lower: 22u 3V3 bulk
+    P["R21"] = (26.5, 13.5, 90)                 # L2 upper: SDA pull-up
+    P["R22"] = (26.5, 19.0, 90)                 # L2 lower: SCL pull-up
+    P["R23"] = (52.6, 13.5, 90)                 # R1 upper: ~RESET pull-up, level with pin 18
+    P["C1"] = (52.6, 19.0, 90)                  # R1 lower: 100n at VDD/VSS, level with pins 9/10
     # ---- row 3: coil drivers, one SET and one RESET column above each relay ---------------------------
     for n, kref in enumerate(("K1", "K2", "K3", "K4", "K5"), 1):
         kx = RELAY_X[kref]

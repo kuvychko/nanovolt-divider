@@ -43,7 +43,7 @@ hardware/                  KiCad 10 project
   nanovolt-divider.kicad_sch   root sheet: metrology topology (inputs, relays, high legs, 1 ohm, outputs)
   control.kicad_sch            ESP32 display-module harness, MCP23017, TMP275, power
   relay_channel.kicad_sch      generic latching-relay channel, instantiated 5x (K1..K5)
-  nanovolt-divider.kicad_pcb   board: 60 x 83 mm, 2 layers, placed, not yet routed
+  nanovolt-divider.kicad_pcb   board: 60 x 72.5 mm, 2 layers, placed, not yet routed
   nanovolt-divider.kicad_dru   custom DRC rules (1 ohm bridge track width)
   lib/                         project-local symbol and footprint libraries
 tools/gen_schematics.py    bootstrap script that produced the first version of the schematics
@@ -171,13 +171,24 @@ UUIDs and never round-trips through `kicad-cli`, so re-running it leaves the wor
 
 `hardware/nanovolt-divider.kicad_pcb` is placed but unrouted:
 
-* 60 x 83 mm portrait, two layers, laid out top-down: display-module harness pads, the
-  MCP23017 (horizontal, caps and pull-ups in columns on both sides), ten coil-driver columns, then
-  one self-contained cell per relay.
-* **Range cells.** Each relay carries its SET/RESET driver pair directly above it and its own
-  high-leg resistor directly below it, standing vertically across the relay's pole A and pole B
-  contacts. `RANGE_BUS` then runs as one short chain across the three cells instead of a long
-  row-to-row bus.
+* 60 x 72.5 mm portrait, two layers, laid out top-down: display-module harness pads, the
+  MCP23017 (horizontal, caps and pull-ups in columns on both sides), ten coil-driver columns, the
+  five relays, then the three high legs flat in one row.
+* **Driver cells.** Each relay carries its SET/RESET driver pair directly above it, so
+  `RANGE_BUS` runs as one short chain across the three cells instead of a long row-to-row bus.
+* **The three high legs lie flat in one row** under the relays, rather than standing vertically
+  one per cell. Standing, each was 16 mm tall and `R33` reached y 67.7 - that, not the mounting
+  holes, was what held the slots and the whole 1 ohm island down the board. Flat they are 3.2 mm
+  tall and the row clears the relays by 0.55 mm. They no longer align one-per-relay, because they
+  cannot: three 12 mm-plus resistors do not fit in three 10.2 mm relay cells. Nothing is lost by
+  that - `A_NO` and `B_NO` are both on the relay's *upper* contact row, so a resistor hanging below
+  the relay never landed across them either; it ran 14 mm to one and 24 mm to the other. Flat and
+  offset, both runs are 2-5 mm.
+* **M2 mounting holes, not M3.** The hole is 1 mm smaller but the courtyard radius drops
+  3.45 -> 2.45, and both ends of that count: the top sets how close the hole sits under `K4`/`K5`,
+  the bottom sets how close the slots sit under the hole. Worth 1.5 mm of board height for screws
+  that only hold a 60 x 72.5 mm board in an enclosure. The lower pair now sits in the same band as
+  the high-leg row, flanking it at the board edges.
 * There is no strict warm/quiet partition any more. The relay coils are pulsed for 10-20 ms and
   never held, so their average dissipation is ~0 and co-locating them with the range resistors
   costs nothing while making the routing far shorter. What is preserved is the part that actually

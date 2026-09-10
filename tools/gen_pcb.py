@@ -3,7 +3,7 @@
 Bootstrap PCB generator for the nanovolt-divider Rev0 board.
 
 Produces hardware/nanovolt-divider.kicad_pcb with:
-  * board outline (60 x 83 mm portrait) with two slots that isolate the 1 ohm strip except for a
+  * board outline (60 x 72.5 mm portrait) with two slots that isolate the 1 ohm strip except for a
     10 mm centre bridge and 3 mm bridges at both edges
   * every schematic footprint placed with the design rules from docs/nanovolt_divider_rev0.md
     (control cluster on top, then one self-contained cell per relay - drivers, relay and its own
@@ -47,16 +47,16 @@ PROJECT = G.PROJECT
 BOARD = os.path.join(HW, f"{PROJECT}.kicad_pcb")
 
 OX, OY = 50.0, 50.0          # board origin on the KiCad sheet
-W, H = 60.0, 83.0            # board size (portrait: control on top, precision below).  11 mm shorter
+W, H = 60.0, 72.5            # board size (portrait: control on top, precision below).  21.5 mm shorter
                              # than it was before the HV divider came out.  Row 7 (the 3PDT wire pads
                              # and the HV island) is gone outright, and with J1/J2 moved up beside K4
-                             # the lower mounting holes could follow the slots up by the same 11 mm.
-                             # What stops it going further is R31-R33: the high legs hang 12.7 mm
-                             # below their relays and their courtyards reach y 67.7.
+                             # the lower mounting holes could follow the slots up by the same 20 mm.
+                             # The last 9 mm came from laying R31-R33 flat (see row 5): standing
+                             # vertically they reached y 67.7 and were what held the slots down.
 SHIFT_Y = 6.0                # uniform upward shift applied to every row below the harness pads.  A
                              # single translation keeps all the reviewed relative spacing - slot
                              # geometry, HV island separation, the 1 ohm strip - exactly as it was.
-NOTCH_Y = (68.0, 69.6)       # two slots isolating the 1 ohm strip
+NOTCH_Y = (57.5, 59.1)       # two slots isolating the 1 ohm strip
 EDGE_BRIDGE = 3.0            # material left at both board edges beside the slots
 NOTCH_BRIDGE = (25.0, 35.0)  # centre bridge left between the notches (MEAS, RTN, TMP275 lines)
 DGND_MAX_Y = 36.0            # DGND pour limit: it follows the digital circuitry (control + coil
@@ -107,14 +107,20 @@ def placement() -> dict:
     # ---- row 4: relays (rotation 90: coil pins 5/6 face down, contact pins face the resistors) -------
     for ref, x in RELAY_X.items():
         P[ref] = (x, RELAY_Y, 90)
-    # ---- row 5: each high leg directly under its own relay -------------------------------------------
-    # Both poles switch the resistor now (pole A the top, pole B the bottom), so the resistor belongs
-    # inside its relay's cell rather than on a shared row: A_NO and B_NO are 7.62 mm apart on the
-    # relay, and a vertical resistor lands straight across them.
-    # rotation 270, not 90: pad 2 must hang BELOW pad 1, away from the relay body.
-    P["R31"] = (RELAY_X["K1"], 61.0, 270)       # 100k (MOX-700)  under K1
-    P["R32"] = (RELAY_X["K2"], 61.0, 270)       # 1M   (MOX-700)  under K2
-    P["R33"] = (RELAY_X["K3"], 61.0, 270)       # 10M  (Slim-Mox) under K3
+    # ---- row 5: the three high legs, flat in one row under the relays --------------------------------
+    # Standing them vertically under their own relays cost 16 mm of height each and put the bottom of
+    # R33 at y 67.7, which is what held the slots - and the whole 1 ohm island - down the board.  Flat
+    # they are 3.2 mm tall, and the row clears the relays by 0.55 mm.
+    #
+    # They no longer sit one-per-cell, because they cannot: three 12+ mm resistors do not fit in three
+    # 10.2 mm relay cells.  Nothing is lost by that - A_NO and B_NO are both on the relay's *upper*
+    # contact row (y 41.46), so a vertical resistor hanging below the relay never landed across them
+    # either; it ran 14 mm to one and 24 mm to the other.  Flat and offset, both runs are ~2-5 mm.
+    #
+    # rotation 180 so pad 1 (R*_IN, from A_NO) is on the right, matching A_NO's side of the relay.
+    P["R31"] = (21.0, 59.4, 180)                # 100k (MOX-700),  pads at x 21.0 / 10.84
+    P["R32"] = (34.0, 59.4, 180)                # 1M   (MOX-700),  pads at x 34.0 / 23.84
+    P["R33"] = (48.5, 59.4, 180)                # 10M  (Slim-Mox), pads at x 48.5 / 38.34
     # ---- row 6: NORMAL IN pads, genuinely beside K4 now rather than below it -------------------------
     # They used to sit under the relay row, which put them directly above the left mounting hole and
     # pinned it - and through it the slots and the whole 1 ohm island - 10 mm lower than it needed to
@@ -128,16 +134,16 @@ def placement() -> dict:
     # taking it from the bottom margin keeps the slots, the mounting holes and everything above
     # them exactly where the Rev0 review left them.  R35's silk still clears the board edge by
     # 0.6 mm and its pads by 2.5 mm.
-    P["R35"] = (19.84, 85.5, 0)                 # 1 ohm (RS-2C), pads at x = 19.84 / 40.16
-    P["J6"] = (14.5, 85.5, 0)                   # DIVIDER OUT LO at the pad-1 end
-    P["J5"] = (45.5, 85.5, 0)                   # DIVIDER OUT HI at the pad-2 end
+    P["R35"] = (19.84, 75.0, 0)                 # 1 ohm (RS-2C), pads at x = 19.84 / 40.16
+    P["J6"] = (14.5, 75.0, 0)                   # DIVIDER OUT LO at the pad-1 end
+    P["J5"] = (45.5, 75.0, 0)                   # DIVIDER OUT HI at the pad-2 end
     # TMP275 in SOIC-8 is 7.4 x 5.4 mm over the courtyard, far larger than the TMP117 DSBGA it
     # replaced, so it no longer fits in the gap over the resistor body.  It sits on the same
     # thermally isolated island, centred on the resistor's midpoint, 0.7 mm below the slots and
     # 0.8 mm above R35's courtyard - the island is what couples it to R35, not the millimetre of
     # air over the body.
-    P["U2"] = (30.0, 79.0, 0)                   # TMP275 (SOIC-8) on the 1 ohm island, above R35
-    P["C2"] = (37.5, 79.0, 0)
+    P["U2"] = (30.0, 68.5, 0)                   # TMP275 (SOIC-8) on the 1 ohm island, above R35
+    P["C2"] = (37.5, 68.5, 0)
     # Everything except the harness pads moves up by SHIFT_Y.  Doing it as one translation here,
     # rather than editing every literal above, keeps this table readable against the Rev0 review
     # notes and guarantees no row drifts relative to another.
@@ -154,16 +160,25 @@ def placement() -> dict:
 #         0.8 mm below to R35's courtyard.  The island is already labelled "1R + TMP275" in silk.
 #         Same reasoning as the harness pads at the top edge.
 #   R35 - moves from the body centre (where U2 now sits) to the pad-1 end, still on silk.
+#   H1-H4 - to F.Fab.  The stock footprint puts the refdes 3.15 mm above the hole, which for the
+#           top pair lands across the board edge; and a silk designator on a board_only part that
+#           is excluded from the BOM and the pick-and-place is noise anyway.
 REF_OVERRIDE = {
     "U2": (0.0, 0.0, "F.Fab"),
     "R35": (0.0, -3.92, "F.SilkS"),
+    **{f"H{i}": (0.0, 0.0, "F.Fab") for i in (1, 2, 3, 4)},
 }
 
 
+# M2, not M3: the hole itself is only 1 mm smaller but the courtyard radius drops 3.45 -> 2.45, and
+# both ends of that count here - the top sets how close the hole can sit under K4/K5, the bottom sets
+# how close the slots can sit under the hole.  1.5 mm of board height, for screws that only hold a
+# 60 x 72 mm board in an enclosure.
+#
 # The two lower holes sit ABOVE the slots: a screw on the 1 ohm island would add a thermal and
 # mechanical-stress path straight to the precision resistor.  The island hangs on the two 3 mm
 # edge bridges plus the 10 mm centre bridge, which is ample for a 15 mm strip.
-MOUNTING_HOLES = [(3.0, 3.0), (57.0, 3.0), (3.0, 63.0), (57.0, 63.0)]
+MOUNTING_HOLES = [(3.0, 3.0), (57.0, 3.0), (3.0, 54.0), (57.0, 54.0)]
 
 
 # --------------------------------------------------------------------------------------
@@ -460,7 +475,7 @@ def build():
         x, y, rot = P[ref]
         items.append(dump(footprint_instance(ref, comps[ref], x, y, rot, nets_by_name, pin_net), 1))
     for i, (hx, hy) in enumerate(MOUNTING_HOLES, 1):
-        comp = dict(footprint="MountingHole:MountingHole_3.2mm_M3", value="M3", datasheet="", description="Mounting hole", board_only=True)
+        comp = dict(footprint="MountingHole:MountingHole_2.2mm_M2", value="M2", datasheet="", description="Mounting hole", board_only=True)
         items.append(dump(footprint_instance(f"H{i}", comp, hx, hy, 0, nets_by_name, pin_net,
                                              extra_attr=("board_only", "exclude_from_pos_files", "exclude_from_bom")), 1))
 
@@ -484,9 +499,9 @@ def build():
             ("NORM IN", 1.2, 51.5, "t_nin", 0.8, 90),
             # The island labels moved above the resistor when the 1 ohm row dropped 1.5 mm: R35's
             # own silk outline now reaches y 93.4 and there is no legible line left below it.
-            ("1R + TMP275", 16.0, 79.0, "t_1r", 0.8, 0),
-            ("OUT LO", 9.5, 82.0, "t_outlo", 0.8, 0),
-            ("OUT HI", 42.5, 82.0, "t_outhi", 0.8, 0)):
+            ("1R + TMP275", 16.0, 68.5, "t_1r", 0.8, 0),
+            ("OUT LO", 9.5, 71.5, "t_outlo", 0.8, 0),
+            ("OUT HI", 42.5, 71.5, "t_outhi", 0.8, 0)):
         g.append(gr_text(txt, x, y - SHIFT_Y, key, size, rot=rot))
     # ---- zones ---------------------------------------------------------------------------------
     gnd = nets_by_name["DGND"]

@@ -642,7 +642,7 @@
 					)
 				)
 			)
-			(property "Description" "Control-section digital ground (MCP23017, TMP117, relay coil drivers, ESP32 harness). Never tied to the floating analog return."
+			(property "Description" "Control-section digital ground (MCP23017, TMP275, relay coil drivers, ESP32 harness). Never tied to the floating analog return."
 				(at 0 0 0)
 				(hide yes)
 				(show_name no)
@@ -1345,7 +1345,7 @@
 	  (property "Value" "DGND" (at 48.26 81.28 0) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27)) (justify left)))
 	  (property "Footprint" "" (at 48.26 77.47 0) (hide yes) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27)) (justify left)))
 	  (property "Datasheet" "" (at 48.26 77.47 0) (hide yes) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27)) (justify left)))
-	  (property "Description" "Control-section digital ground (MCP23017, TMP117, relay coil drivers, ESP32 harness). Never tied to the floating analog return." (at 48.26 77.47 0) (hide yes) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27)) (justify left)))
+	  (property "Description" "Control-section digital ground (MCP23017, TMP275, relay coil drivers, ESP32 harness). Never tied to the floating analog return." (at 48.26 77.47 0) (hide yes) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27)) (justify left)))
 	  (pin "1" (uuid "d11ff35c-a631-55bd-bb42-6b1d5833076d"))
 	  (instances (project "nanovolt-divider"
 	    (path "/6b173215-4dcb-58a2-8716-bf25a1870e1e/8b2f703b-bc2a-57a7-a0af-1777c2dccd85" (reference "#PWR101") (unit 1))
@@ -1474,7 +1474,7 @@
 	  (property "Value" "DGND" (at 48.26 144.78 0) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27)) (justify left)))
 	  (property "Footprint" "" (at 48.26 140.97 0) (hide yes) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27)) (justify left)))
 	  (property "Datasheet" "" (at 48.26 140.97 0) (hide yes) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27)) (justify left)))
-	  (property "Description" "Control-section digital ground (MCP23017, TMP117, relay coil drivers, ESP32 harness). Never tied to the floating analog return." (at 48.26 140.97 0) (hide yes) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27)) (justify left)))
+	  (property "Description" "Control-section digital ground (MCP23017, TMP275, relay coil drivers, ESP32 harness). Never tied to the floating analog return." (at 48.26 140.97 0) (hide yes) (show_name no) (do_not_autoplace no) (effects (font (size 1.27 1.27)) (justify left)))
 	  (pin "1" (uuid "f36aedbd-c1f4-531d-a8b1-b783f6e85de3"))
 	  (instances (project "nanovolt-divider"
 	    (path "/6b173215-4dcb-58a2-8716-bf25a1870e1e/8b2f703b-bc2a-57a7-a0af-1777c2dccd85" (reference "#PWR103") (unit 1))

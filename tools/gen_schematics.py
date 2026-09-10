@@ -5,10 +5,10 @@ Bootstrap generator for the nanovolt-divider KiCad project (Rev0).
 Writes into hardware/:
   nanovolt-divider.kicad_pro          project file
   nanovolt-divider.kicad_sch          root sheet (metrology topology)
-  control.kicad_sch                   ESP32 display module, MCP23017, TMP117, power
+  control.kicad_sch                   ESP32 display module, MCP23017, TMP275, power
   relay_channel.kicad_sch             generic latching-relay channel (instantiated 5x)
   sym-lib-table / fp-lib-table        project-local library tables
-  lib/nanovolt-divider.kicad_sym      project symbols (TQ2-L2-5V relay, 3PDT switch)
+  lib/nanovolt-divider.kicad_sym      project symbols (TQ2-L2-5V relay, 3PDT switch, TMP275)
   lib/nanovolt-divider.pretty/        project footprints (TQ2 THT relay)
 
 Stock symbols are copied from the KiCad installation so the schematics are
@@ -349,6 +349,51 @@ def sw3pdt_symbol_text() -> str:
   )'''
 
 
+def tmp275_symbol_text() -> str:
+    """TI TMP275, I2C temperature sensor in SOIC-8 (D package).
+
+    Not in stock KiCad 10 - Sensor_Temperature has the TMP1xx/TMP2x parts but no TMP275.  The pinout
+    is the LM75/TMP75 industry-standard one, so Sensor_Temperature:LM75B would have wired up
+    correctly, but it would put "LM75B" in the lib_id and call pin 3 "O.S." instead of ALERT.
+
+    SOIC-8 (D), datasheet SBOS363:
+      1 SDA   2 SCL   3 ALERT   4 GND   5 A2   6 A1   7 A0   8 V+
+    A2/A1/A0 select one of eight addresses 0x48..0x4F; all three low gives 0x48.
+
+    The body is 17.78 mm wide rather than the 12.7 mm an 8-pin part would normally get: V+ and GND
+    are the only vertical pins, and their names are drawn rotated through the middle of the body,
+    where a 12.7 mm body puts them straight through "ALERT".
+    """
+    return f'''
+  (symbol "TMP275"
+    (pin_names (offset 1.016))
+    (exclude_from_sim no) (in_bom yes) (on_board yes) (in_pos_files yes) (duplicate_pin_numbers_are_jumpers no)
+    {_prop("Reference", "U", 0, 11.43)}
+    {_prop("Value", "TMP275", 0, -11.43)}
+    {_prop("Footprint", "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm", 0, 0, hide=True)}
+    {_prop("Datasheet", "https://www.ti.com/lit/ds/symlink/tmp275.pdf", 0, 0, hide=True)}
+    {_prop("Description", "Digital temperature sensor, +/-0.5 C, 12-bit (0.0625 C), I2C, 8 selectable addresses (0x48-0x4F), 2.7-5.5 V, SOIC-8", 0, 0, hide=True)}
+    {_prop("MPN", "TMP275AIDR", 0, 0, hide=True)}
+    {_prop("Manufacturer", "Texas Instruments", 0, 0, hide=True)}
+    {_prop("ki_keywords", "temperature sensor i2c thermometer TMP275 TMP75 LM75", 0, 0, hide=True)}
+    {_prop("ki_fp_filters", "SOIC*3.9x4.9mm*P1.27mm*", 0, 0, hide=True)}
+    (symbol "TMP275_0_1"
+      (rectangle (start -8.89 6.35) (end 8.89 -6.35) {STROKE} (fill (type background)))
+    )
+    (symbol "TMP275_1_1"
+      {_pin("bidirectional", -11.43, 3.81, 0, "SDA", "1")}
+      {_pin("input", -11.43, 1.27, 0, "SCL", "2")}
+      {_pin("open_collector", -11.43, -3.81, 0, "ALERT", "3")}
+      {_pin("power_in", 0, -8.89, 90, "GND", "4")}
+      {_pin("input", 11.43, -1.27, 180, "A2", "5")}
+      {_pin("input", 11.43, 1.27, 180, "A1", "6")}
+      {_pin("input", 11.43, 3.81, 180, "A0", "7")}
+      {_pin("power_in", 0, 8.89, 270, "V+", "8")}
+    )
+    (embedded_fonts no)
+  )'''
+
+
 def dgnd_symbol_text() -> str:
     """Control-domain ground.  Deliberately NOT power:GND: the analog return (SRC_RTN / ANALOG_RTN)
     floats, and a distinct global name makes it impossible to merge the two by accident later."""
@@ -361,7 +406,7 @@ def dgnd_symbol_text() -> str:
     {_prop("Value", "DGND", 0, 3.556)}
     {_prop("Footprint", "", 0, 0, hide=True)}
     {_prop("Datasheet", "", 0, 0, hide=True)}
-    {_prop("Description", "Control-section digital ground (MCP23017, TMP117, relay coil drivers, ESP32 harness). Never tied to the floating analog return.", 0, 0, hide=True)}
+    {_prop("Description", "Control-section digital ground (MCP23017, TMP275, relay coil drivers, ESP32 harness). Never tied to the floating analog return.", 0, 0, hide=True)}
     {_prop("ki_keywords", "power-flag global ground digital", 0, 0, hide=True)}
     (symbol "DGND_0_1"
       (polyline (pts (xy 0 0) (xy 0 -1.27) (xy 1.27 -1.27) (xy 0 -2.54) (xy -1.27 -1.27) (xy 0 -1.27)) {STROKE} (fill (type none)))
@@ -429,7 +474,7 @@ def esp32_connector_symbol_text(name) -> str:
 
 def project_symbol_lib_text() -> str:
     return (f'(kicad_symbol_lib (version {SYM_VERSION}) (generator "nanovolt-divider-gen") (generator_version "{GEN_VERSION}")'
-            f'{tq2_symbol_text()}{sw3pdt_symbol_text()}{dgnd_symbol_text()}'
+            f'{tq2_symbol_text()}{sw3pdt_symbol_text()}{tmp275_symbol_text()}{dgnd_symbol_text()}'
             + "".join(esp32_connector_symbol_text(n) for n in ESP32_CONNECTORS)
             + "\n)\n")
 
@@ -749,7 +794,7 @@ def build_relay_channel(lib: SymbolLib) -> Sheet:
 
 def build_control(lib: SymbolLib) -> Sheet:
     sh = Sheet("control", "control.kicad_sch", U("file:control"), "A4", lib, [f"/{ROOT_UUID}/{CONTROL_UUID}"],
-               title="Control: ESP32 display module interface, MCP23017 relay drivers, TMP117")
+               title="Control: ESP32 display module interface, MCP23017 relay drivers, TMP275")
     JP1 = f"{PROJECT}:J_ESP32_P1"     # module P1  (power in)
     JCN1 = f"{PROJECT}:J_ESP32_CN1"   # module CN1 (I2C + 3V3)
     JP3 = f"{PROJECT}:J_ESP32_P3"     # module P3  (GPIO)
@@ -884,25 +929,39 @@ def build_control(lib: SymbolLib) -> Sheet:
     sh.junction(182.88, 40.64)
     flag(190.5, 40.64, "#FLG03")
 
-    # ---- U2 TMP117 -----------------------------------------------------------------------
-    U2 = "Sensor_Temperature:TMP117xxYBG"
+    # ---- U2 TMP275 -----------------------------------------------------------------------
+    # SOIC-8 rather than the TMP117's DSBGA-6: this board is hand-soldered, and 0.4 mm ball pitch is
+    # not hand-assemblable.  The cost is absolute accuracy (+/-0.5 C vs +/-0.1 C) and resolution
+    # (12-bit / 0.0625 C vs 16-bit / 0.0078 C).  Neither is load-bearing here - the sensor exists to
+    # track the *change* in the 1 ohm region's temperature for the optional ratio correction, and
+    # short-term repeatability, not absolute accuracy, is what that needs.
+    U2 = f"{PROJECT}:TMP275"
     tx, ty = 101.6, 172.72
-    sh.symbol(U2, tx, ty, "U2", "TMP117MAIYBGR", ref_pos=(tx + 3.81, ty - 12.7), val_pos=(tx + 3.81, ty - 10.16),
-              fields={"MPN": "TMP117MAIYBGR", "Manufacturer": "Texas Instruments"},
-              description="Precision temperature sensor, +/-0.1 C, I2C addr 0x48 (ADD0=GND). Place adjacent to the 1 ohm resistor; thermal proximity only.")
+    sh.symbol(U2, tx, ty, "U2", "TMP275AIDR", ref_pos=(tx + 3.81, ty - 12.7), val_pos=(tx + 3.81, ty - 10.16),
+              fields={"MPN": "TMP275AIDR", "Manufacturer": "Texas Instruments"},
+              description="Temperature sensor, +/-0.5 C, 12-bit, I2C addr 0x48 (A2:A0 = GND), SOIC-8. Place adjacent to the 1 ohm resistor; thermal proximity only.")
     tp = lambda k: sh.pinpos(U2, tx, ty, 0, k)
-    s_da, s_cl, vp, gn, add0, alert = tp("A1"), tp("A2"), tp("B1"), tp("B2"), tp("C1"), tp("C2")
+    s_da, s_cl, alert, gn, a2, a1, a0, vp = (tp("1"), tp("2"), tp("3"), tp("4"),
+                                             tp("5"), tp("6"), tp("7"), tp("8"))
     sh.wire(s_da[0], s_da[1], 83.82, s_da[1])
     sh.label("SDA", 83.82, s_da[1], 180)
     sh.wire(s_cl[0], s_cl[1], 83.82, s_cl[1])
     sh.label("SCL", 83.82, s_cl[1], 180)
-    sh.poly(add0, (86.36, add0[1]), (86.36, gn[1] + 2.54), (gn[0], gn[1] + 2.54), gn)
-    sh.junction(gn[0], gn[1] + 2.54)
+    sh.noconn(*alert)
+    # address pins to GND -> 0x48
+    for a in (a0, a1, a2):
+        sh.wire(a[0], a[1], 115.57, a[1])
+    sh.wire(115.57, a0[1], 115.57, a1[1])
+    sh.wire(115.57, a1[1], 115.57, a2[1])
+    sh.wire(115.57, a2[1], 115.57, a2[1] + 5.08)
+    sh.junction(115.57, a1[1])
+    sh.junction(115.57, a2[1])
+    pwr(DGND, 115.57, a2[1] + 5.08)
+    sh.wire(gn[0], gn[1], gn[0], gn[1] + 2.54)
     pwr(DGND, gn[0], gn[1] + 2.54)
     sh.wire(vp[0], vp[1], vp[0], vp[1] - 5.08)
     pwr("+3V3", vp[0], vp[1] - 5.08)
-    sh.noconn(*alert)
-    cap(121.92, 165.1, "C2", "100n", "+3V3", "TMP117 decoupling, 100 nF X7R 16 V 1206 (SH31B104K160CT)", "SH31B104K160CT")
+    cap(128.27, 165.1, "C2", "100n", "+3V3", "TMP275 decoupling, 100 nF X7R 16 V 1206 (SH31B104K160CT)", "SH31B104K160CT")
 
     # ---- NORMAL/HV mode sense (3PDT pole 3) ------------------------------------------------
     # HV throw -> 10k -> +3V3 ; COM -> HV_SENSE with a 100k pulldown and a 10 nF filter.
@@ -935,7 +994,7 @@ def build_control(lib: SymbolLib) -> Sheet:
             "  P1 : TX / RX / VIN(5V) / GND   -> VIN is the module's USB 5 V rail; it powers the relay coils (+5V).\n"
             "  CN1: GND / IO22 / IO27 / 3V3    -> I2C: SCL = IO22, SDA = IO27. 3V3 from the module LDO feeds U1, U2, pull-ups.\n"
             "  P3 : GND / IO35 / IO22 / IO21   -> IO35 (input only) reads HV_SENSE. IO22 duplicate and IO21 (backlight) left open.\n"
-            "I2C addresses: MCP23017 0x20 (A2:A0 = 000), TMP117 0x48 (ADD0 = GND). 4.7k pull-ups to 3V3 on this board.\n"
+            "I2C addresses: MCP23017 0x20 (A2:A0 = 000), TMP275 0x48 (A2:A0 = GND). 4.7k pull-ups to 3V3 on this board.\n"
             "MCP23017 GPA0..GPA7, GPB0, GPB1 -> K1..K5 SET/RESET coil drivers (see relay_channel sheets). GPB2..GPB7 spare.\n"
             "MODE_SW_HV / HV_SENSE: third pole of the front-panel 3PDT NORMAL/HV toggle. HV position pulls HV_SENSE high through 10k (~3.0 V);\n"
             "NORMAL position and switch-in-transit leave it low through R25 (100k); C5 (10 nF) filters the harness run. IO35 has no internal pull.\n"
@@ -943,7 +1002,7 @@ def build_control(lib: SymbolLib) -> Sheet:
             172.72, 143.51, 1.0)
     sh.text("ESP32 display module harness", 25.4, 30.48, 2.0)
     sh.text("MCP23017 -> relay coil drivers", 66.04, 80.01, 2.0)
-    sh.text("Temperature sensor (near 1 ohm)", 76.2, 152.4, 2.0)
+    sh.text("Temperature sensor (near 1 ohm)", 86.36, 152.4, 2.0)
     sh.text("NORMAL / HV mode sense", 25.4, 125.73, 2.0)
     return sh
 
@@ -1120,7 +1179,7 @@ def build_root(lib: SymbolLib) -> Sheet:
     # ---- measurement node, 1 ohm low leg, output ---------------------------------------------------
     rlx = 289.56
     sh.symbol(R, rlx, 76.2, "R35", "1R", footprint=FP_RS02C,
-              description="Vishay Dale RS-2C wirewound 1 Ohm 1% 2.5 W - shared low leg, never switched; TMP117 adjacent" + TODO,
+              description="Vishay Dale RS-2C wirewound 1 Ohm 1% 2.5 W - shared low leg, never switched; TMP275 adjacent" + TODO,
               fields={"MPN": "RS02C1R000FE70", "Manufacturer": "Vishay Dale"}, ref_pos=(292.1, 74.93), val_pos=(292.1, 77.47))
     rl_top, rl_bot = sh.pinpos(R, rlx, 76.2, 0, "1"), sh.pinpos(R, rlx, 76.2, 0, "2")
     out_hi = jack(307.34, 88.9, "J5", "DIVIDER OUT HI", 0, "Front panel banana jack, divider output HI (to DMM HI)")
@@ -1168,7 +1227,7 @@ def build_root(lib: SymbolLib) -> Sheet:
             "Every other SW1 lug lands on a board pad. Confirm the lever-to-throw mapping on the physical\n"
             "switch before wiring: which row is NORMAL depends on the part, which has not been selected yet.",
             160.02, 236.22, 1.27)
-    sh.text("1 ohm low leg - TMP117 (U2) mounted adjacent", 283.0, 70.0, 1.0)
+    sh.text("1 ohm low leg - TMP275 (U2) mounted adjacent", 283.0, 70.0, 1.0)
     return sh
 
 

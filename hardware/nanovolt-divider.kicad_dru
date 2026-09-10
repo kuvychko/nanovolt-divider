@@ -15,11 +15,6 @@
 	(constraint edge_clearance (min 1.5mm))
 	(condition "A.NetClass == 'HV'"))
 
-# TMP117 DSBGA-6 has a 0.4 mm ball pitch (0.15 mm between pads); relax the default clearance inside it.
-(rule "DSBGA pad clearance"
-	(constraint clearance (min 0.1mm))
-	(condition "A.memberOfFootprint('U2') && B.memberOfFootprint('U2')"))
-
 # The 1 ohm strip is reached only through the centre bridge between the two notches; keep those tracks narrow.
 (rule "bridge tracks"
 	(constraint track_width (max 0.4mm))

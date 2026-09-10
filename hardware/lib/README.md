@@ -9,6 +9,7 @@ Both libraries are registered in `../sym-lib-table` and `../fp-lib-table` under 
 |---|---|
 | `TQ2-L2-5V` | Panasonic 2-coil latching DPDT signal relay, 4 units: A = SET coil (1+ / 5-), B = RESET coil (10+ / 6-), C = pole A (3 COM, 2 NC, 4 NO), D = pole B (8 COM, 9 NC, 7 NO). Pin numbers per Panasonic catalog ASCTB14E, "Schematic (bottom view), 2 coil latching". Contacts are drawn in the RESET state. |
 | `SW_3PDT` | Generic 3PDT toggle, 3 units, pins named NORM / COM / HV. Lug numbers 1..9 are placeholders until the physical switch is chosen. |
+| `TMP275` | TI TMP275 I2C temperature sensor, SOIC-8 (D). Not in stock KiCad 10 - `Sensor_Temperature` has no TMP275. The pinout is the LM75/TMP75 industry-standard one (1 SDA, 2 SCL, 3 ALERT, 4 GND, 5 A2, 6 A1, 7 A0, 8 V+), so `Sensor_Temperature:LM75B` would have wired up correctly, but it would put "LM75B" in the lib_id and call pin 3 "O.S.". Uses the stock `Package_SO:SOIC-8_3.9x4.9mm_P1.27mm` footprint. |
 
 ## nanovolt-divider.pretty
 

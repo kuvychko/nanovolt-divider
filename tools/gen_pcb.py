@@ -56,7 +56,7 @@ SHIFT_Y = 6.0                # uniform upward shift applied to every row below t
                              # geometry, HV island separation, the 1 ohm strip - exactly as it was.
 NOTCH_Y = (79.0, 80.6)       # two slots isolating the 1 ohm strip
 EDGE_BRIDGE = 3.0            # material left at both board edges beside the slots
-NOTCH_BRIDGE = (25.0, 35.0)  # centre bridge left between the notches (MEAS, RTN, TMP117 lines)
+NOTCH_BRIDGE = (25.0, 35.0)  # centre bridge left between the notches (MEAS, RTN, TMP275 lines)
 DGND_MAX_Y = 36.0            # DGND pour limit: it follows the digital circuitry (control + coil
                              # drivers), not an arbitrary cut across the board.  There is no blanket
                              # keepout below it any more - only the 1 ohm island is kept clear.
@@ -129,11 +129,21 @@ def placement() -> dict:
     P["R34"] = (56.0, 64.0, 270)                # HV 10M, vertical: pad 1 (HV_IN_P) top, pad 2 (HV_DIV) bottom
     P["J3"] = (48.0, 64.0, 0)                   # HV IN +, on the HV_IN_P net with R34 pad 1
     # ---- row 8: 1 ohm strip behind the slots ---------------------------------------------------------
-    P["R35"] = (19.84, 95.0, 0)                 # 1 ohm (RS-2C), pads at x = 19.84 / 40.16
-    P["J6"] = (14.5, 95.0, 0)                   # DIVIDER OUT LO at the pad-1 end
-    P["J5"] = (45.5, 95.0, 0)                   # DIVIDER OUT HI at the pad-2 end
-    P["U2"] = (30.0, 89.5, 0)                   # TMP117 over the resistor body
-    P["C2"] = (34.5, 89.5, 0)
+    # The 1 ohm row sits 1.5 mm lower than it did with the TMP117.  A SOIC-8 courtyard is 5.4 mm
+    # tall and the band between the slots and R35 was 5.38 mm, so U2 had to gain room somewhere;
+    # taking it from the bottom margin keeps the slots, the mounting holes and everything above
+    # them exactly where the Rev0 review left them.  R35's silk still clears the board edge by
+    # 0.6 mm and its pads by 2.5 mm.
+    P["R35"] = (19.84, 96.5, 0)                 # 1 ohm (RS-2C), pads at x = 19.84 / 40.16
+    P["J6"] = (14.5, 96.5, 0)                   # DIVIDER OUT LO at the pad-1 end
+    P["J5"] = (45.5, 96.5, 0)                   # DIVIDER OUT HI at the pad-2 end
+    # TMP275 in SOIC-8 is 7.4 x 5.4 mm over the courtyard, far larger than the TMP117 DSBGA it
+    # replaced, so it no longer fits in the gap over the resistor body.  It sits on the same
+    # thermally isolated island, centred on the resistor's midpoint, 0.7 mm below the slots and
+    # 0.8 mm above R35's courtyard - the island is what couples it to R35, not the millimetre of
+    # air over the body.
+    P["U2"] = (30.0, 90.0, 0)                   # TMP275 (SOIC-8) on the 1 ohm island, above R35
+    P["C2"] = (37.5, 90.0, 0)
     # Everything except the harness pads moves up by SHIFT_Y.  Doing it as one translation here,
     # rather than editing every literal above, keeps this table readable against the Rev0 review
     # notes and guarantees no row drifts relative to another.
@@ -141,6 +151,19 @@ def placement() -> dict:
         if ref not in HARNESS_X:
             P[ref] = (x, y - SHIFT_Y, rot)
     return P
+
+
+# Reference-designator overrides: ref -> (local x, local y, layer).  The footprint's own refdes
+# position is used everywhere else; these two are on the 1 ohm island, where a SOIC-8 and a 20 mm
+# resistor share a 6.9 mm band between the slots and the board edge and the stock positions collide.
+#   U2  - goes to F.Fab.  There is no silk line left for it: 0.7 mm above the part to the slot and
+#         0.8 mm below to R35's courtyard.  The island is already labelled "1R + TMP275" in silk.
+#         Same reasoning as the harness pads at the top edge.
+#   R35 - moves from the body centre (where U2 now sits) to the pad-1 end, still on silk.
+REF_OVERRIDE = {
+    "U2": (0.0, 0.0, "F.Fab"),
+    "R35": (0.0, -3.92, "F.SilkS"),
+}
 
 
 # The two lower holes sit ABOVE the slots: a screw on the 1 ohm island would add a thermal and
@@ -234,7 +257,13 @@ def footprint_instance(ref, comp, x, y, rot, nets_by_name, pin_net, extra_attr=(
         n = find(src, tag)
         if n:
             fp.append(n)
-    fp.append(prop("Reference", ref, props.get("Reference")))
+    refprop = prop("Reference", ref, props.get("Reference"))
+    if ref in REF_OVERRIDE:
+        ox_, oy_, layer = REF_OVERRIDE[ref]
+        at = find(refprop, "at")
+        at[1], at[2] = G.fmt(ox_), G.fmt(oy_)
+        find(refprop, "layer")[1] = q(layer)
+    fp.append(refprop)
     fp.append(prop("Value", comp["value"], props.get("Value")))
     fp.append(prop("Footprint", lib_id, hide=True))
     fp.append(prop("Datasheet", comp.get("datasheet", ""), hide=True))
@@ -370,11 +399,6 @@ DRU = '''(version 1)
 	(constraint edge_clearance (min 1.5mm))
 	(condition "A.NetClass == 'HV'"))
 
-# TMP117 DSBGA-6 has a 0.4 mm ball pitch (0.15 mm between pads); relax the default clearance inside it.
-(rule "DSBGA pad clearance"
-	(constraint clearance (min 0.1mm))
-	(condition "A.memberOfFootprint('U2') && B.memberOfFootprint('U2')"))
-
 # The 1 ohm strip is reached only through the centre bridge between the two notches; keep those tracks narrow.
 (rule "bridge tracks"
 	(constraint track_width (max 0.4mm))
@@ -478,9 +502,11 @@ def build():
             ("HV 450V", 47.0, 58.5, "t_hv", 0.9, 0),
             ("NORM IN", 2.5, 58.5, "t_nin", 0.8, 0),
             ("SW 3PDT", 31.0, 71.5, "t_sw", 0.8, 0),
-            ("1R + TMP117", 24.0, 99.4, "t_1r", 0.8, 0),
-            ("OUT LO", 9.5, 98.6, "t_outlo", 0.8, 0),
-            ("OUT HI", 42.5, 98.6, "t_outhi", 0.8, 0)):
+            # The island labels moved above the resistor when the 1 ohm row dropped 1.5 mm: R35's
+            # own silk outline now reaches y 93.4 and there is no legible line left below it.
+            ("1R + TMP275", 16.0, 90.0, "t_1r", 0.8, 0),
+            ("OUT LO", 9.5, 93.0, "t_outlo", 0.8, 0),
+            ("OUT HI", 42.5, 93.0, "t_outhi", 0.8, 0)):
         g.append(gr_text(txt, x, y - SHIFT_Y, key, size, rot=rot))
     # ---- zones ---------------------------------------------------------------------------------
     gnd = nets_by_name["DGND"]

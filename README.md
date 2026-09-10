@@ -21,10 +21,10 @@ docs/datasheets/           vendor datasheets (git-ignored, copyrighted; see docs
 hardware/                  KiCad 10 project
   nanovolt-divider.kicad_pro
   nanovolt-divider.kicad_sch   root sheet: metrology topology (inputs, relays, high legs, 3PDT, 1 ohm, outputs)
-  control.kicad_sch            ESP32 display-module harness, MCP23017, TMP117, power
+  control.kicad_sch            ESP32 display-module harness, MCP23017, TMP275, power
   relay_channel.kicad_sch      generic latching-relay channel, instantiated 5x (K1..K5)
   nanovolt-divider.kicad_pcb   board: 60 x 94 mm, 2 layers, placed, not yet routed
-  nanovolt-divider.kicad_dru   custom DRC rules (450 V clearance / creepage, DSBGA, 1 ohm bridge)
+  nanovolt-divider.kicad_dru   custom DRC rules (450 V clearance / creepage, 1 ohm bridge)
   lib/                         project-local symbol and footprint libraries
 tools/gen_schematics.py    bootstrap script that produced the first version of the schematics
 tools/gen_pcb.py           bootstrap script that produced the placed (unrouted) board
@@ -79,7 +79,12 @@ capacitance, not its leakage to earth - remains attached to the measurement node
   serves I2C. Same net, but three conductors cut the cable-side shared IR drop - do not collapse
   them to one wire.
 * MCP23017 (I2C 0x20) GPA0..GPA7 + GPB0..GPB1 drive the ten coil lines K1..K5 SET/RESET.
-* TMP117 (I2C 0x48) sits next to the 1 ohm resistor, thermal proximity only.
+* TMP275 (I2C 0x48, `A2:A0` all on `DGND`) sits next to the 1 ohm resistor, thermal proximity only.
+  It replaced a TMP117 because the whole board is hand-soldered and the TMP117 only comes in a
+  DSBGA-6 at 0.4 mm ball pitch. The price is absolute accuracy - +/-0.5 C and 12-bit (0.0625 C)
+  instead of +/-0.1 C and 16-bit - which is not what this sensor is for: it tracks the *change* in
+  the 1 ohm region's temperature for the optional ratio correction, and that needs short-term
+  repeatability, not absolute accuracy. The address is unchanged, so nothing on the bus moves.
 * The third pole of the NORMAL/HV toggle drives `HV_SENSE` (IO35): the HV throw pulls it high
   through R24 (10 k), R25 (100 k) holds it low otherwise, and C5 (10 nF) filters the harness run.
   The NORMAL throw needs no resistor and no board pad.
@@ -89,12 +94,13 @@ capacitance, not its leakage to earth - remains attached to the measurement node
 ## Working with the schematics
 
 Open `hardware/nanovolt-divider.kicad_pro` in KiCad 10. The project library
-`hardware/lib/nanovolt-divider.kicad_sym` holds the TQ2-L2-5V relay, the 3PDT switch, the `DGND`
-power symbol and the three ESP32 harness pigtail landings - these carry the module's own pin names
-(`SCL_IO22`, `IO35`, ...) rather than `Pin_1..Pin_4`, so a wire on the wrong pin is visible in the
-schematic instead of looking plausibly correct. Footprints for the relay, the precision resistors,
-the switch pads and the harness pads are in `hardware/lib/nanovolt-divider.pretty`. Everything else
-is stock KiCad.
+`hardware/lib/nanovolt-divider.kicad_sym` holds the TQ2-L2-5V relay, the 3PDT switch, the TMP275,
+the `DGND` power symbol and the three ESP32 harness pigtail landings - these carry the module's own
+pin names (`SCL_IO22`, `IO35`, ...) rather than `Pin_1..Pin_4`, so a wire on the wrong pin is
+visible in the schematic instead of looking plausibly correct. Footprints for the relay, the
+precision resistors, the switch pads and the harness pads are in
+`hardware/lib/nanovolt-divider.pretty`; the TMP275 uses the stock `Package_SO:SOIC-8_3.9x4.9mm_P1.27mm`.
+Everything else is stock KiCad.
 
 Run ERC / exports from the command line:
 
@@ -164,10 +170,16 @@ UUIDs and never round-trips through `kicad-cli`, so re-running it leaves the wor
   matters for thermal EMF: the continuously powered parts (MCP23017, harness pads, bulk caps) stay
   at the top edge, away from `MEAS_NODE`, and the 1 ohm strip stays physically isolated.
 * The 1 ohm strip is separated by two slots that leave a 10 mm centre bridge and 3 mm bridges at
-  both board edges for stiffness; `MEAS_NODE`, `ANALOG_RTN` and the TMP117 lines cross the centre
-  one. The TMP117 sits over the resistor body and the OUT HI / OUT LO wire pads are at the
-  resistor's own terminals. Both lower mounting holes sit *above* the slots: a screw on the island
-  would add a thermal and mechanical-stress path straight to the precision resistor.
+  both board edges for stiffness; `MEAS_NODE`, `ANALOG_RTN` and the TMP275 lines cross the centre
+  one. The OUT HI / OUT LO wire pads are at the resistor's own terminals. Both lower mounting holes
+  sit *above* the slots: a screw on the island would add a thermal and mechanical-stress path
+  straight to the precision resistor.
+* The TMP275 sits on that island above `R35`, not over the resistor body: a SOIC-8 courtyard is
+  5.4 mm tall and the band between the slots and `R35` was 5.38 mm. The 1 ohm row moved down 1.5 mm
+  to make the room, taken from the bottom margin so the slots, the mounting holes and everything
+  above them stay exactly where the Rev0 review left them. What couples the sensor to `R35` is the
+  island, not the millimetre of air over the body. `U2`'s designator is on F.Fab and `R35`'s moved
+  to its pad-1 end (`REF_OVERRIDE` in `gen_pcb.py`) - there is no silk line left between them.
 * **3PDT wire pads.** These are wire-landing pads, not the switch, so they no longer copy its 3 x 3
   lug geometry (which cost ~18 x 18 mm and put a 450 V pad 7.62 mm from `MEAS_NODE`). Seven pads
   remain, split into a 2 x 3 low-voltage cluster and one isolated HV pad:
@@ -219,7 +231,7 @@ silkscreen-over-pad warnings (reference designators still need tidying after rou
 
 Not redistributed in this repository. Panasonic TQ relays: catalog ASCTB14E
 (`industry.panasonic.com`); Ohmite MOX-700 and Slim-Mox; Vishay Dale RS/NS; Microchip MCP23017;
-TI TMP117.
+TI TMP275.
 
 ## License
 

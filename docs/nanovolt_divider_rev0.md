@@ -53,8 +53,12 @@ The precision signal path should remain as passive and electrically quiet as pra
    - the HV path does **not** rely on the small TQ relays for switching 450 V
 
 6. **Temperature monitoring**
-   - one TMP117 located adjacent to the 1 Ω resistor
+   - one TMP275 located adjacent to the 1 Ω resistor
    - used to characterize thermal behavior and support optional ratio correction
+   - SOIC-8, because the board is hand-soldered; the TMP117 it replaced is DSBGA-6 only
+   - ±0.5 °C / 12-bit rather than the TMP117's ±0.1 °C / 16-bit. The correction is driven by the
+     *change* in temperature since calibration, so short-term repeatability matters here and
+     absolute accuracy does not.
 
 7. **Stored calibration**
    - calibrated divider multiplier for each normal range
@@ -188,7 +192,7 @@ flowchart LR
     subgraph CTRL["Front / Control Section"]
         UI["2.8 in ESP32 Touch TFT"]
         IO["MCP23017\nI²C GPIO expander"]
-        T["TMP117\ntemperature sensor"]
+        T["TMP275\ntemperature sensor"]
         UI <-->|I²C / control| IO
         UI <-->|I²C| T
     end
@@ -262,7 +266,7 @@ MMBT2222A emitter -> DGND
 1N4148W flyback diode across relay coil
 ```
 
-The same I²C bus is used for the TMP117.
+The same I²C bus is used for the TMP275 (address 0x48, `A2`/`A1`/`A0` all on `DGND`).
 
 ### 6.3 Relay safety/state rules
 
@@ -293,7 +297,7 @@ The enclosure should have two physically distinct regions.
 - relay contacts
 - precision high-leg resistors
 - 1 Ω resistor
-- TMP117
+- TMP275
 - output connector
 - HV divider components
 
@@ -308,7 +312,7 @@ The 1 Ω resistor should receive special layout treatment:
 - located near the output connector,
 - minimal low-level trace length,
 - output/sense traces branch directly from the resistor terminals,
-- TMP117 placed nearby,
+- TMP275 placed nearby,
 - no relay coil or TFT/backlight heat nearby,
 - optional PCB cutouts/slots to reduce thermal conduction from the rest of the board.
 
@@ -385,7 +389,7 @@ nanovolt-divider.kicad_sch        # root / system architecture
 +-- control.kicad_sch
 |     ESP32/display interface
 |     MCP23017
-|     TMP117 interface
+|     TMP275 interface
 |     power/decoupling
 |
 +-- relay_channel.kicad_sch       # same file instantiated 5 times
@@ -437,7 +441,7 @@ The same sheet is instantiated five times. KiCad's multi-channel/repeat-layout w
 | 1 | Ohmite 10 MΩ thick film | `SM102031005FE` | Normal `1e-7` range, 1% | **Purchased** |
 | 1 | Ohmite 10 MΩ thick film | `SM102031005FE` | Dedicated HV divider leg | **To order** |
 | 5 | Panasonic latching relay | `TQ2-L2-5V-3` | K1–K5 | 1 purchased; **4 more required** |
-| 1 | TI precision temperature sensor | `TMP117MAIYBGR` | Temperature of 1 Ω region | **Purchased** |
+| 1 | TI temperature sensor, SOIC-8 | `TMP275AIDR` | Temperature of 1 Ω region, I²C 0x48 | **To order** (the purchased `TMP117MAIYBGR` is DSBGA-6 and cannot be hand-soldered) |
 
 ### 11.2 Relay-driver / control-board components
 
@@ -484,12 +488,13 @@ The first Mouser order establishes the core passive-divider and relay-driver com
 - 12 × 1N4148W
 - 20 × 100 nF X7R MLCCs
 - 3 × 1206 bulk MLCCs
-- 1 × TMP117
+- 1 × TMP117 *(DSBGA-6, superseded - see 11.1)*
 - 1 × TQ2-L2-5V-3 relay
 
 Additional Rev0 procurement is expected to include:
 
 - four more TQ2-L2-5V-3 relays,
+- one `TMP275AIDR` (SOIC-8) in place of the DSBGA-6 TMP117,
 - one additional `SM102031005FE` 10 MΩ resistor for the HV leg,
 - MCP23017,
 - HV-rated 3PDT selector,
@@ -520,7 +525,7 @@ Additional Rev0 procurement is expected to include:
 3. Create the generic `relay_channel.kicad_sch` interface.
 4. Instantiate the relay channel five times.
 5. Implement and ERC-check one relay channel.
-6. Build the control sheet around the ESP32 module, MCP23017, and TMP117.
+6. Build the control sheet around the ESP32 module, MCP23017, and TMP275.
 7. Complete the precision/HV signal path on the root sheet.
 8. Select the HV-rated 3PDT switch and safety banana sockets.
 9. Assign real footprints from component datasheets.

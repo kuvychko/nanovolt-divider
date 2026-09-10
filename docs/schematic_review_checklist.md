@@ -137,8 +137,10 @@ instance (K1 shown; K2-K5 identical):
       into `MEAS_NODE` / `ANALOG_RTN`.
 - [ ] `R35` is a 2.5 W part running at microwatts. Confirm you chose it for stability and derating,
       and check its **thermal EMF per degree C** against your target resolution.
-- [ ] `U2` (TMP117) is thermally coupled to `R35` but electrically on `DGND`/`+3V3`. Confirm there
-      is no galvanic path from the sensor into the analog return.
+- [ ] `U2` (TMP275) is thermally coupled to `R35` but electrically on `DGND`/`+3V3`. Confirm there
+      is no galvanic path from the sensor into the analog return. It sits on the 1 ohm island above
+      `R35` rather than over the resistor body - a SOIC-8 does not fit in that gap. Confirm the
+      island alone couples it closely enough for the ratio correction you intend.
 
 ---
 
@@ -178,7 +180,9 @@ instance (K1 shown; K2-K5 identical):
 
 - [ ] **MCP23017 address.** `A0`/`A1`/`A2` (15/16/17) all on `DGND` -> **0x20**. Confirm no clash
       with anything else on the bus.
-- [ ] **TMP117 address.** `ADD0` (`C1`) on `DGND` -> **0x48**. Confirm.
+- [ ] **TMP275 address.** `A2`/`A1`/`A0` (pins 5/6/7) all on `DGND` -> **0x48**. Confirm. This is
+      the same address the TMP117 had, so no firmware change follows from the swap - but the
+      register map and resolution do differ (12-bit, 0.0625 C/LSB, not TMP117-compatible).
 - [ ] `U1.18` (RESET) is pulled to `+3V3` through `R23` (10 k), active-low, so the expander runs.
       Confirm you do not want the ESP32 driving it instead, and that the 10 k pulldown on every
       driver base holds the relays quiet during the power-up window before `U1` is configured.
@@ -251,8 +255,10 @@ instance (K1 shown; K2-K5 identical):
       connector name (`P1`/`CN1`/`P3`) and the pin numbers; the refdes is on F.Fab because the row
       sits hard against the top board edge and there is only one usable silk line below the pads.
       Confirm that labelling reads correctly on a 1:1 plot.
-- [ ] TMP117 is a **DSBGA-6 at 0.4 mm pitch**. Confirm you can assemble it, and that the relaxed
-      0.1 mm intra-footprint DRC exception in `.kicad_dru` is acceptable to your fab.
+- [ ] `U2` is a **SOIC-8 at 1.27 mm pitch** (`TMP275AIDR`), chosen so the board can be
+      hand-soldered; it replaced a DSBGA-6 TMP117 and the 0.1 mm intra-footprint DRC exception went
+      with it. Confirm the +/-0.5 C absolute accuracy and 0.0625 C resolution are enough for the
+      ratio correction - the TMP117 gave +/-0.1 C and 0.0078 C.
 
 ---
 

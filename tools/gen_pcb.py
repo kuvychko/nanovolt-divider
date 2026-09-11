@@ -127,8 +127,11 @@ def placement() -> dict:
         for dx, rb, rp, qq, dd in ((-2.0, 4 * n - 3, 4 * n - 2, 2 * n - 1, 2 * n - 1),
                                    (2.0, 4 * n - 1, 4 * n, 2 * n, 2 * n)):
             x = kx + dx
-            P[f"R{rb}"] = (x, 26.0, 90)         # 1k base
-            P[f"R{rp}"] = (x, 30.8, 90)         # 10k pulldown
+            # 270, not 90: pad 1 on top.  The MCP23017 line then lands on the 1k's upper pad, the
+            # base node runs straight down 1k pad 2 -> 10k pad 1, and DGND ends up at the bottom next
+            # to the emitter.  At 90 the base node started above the MCP pad and had to run past it.
+            P[f"R{rb}"] = (x, 26.0, 270)        # 1k base
+            P[f"R{rp}"] = (x, 30.8, 270)        # 10k pulldown
             P[f"Q{qq}"] = (x, 35.0, 0)          # MMBT2222A
             P[f"D{dd}"] = (x, 39.2, 90)         # 1N4148W
     # ---- row 4: relays (rotation 90: coil pins 5/6 face down, contact pins face the resistors) -------

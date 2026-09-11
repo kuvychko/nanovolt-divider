@@ -31,7 +31,8 @@ and clearance rules, and 11 mm of board.
 
 ## Status
 
-Rev0: architecture locked, schematics ERC-clean, PCB placed and DRC-clean (unrouted).
+Rev0: architecture locked, schematics ERC-clean, PCB placed and routed (first pass): DRC 0 errors,
+0 unconnected, 64 silkscreen warnings still to tidy.
 
 ## Repository layout
 
@@ -43,11 +44,14 @@ hardware/                  KiCad 10 project
   nanovolt-divider.kicad_sch   root sheet: metrology topology (inputs, relays, high legs, 1 ohm, outputs)
   control.kicad_sch            ESP32 display-module harness, MCP23017, TMP275, power
   relay_channel.kicad_sch      generic latching-relay channel, instantiated 5x (K1..K5)
-  nanovolt-divider.kicad_pcb   board: 60 x 69.1 mm, 2 layers, placed, not yet routed
+  nanovolt-divider.kicad_pcb   board: 60 x 69.1 mm, 2 layers, placed and routed (first pass)
   nanovolt-divider.kicad_dru   custom DRC rules (1 ohm bridge track width)
   lib/                         project-local symbol and footprint libraries
 tools/gen_schematics.py    bootstrap script that produced the first version of the schematics
 tools/gen_pcb.py           bootstrap script that produced the placed (unrouted) board
+tools/route_pcb.py         bootstrap maze router that produced the first routing (see Routing below)
+tools/route_hand.py        its hand routes and routing policy - the design intent of the routing
+tools/pcb_io.py            pcbnew side of the router: dump pads, apply routes
 ```
 
 ### Hierarchy
@@ -125,16 +129,19 @@ kicad-cli sch export pdf --output build/schematic.pdf hardware/nanovolt-divider.
 kicad-cli pcb drc --severity-error --severity-warning hardware/nanovolt-divider.kicad_pcb
 ```
 
-Neither generator script runs DRC - run it yourself with the command above. It will **not** come
-back clean while the board is unrouted: every net reports as unconnected, and the silkscreen
-reports over pads. Treat the current count as the baseline and check that a change does not add to
-it, rather than expecting zero.
+None of the generator scripts runs DRC - run it yourself with the command above. The baseline is
+0 errors, 0 unconnected and 64 `silk_over_copper` warnings (reference designators over pads, not
+yet tidied). Check that a change does not add to it.
 
 `tools/gen_schematics.py` generates all schematic files, the project symbol library and the
 project footprints; re-run it after editing the script. It will **not** overwrite an existing
 `nanovolt-divider.kicad_pro` - KiCad owns that file, and it holds the DRC severities.
 
 ### Regenerating the board produces a huge, meaningless diff
+
+The board is routed now, and `tools/gen_pcb.py` writes an unrouted one from scratch: re-running it
+throws the routing away. If you must, re-run the routing pipeline (see Routing) straight after, and
+know that any hand edits made in KiCad since are gone either way.
 
 `tools/gen_pcb.py` is **not idempotent**, and this has been rediscovered three times. `kicad-cli pcb
 upgrade` assigns fresh random UUIDs to the graphics it materialises inside stock footprints, so
@@ -169,7 +176,7 @@ UUIDs and never round-trips through `kicad-cli`, so re-running it leaves the wor
 
 ## Board
 
-`hardware/nanovolt-divider.kicad_pcb` is placed but unrouted:
+`hardware/nanovolt-divider.kicad_pcb` is placed and routed (first pass; see Routing below):
 
 * 60 x 69.1 mm portrait, two layers, laid out top-down: one control band, ten coil-driver columns,
   the five relays, then the three high legs flat in one row.
@@ -225,12 +232,60 @@ UUIDs and never round-trips through `kicad-cli`, so re-running it leaves the wor
 * Panel parts (four banana jacks) terminate on solder-wire pads. Nothing is wired panel-to-panel,
   so every conductor appears in the netlist.
 
-DRC is clean (0 errors, 0 schematic-parity issues) apart from the unrouted ratsnest and
-silkscreen-over-pad warnings (reference designators still need tidying after routing).
+DRC is clean (0 errors, 0 unconnected, 0 schematic-parity issues) apart from 64
+silkscreen-over-pad warnings (reference designators still need tidying).
+
+### Routing
+
+The first routing came from `tools/route_pcb.py`: a grid maze router that routes around a set of
+hand-laid tracks in `tools/route_hand.py`. The hand-laid part is the design; the router only filled
+in the rest, and it shows in the control band (see Open items). Rules the routing follows, and that
+hand edits should keep:
+
+* **`MEAS_NODE` and `ANALOG_RTN` run as one tight pair on B.Cu** from K5 to R35: 0.4 mm, 0.3 mm
+  apart, via-free. `ANALOG_RTN` is on the side facing the high-leg pads, so it rather than
+  `MEAS_NODE` takes any surface leakage from `R*_IN`. The pair crosses the centre bridge on the
+  board's centre line and only splits under R35, along its axis, so the current loop is the
+  resistor itself and both terminals have the same copper path back to the board.
+* **Kelvin at R35.** The injection current lands on R35's pads from the inside; J5 / J6 (the DMM)
+  leave them on the outside on F.Cu, and carry no current.
+* **Source-side and low-side copper keep 0.5 mm apart on the same layer.** `SRC_P`, `NORMAL_IN_*`
+  and `R*_IN` sit at the source voltage; `RANGE_BUS`, `R*_OUT` and `MEAS_NODE` at the bottom of the
+  selected high leg. Leakage between them is a resistor across the high leg - 10 ppm at 1e12 ohm on
+  the 10 M range. Where the two chains must cross they do it on opposite layers, through 1.6 mm of
+  FR4 bulk. `SRC_RTN` / `ANALOG_RTN` are in neither class: leakage into them only loads the source.
+* **Nothing reaches the 1 ohm island except over the centre bridge**, and the bridge carries no
+  vias. A track over an edge bridge brings heat in at one end of R35, and a temperature difference
+  between its terminals is a thermal EMF in series with the measurement.
+* **The TMP275 lines are one F.Cu spine**: SDA, SCL, DGND, +3V3 at 0.65 mm pitch, down the gap
+  between the K1 and K2 driver pairs, through the left half of K2, under R32's body and onto the
+  island left of the pair. The precision chains cross it on B.Cu.
+* **Driver cells are identical.** Each column is the same template: the base node runs straight
+  from the 1k to the 10k, which is why R1-R20 sit at 270 degrees rather than 90 (at 90 the MCP23017
+  line landed on the 1k's lower pad and the base node had to run past it). DGND goes to the B.Cu
+  pour through a via beside the 10k and one beside the emitter; cathodes drop to a +5V bus on B.Cu
+  at y 32.5 along the bottom of the pour.
+* **One coil crossing per relay, the same for all five.** The SET column feeds the right-hand coil
+  pin and the RESET column the left, so they cross: SET stays on F.Cu, RESET drops to B.Cu. That
+  way round leaves the left half of each relay's top free on F.Cu, which is how the TMP275 spine
+  gets into K2.
+
+The router is deterministic and reproduces the committed routing exactly, but `pcb_io.py apply`
+deletes every track first, so it is historical as soon as the board is edited by hand:
+
+```
+"C:/Program Files/KiCad/10.0/bin/python.exe" tools/pcb_io.py dump  hardware/nanovolt-divider.kicad_pcb %TEMP%/nvd_geom.json
+uv run tools/route_pcb.py %TEMP%/nvd_geom.json %TEMP%/nvd_routes.json
+"C:/Program Files/KiCad/10.0/bin/python.exe" tools/pcb_io.py apply hardware/nanovolt-divider.kicad_pcb %TEMP%/nvd_routes.json
+```
 
 ## Open items
 
-* Route the board (interactively, or Freerouting), then tidy silkscreen.
+* Tidy the MCP23017 fan-out by hand. It is the router's work and it looks like it: `K4_SET` takes
+  6 vias and `K1_SET` 4, `K4_RESET` threads between CN1's DGND and SCL pads, and `K4_SET` runs
+  between the two pads of the 1k base resistors in the K4 and K1 columns. It is DRC-clean and
+  electrically harmless (static logic lines), just untidy.
+* Tidy silkscreen (64 reference designators over pads).
 * Confirm the display module variant and its connector pinout (P1 / CN1) against the board in
   hand. With soldered pigtails there is no keyed housing at the board end, so this continuity check
   is the only thing standing between a mis-landed wire and 5 V on an I2C pin.

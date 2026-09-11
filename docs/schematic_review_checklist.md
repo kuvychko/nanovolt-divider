@@ -162,9 +162,11 @@ instance (K1 shown; K2-K5 identical):
 - [ ] `U1.18` (RESET) is pulled to `+3V3` through `R23` (10 k), active-low, so the expander runs.
       Confirm you do not want the ESP32 driving it instead, and that the 10 k pulldown on every
       driver base holds the relays quiet during the power-up window before `U1` is configured.
-- [ ] GPIO to coil mapping: `GPA0..GPA7` = K1_SET, K1_RESET, K2_SET, K2_RESET, K3_SET, K3_RESET,
-      K4_SET, K4_RESET; `GPB0`/`GPB1` = K5_SET/K5_RESET; `GPB2..GPB7` spare and no-connect. Confirm
-      this is what the firmware will assume.
+- [ ] GPIO to coil mapping: `GPB0..GPB7` = K4_SET, K4_RESET, K1_SET, K1_RESET, K2_SET, K2_RESET,
+      K3_SET, K3_RESET; `GPA0` = K5_RESET, `GPA1` = K5_SET; `GPA2..GPA7` spare and no-connect. The
+      order follows the board (GPB0..7 face the driver columns in this order), not the relay
+      numbering. Confirm this is what the firmware will assume. `GPA7`/`GPB7` are output-only on
+      current silicon; every coil line is an output.
 - [ ] Per-pin draw is 2.5 mA against a 25 mA limit, and only one coil is pulsed at a time. Confirm
       nothing in the firmware can pulse two at once.
 - [ ] I2C pull-ups are 4.7 k to 3.3 V (~0.7 mA sink). Confirm the display module does **not** also

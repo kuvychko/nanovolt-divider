@@ -841,14 +841,19 @@ def build_control(lib: SymbolLib) -> Sheet:
     pwr(DGND, vss[0], vss[1] + 2.54)
     sh.wire(vdd[0], vdd[1], vdd[0], vdd[1] - 10.16)
     pwr("+3V3", vdd[0], vdd[1] - 10.16)
-    # GPIO -> relay coil control lines
-    gp = [("21", "K1_SET"), ("22", "K1_RESET"), ("23", "K2_SET"), ("24", "K2_RESET"), ("25", "K3_SET"),
-          ("26", "K3_RESET"), ("27", "K4_SET"), ("28", "K4_RESET"), ("1", "K5_SET"), ("2", "K5_RESET")]
+    # GPIO -> relay coil control lines.  The assignment is set by the board, not by the port names:
+    # GPB0..GPB7 (pins 1-8) are the package row that faces the driver columns, so they take eight
+    # lines in the columns' own left-to-right order and fan out without crossing.  K5's two lines are
+    # on GPA0/GPA1 and leave under the package to the right; GPA0 is the outer of the two there, so
+    # it takes K5_RESET, whose driver is the outer column.  Firmware maps GPIO -> coil by table.
+    # (GPA7/GPB7 are output-only on current MCP23017 silicon; every pin here is an output.)
+    gp = [("1", "K4_SET"), ("2", "K4_RESET"), ("3", "K1_SET"), ("4", "K1_RESET"), ("5", "K2_SET"),
+          ("6", "K2_RESET"), ("7", "K3_SET"), ("8", "K3_RESET"), ("21", "K5_RESET"), ("22", "K5_SET")]
     for (num, name) in gp:
         pp = pin(num)
         sh.wire(pp[0], pp[1], 149.86, pp[1])
         sh.hlabel(name, "output", 149.86, pp[1], 0)
-    for num in ("3", "4", "5", "6", "7", "8"):
+    for num in ("23", "24", "25", "26", "27", "28"):
         sh.noconn(*pin(num))
 
     # ---- decoupling ---------------------------------------------------------------------
@@ -906,8 +911,8 @@ def build_control(lib: SymbolLib) -> Sheet:
             "  P1 : TX / RX / VIN(5V) / GND   -> VIN is the module's USB 5 V rail; it powers the relay coils (+5V).\n"
             "  CN1: GND / IO22 / IO27 / 3V3    -> I2C: SCL = IO22, SDA = IO27. 3V3 from the module LDO feeds U1, U2, pull-ups.\n"
             "I2C addresses: MCP23017 0x20 (A2:A0 = 000), TMP275 0x48 (A2:A0 = GND). 4.7k pull-ups to 3V3 on this board.\n"
-            "MCP23017 GPA0..GPA7, GPB0, GPB1 -> K1..K5 SET/RESET coil drivers (see relay_channel sheets).\n"
-            "MCP23017 GPB2..GPB7 are spare; the ESP32 side has no board connection beyond P1 and CN1.",
+            "MCP23017 GPB0..GPB7 -> K4 S/R, K1 S/R, K2 S/R, K3 S/R; GPA0 -> K5 RESET, GPA1 -> K5 SET (layout order).\n"
+            "MCP23017 GPA2..GPA7 are spare; the ESP32 side has no board connection beyond P1 and CN1.",
             172.72, 143.51, 1.0)
     sh.text("ESP32 display module harness", 25.4, 30.48, 2.0)
     sh.text("MCP23017 -> relay coil drivers", 66.04, 80.01, 2.0)

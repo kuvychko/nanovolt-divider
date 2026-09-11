@@ -31,8 +31,8 @@ and clearance rules, and 11 mm of board.
 
 ## Status
 
-Rev0: architecture locked, schematics ERC-clean, PCB placed and routed (first pass): DRC 0 errors,
-0 unconnected, 64 silkscreen warnings still to tidy.
+Rev0: architecture locked, schematics ERC-clean, PCB placed, routed and silkscreen tidied: DRC 0
+errors, 0 unconnected, 56 benign silkscreen-clipped-by-mask warnings.
 
 ## Repository layout
 
@@ -101,7 +101,11 @@ capacitance, not its leakage to earth - remains attached to the measurement node
   the *module's* pin numbering rather than being renumbered 1..n. Both GND wires are run: P1's
   returns the pulsed coil current and CN1's serves I2C. Same net, but two conductors cut the
   cable-side shared IR drop - do not collapse them to one wire.
-* MCP23017 (I2C 0x20) GPA0..GPA7 + GPB0..GPB1 drive the ten coil lines K1..K5 SET/RESET.
+* MCP23017 (I2C 0x20) drives the ten coil lines: GPB0..GPB7 = K4 SET, K4 RESET, K1 SET, K1 RESET,
+  K2 SET, K2 RESET, K3 SET, K3 RESET; GPA0 = K5 RESET, GPA1 = K5 SET; GPA2..GPA7 spare. The order
+  is the board's, not the relays': GPB0..GPB7 are the package row that faces the driver columns, and
+  in the columns' left-to-right order the lines fan out without a single crossing or via (see
+  Routing). The firmware maps GPIO to coil by table.
 * TMP275 (I2C 0x48, `A2:A0` all on `DGND`) sits next to the 1 ohm resistor, thermal proximity only.
   It replaced a TMP117 because the whole board is hand-soldered and the TMP117 only comes in a
   DSBGA-6 at 0.4 mm ball pitch. The price is absolute accuracy - +/-0.5 C and 12-bit (0.0625 C)
@@ -130,8 +134,9 @@ kicad-cli pcb drc --severity-error --severity-warning hardware/nanovolt-divider.
 ```
 
 None of the generator scripts runs DRC - run it yourself with the command above. The baseline is
-0 errors, 0 unconnected and 64 `silk_over_copper` warnings (reference designators over pads, not
-yet tidied). Check that a change does not add to it.
+0 errors, 0 unconnected, 0 schematic-parity issues and 56 `silk_over_copper` warnings (silkscreen
+clipped by solder mask at pad openings, which the fab does anyway; judged benign). Check that a change
+does not add to it.
 
 `tools/gen_schematics.py` generates all schematic files, the project symbol library and the
 project footprints; re-run it after editing the script. It will **not** overwrite an existing
@@ -232,15 +237,16 @@ UUIDs and never round-trips through `kicad-cli`, so re-running it leaves the wor
 * Panel parts (four banana jacks) terminate on solder-wire pads. Nothing is wired panel-to-panel,
   so every conductor appears in the netlist.
 
-DRC is clean (0 errors, 0 unconnected, 0 schematic-parity issues) apart from 64
-silkscreen-over-pad warnings (reference designators still need tidying).
+DRC is clean (0 errors, 0 unconnected, 0 schematic-parity issues) apart from 56 benign
+silkscreen-clipped-by-mask warnings.
 
 ### Routing
 
-The first routing came from `tools/route_pcb.py`: a grid maze router that routes around a set of
-hand-laid tracks in `tools/route_hand.py`. The hand-laid part is the design; the router only filled
-in the rest, and it shows in the control band (see Open items). Rules the routing follows, and that
-hand edits should keep:
+The routing came from `tools/route_pcb.py`: a grid maze router that routes around a set of
+hand-laid tracks in `tools/route_hand.py`. The hand-laid part is the design - the precision path,
+the driver cells and the whole control band; the router only filled in the rest (the precision
+chains between relays, +5V to the coils, DGND ties). Rules the routing follows, and that hand edits
+should keep:
 
 * **`MEAS_NODE` and `ANALOG_RTN` run as one tight pair on B.Cu** from K5 to R35: 0.4 mm, 0.3 mm
   apart, via-free. `ANALOG_RTN` is on the side facing the high-leg pads, so it rather than
@@ -269,6 +275,17 @@ hand edits should keep:
   pin and the RESET column the left, so they cross: SET stays on F.Cu, RESET drops to B.Cu. That
   way round leaves the left half of each relay's top free on F.Cu, which is how the TMP275 spine
   gets into K2.
+* **The MCP23017 fan-out has no crossings and no vias.** That is the GPIO order above, not the
+  routing: eight lines drop off U1's lower row in the driver columns' order, five of them left in
+  0.2 mm lanes at 0.4 mm pitch (four is all that fits between pin 1 and R7's pad), and K5's two leave
+  under the package to the right. SDA, SCL and 3V3 reach U1 under its body, stacked in the order
+  they drop to pins 13, 12 and 9. Before the remap the same ten lines took 30 vias and 237 mm; now
+  161 mm and none.
+* **What the control band still needs vias for**, and why each is unavoidable: the TMP275 spine's
+  SDA, SCL and 3V3 each rise on B.Cu past the coil lanes (the spine runs between U1 and the K4/K1
+  columns, so every ordering crosses it); R21's 3V3 pad is fenced in by SDA and SCL; and C1/R23 sit
+  beyond the K5 lines, so their 3V3 hops from pin 9 on B.Cu. SDA and SCL squeeze between C3 and C4
+  in two 0.2 mm lanes; +5V comes down the left edge from P1.
 
 The router is deterministic and reproduces the committed routing exactly, but `pcb_io.py apply`
 deletes every track first, so it is historical as soon as the board is edited by hand:
@@ -281,11 +298,8 @@ uv run tools/route_pcb.py %TEMP%/nvd_geom.json %TEMP%/nvd_routes.json
 
 ## Open items
 
-* Tidy the MCP23017 fan-out by hand. It is the router's work and it looks like it: `K4_SET` takes
-  6 vias and `K1_SET` 4, `K4_RESET` threads between CN1's DGND and SCL pads, and `K4_SET` runs
-  between the two pads of the 1k base resistors in the K4 and K1 columns. It is DRC-clean and
-  electrically harmless (static logic lines), just untidy.
-* Tidy silkscreen (64 reference designators over pads).
+* Firmware: the GPIO-to-coil table must follow the layout order above (GPB0..GPB7, GPA0 = K5
+  RESET, GPA1 = K5 SET), not the relay numbering.
 * Confirm the display module variant and its connector pinout (P1 / CN1) against the board in
   hand. With soldered pigtails there is no keyed housing at the board end, so this continuity check
   is the only thing standing between a mis-landed wire and 5 V on an I2C pin.

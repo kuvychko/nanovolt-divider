@@ -52,7 +52,17 @@ def apply(board_path, routes):
     P = lambda x, y: pcbnew.VECTOR2I(pcbnew.FromMM(x + OX), pcbnew.FromMM(y + OY))  # noqa: E731
     for t in list(b.GetTracks()):
         b.Remove(t)
-    nets = b.GetNetsByName()
+    # FindNet, not GetNetsByName(): once tracks have been removed, the SWIG proxy GetNetsByName()
+    # goes through is broken ("'SwigPyObject' object has no attribute 'NetsByName'").
+    nets = {}
+
+    def net_of(name):
+        if name not in nets:
+            nets[name] = b.FindNet(name)
+            if nets[name] is None:
+                raise KeyError(f"net {name!r} is not on the board - update the PCB from the schematic first")
+        return nets[name]
+
     r = json.load(open(routes))
     n = 0
     for net, layer, w, pts in r["tracks"]:
@@ -64,7 +74,7 @@ def apply(board_path, routes):
             t.SetEnd(P(*c))
             t.SetWidth(pcbnew.FromMM(w))
             t.SetLayer(pcbnew.F_Cu if layer == 0 else pcbnew.B_Cu)
-            t.SetNet(nets[net])
+            t.SetNet(net_of(net))
             b.Add(t)
             n += 1
     for net, x, y in r["vias"]:
@@ -73,7 +83,7 @@ def apply(board_path, routes):
         v.SetWidth(pcbnew.FromMM(0.6))
         v.SetDrill(pcbnew.FromMM(0.3))
         v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu)
-        v.SetNet(nets[net])
+        v.SetNet(net_of(net))
         b.Add(v)
     pcbnew.ZONE_FILLER(b).Fill(b.Zones())
     pcbnew.SaveBoard(board_path, b)

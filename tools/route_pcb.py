@@ -320,6 +320,7 @@ def main():
 
         def blocked(extra=0.0):
             res = []
+            vb = np.zeros((NY, NX), bool)
             for L in (0, 1):
                 other = (B.own[L] >= 0) & (B.own[L] != nid)
                 d = ndimage.distance_transform_edt(~other) * G
@@ -331,11 +332,13 @@ def main():
                     if em.any():
                         de = ndimage.distance_transform_edt(~em) * G
                         b |= de < HR.SEP + w / 2 + MARG
+                        # A via is wider than the track it replaces.  Without this it could sit
+                        # inside SEP - two SRC_P vias ended up 0.46 mm from RANGE_BUS.
+                        vb |= de < HR.SEP + VIA_D / 2 + MARG
                 b |= B.d_edge < EDGE + w / 2 + MARG
                 b |= B.d_hole < HOLE + w / 2 + MARG
                 b |= HR.region_block(net, xx, yy, L)
                 res.append((b, d))
-            vb = np.zeros((NY, NX), bool)
             for L in (0, 1):
                 vb |= res[L][1] < CLR + VIA_D / 2 + MARG
             vb |= B.d_edge < EDGE + VIA_D / 2 + MARG

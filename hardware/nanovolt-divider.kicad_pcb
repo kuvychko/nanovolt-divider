@@ -8,8 +8,8 @@
 	)
 	(paper "A4")
 	(title_block
-		(title "Nanovolt divider Rev0")
-		(rev "Rev0")
+		(title "Nanovolt divider Rev A")
+		(rev "Rev A")
 		(company "nanovolt-divider (open hardware)")
 	)
 	(layers

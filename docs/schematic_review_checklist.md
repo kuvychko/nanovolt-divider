@@ -1,4 +1,4 @@
-# Rev0 schematic review checklist
+# Rev A schematic review checklist
 
 Work through this before spending time on routing. Written against the schematics as of commit
 `a713704`.

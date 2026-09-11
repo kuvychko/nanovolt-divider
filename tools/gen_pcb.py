@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Bootstrap PCB generator for the nanovolt-divider Rev0 board.
+Bootstrap PCB generator for the nanovolt-divider Rev A board.
 
 Produces hardware/nanovolt-divider.kicad_pcb with:
   * board outline (60 x 69.1 mm portrait) with two slots that isolate the 1 ohm strip except for a
     10 mm centre bridge and 3 mm bridges at both edges
-  * every schematic footprint placed with the design rules from docs/nanovolt_divider_rev0.md
+  * every schematic footprint placed with the design rules from docs/nanovolt_divider_rev_a.md
     (control cluster on top, then one self-contained cell per relay - drivers, relay and its own
     high-leg resistor - the HV parts spaced, and the 1 ohm strip isolated behind two slots)
   * pad nets from the exported schematic netlist (so KiCad shows the ratsnest immediately)
@@ -162,7 +162,7 @@ def placement() -> dict:
     # The 1 ohm row sits 1.5 mm lower than it did with the TMP117.  A SOIC-8 courtyard is 5.4 mm
     # tall and the band between the slots and R35 was 5.38 mm, so U2 had to gain room somewhere;
     # taking it from the bottom margin keeps the slots, the mounting holes and everything above
-    # them exactly where the Rev0 review left them.  R35's silk still clears the board edge by
+    # them exactly where the Rev A review left them.  R35's silk still clears the board edge by
     # 0.6 mm and its pads by 2.5 mm.
     P["R35"] = (19.84, 75.0, 0)                 # 1 ohm (RS-2C), pads at x = 19.84 / 40.16
     P["J6"] = (14.5, 75.0, 0)                   # DIVIDER OUT LO at the pad-1 end
@@ -175,7 +175,7 @@ def placement() -> dict:
     P["U2"] = (30.0, 68.5, 0)                   # TMP275 (SOIC-8) on the 1 ohm island, above R35
     P["C2"] = (37.5, 68.5, 0)
     # Everything except the harness pads moves up by SHIFT_Y.  Doing it as one translation here,
-    # rather than editing every literal above, keeps this table readable against the Rev0 review
+    # rather than editing every literal above, keeps this table readable against the Rev A review
     # notes and guarantees no row drifts relative to another.
     for ref, (x, y, rot) in P.items():
         if ref not in HARNESS_POS:
@@ -517,7 +517,7 @@ def build():
     g.append(gr_rect(EDGE_BRIDGE, ny0, bx0, ny1, "Edge.Cuts", "slot_1ohm_left"))
     g.append(gr_rect(bx1, ny0, W - EDGE_BRIDGE, ny1, "Edge.Cuts", "slot_1ohm_right"))
     # ---- silkscreen ----------------------------------------------------------------------------
-    g.append(gr_text("NANOVOLT DIVIDER Rev0", 58.6, 33.6, "t_title", 0.9, rot=90))
+    g.append(gr_text("NANOVOLT DIVIDER Rev A", 58.6, 33.6, "t_title", 0.9, rot=90))
     # No harness group labels here: the P1 / CN1 / P3 name and the module pin numbers are silk on
     # the harness footprints themselves, which keeps them attached to the pads if the row moves.
     for txt, x, y, key, size, rot in (
@@ -549,7 +549,7 @@ def build():
     body = "\n".join(items + ["\t" + x for x in g])
     text = (f'(kicad_pcb (version 20241229) (generator "pcbnew") (generator_version "9.0")\n'
             f'\t(general (thickness 1.6) (legacy_teardrops no))\n\t(paper "A4")\n'
-            f'\t(title_block (title "Nanovolt divider Rev0") (rev "Rev0") (company "nanovolt-divider (open hardware)"))\n'
+            f'\t(title_block (title "Nanovolt divider Rev A") (rev "Rev A") (company "nanovolt-divider (open hardware)"))\n'
             + "\t" + LAYERS.replace("\n", "\n\t") + "\n\t" + SETUP.replace("\n", "\n\t") + "\n"
             + netlines + "\n" + body + "\n\t(embedded_fonts no)\n)\n")
     G.write(BOARD, text)

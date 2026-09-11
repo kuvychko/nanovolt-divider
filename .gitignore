@@ -25,6 +25,13 @@ fp-info-cache
 production/
 fabrication/
 
+# ...except the Rev A fabrication files, kept exactly as sent to the fab (see README).  The zip
+# that was uploaded is just these files zipped.
+!hardware/fab/*.gbr
+!hardware/fab/*.gbrjob
+!hardware/fab/*.drl
+hardware/fab/*.zip
+
 # --- Datasheets and vendor files (copyrighted, do not redistribute) ---
 docs/datasheets/
 

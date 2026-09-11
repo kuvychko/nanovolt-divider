@@ -1,7 +1,7 @@
 # /// script
 # dependencies = ["numpy", "scipy", "pillow"]
 # ///
-"""Bootstrap router for the nanovolt-divider Rev0 board.
+"""Bootstrap router for the nanovolt-divider Rev A board.
 
 Hand routes (design intent) come from route_hand.py; everything else is routed by A* on a 0.1 mm grid,
 two layers, 45-degree moves with turn penalties, clearance from Euclidean distance transforms of the

@@ -5,12 +5,12 @@ ordinary programmable DC source into a calibrated nanovolt-to-microvolt signal b
 attenuation** (1e-5 / 1e-6 / 1e-7), with relay-controlled polarity reversal and a true-zero
 (isolate) function, read by an external precision DMM.
 
-The design rationale, architecture, relay rules, calibration model and Rev0 BOM live in
-[docs/nanovolt_divider_rev0.md](docs/nanovolt_divider_rev0.md).
+The design rationale, architecture, relay rules, calibration model and Rev A BOM live in
+[docs/nanovolt_divider_rev_a.md](docs/nanovolt_divider_rev_a.md).
 
 ### The 450 V path was removed
 
-Rev0 originally carried a second, passive input for measuring a ~450 V Geiger-counter supply,
+Rev A originally carried a second, passive input for measuring a ~450 V Geiger-counter supply,
 sharing the 1 ohm low leg through a 3PDT NORMAL/HV toggle. It is gone, and the reasoning is worth
 keeping:
 
@@ -25,14 +25,29 @@ keeping:
   more output would have helped, and it was the one thing the 1 ohm leg would not give.
 
 A dedicated fixed divider has none of those constraints - it can pick its own low leg - so the HV
-measurement moves out of this instrument entirely. What this bought Rev0: `R34`, `J3`, `SW1` and
+measurement moves out of this instrument entirely. What this bought Rev A: `R34`, `J3`, `SW1` and
 the panel toggle, `R24`/`R25`/`C5`, the `J9`/P3 harness, the `HV` netclass and its three creepage
 and clearance rules, and 11 mm of board.
 
 ## Status
 
-Rev0: architecture locked, schematics ERC-clean, PCB placed, routed and silkscreen tidied: DRC 0
-errors, 0 unconnected, 56 benign silkscreen-clipped-by-mask warnings.
+Rev A: sent to OSH Park for fabrication on 2026-09-11 (git tag `rev-a`). Schematics ERC-clean;
+PCB placed, routed and silkscreen tidied: DRC 0 errors, 0 unconnected, 56 benign
+silkscreen-clipped-by-mask warnings.
+
+### Fabrication files
+
+`hardware/fab/` holds the Gerbers and drill files exactly as sent to OSH Park - byte for byte, so
+`.gitattributes` marks the folder `-text` and git leaves their CRLF line endings alone. The zip that
+was uploaded is just these files zipped and is not committed. Two things to know about them:
+
+* They were plotted before the revision was renamed, so their metadata still says `Rev0`
+  (`TF.ProjectId` in every Gerber, `Revision` in the job file). The copper is the tagged board's:
+  re-plotting the board and diffing against these files leaves only the creation date and the drill
+  marks.
+* They were plotted with drill marks **off**. The board file's stored plot settings have them on
+  (small), so `kicad-cli pcb export gerbers --board-plot-params` adds a 0.3 / 0.35 mm flash at every
+  hole on the copper and mask layers. Turn them off when re-plotting for comparison or for a re-order.
 
 ## Repository layout
 
@@ -44,9 +59,10 @@ hardware/                  KiCad 10 project
   nanovolt-divider.kicad_sch   root sheet: metrology topology (inputs, relays, high legs, 1 ohm, outputs)
   control.kicad_sch            ESP32 display-module harness, MCP23017, TMP275, power
   relay_channel.kicad_sch      generic latching-relay channel, instantiated 5x (K1..K5)
-  nanovolt-divider.kicad_pcb   board: 60 x 69.1 mm, 2 layers, placed and routed (first pass)
+  nanovolt-divider.kicad_pcb   board: 60 x 69.1 mm, 2 layers, placed and routed
   nanovolt-divider.kicad_dru   custom DRC rules (1 ohm bridge track width)
   lib/                         project-local symbol and footprint libraries
+  fab/                         Rev A Gerbers and drill files, as sent to OSH Park
 tools/gen_schematics.py    bootstrap script that produced the first version of the schematics
 tools/gen_pcb.py           bootstrap script that produced the placed (unrouted) board
 tools/route_pcb.py         bootstrap maze router that produced the first routing (see Routing below)

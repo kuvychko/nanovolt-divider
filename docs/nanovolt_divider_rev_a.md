@@ -1,11 +1,11 @@
 # Programmable Nanovolt Divider / Precision Attenuator
-## Rev0 Design Specification
+## Rev A Design Specification
 
-**Revision:** Rev0  
+**Revision:** Rev A  
 **Date:** 2026-09-06  
-**Status:** Architecture locked; schematic and PCB layout next  
+**Status:** Rev A boards ordered from OSH Park, 2026-09-11 (fab files in `hardware/fab/`)  
 **Primary use:** calibrated low-level DC injection and sub-LSB metrology with an external precision DMM  
-**Scope note:** a second, passive path for measuring a ~450 V Geiger-counter supply was specified for Rev0 and then removed - see §4.3.
+**Scope note:** a second, passive path for measuring a ~450 V Geiger-counter supply was specified for Rev A and then removed - see §4.3.
 
 ---
 
@@ -15,7 +15,7 @@ The goal is to build a compact bench instrument that converts an ordinary, contr
 
 The motivating experiment used a LAN-controlled bench power supply, a simple ~1:10^6 divider built from inexpensive resistors, an HP 3478A 5½-digit DMM on its 30 mV range, and ABBA modulation/averaging. That setup demonstrated reliable recovery of signals well below the DMM's 100 nV quantization count, including signals around 20 nV.
 
-The Rev0 instrument should preserve the simplicity of the successful experiment:
+The Rev A instrument should preserve the simplicity of the successful experiment:
 
 > **A conventional voltage source + passive precision attenuation + reversal + true zero + calibration + averaging.**
 
@@ -76,11 +76,11 @@ The precision signal path should remain as passive and electrically quiet as pra
 
 ---
 
-## 3. Rev0 non-goals
+## 3. Rev A non-goals
 
-Rev0 intentionally avoids becoming a general-purpose precision source or full HV instrument.
+Rev A intentionally avoids becoming a general-purpose precision source or full HV instrument.
 
-Not planned for Rev0:
+Not planned for Rev A:
 
 - direct nanovolt generation with DACs/op-amps
 - precision voltage reference
@@ -152,7 +152,7 @@ This preserves the same 1 Ω resistor, PCB traces, solder joints, output connect
 
 ### 4.3 High-voltage path — removed
 
-Rev0 originally carried a second passive input for a ~450 V Geiger-counter supply: a dedicated
+Rev A originally carried a second passive input for a ~450 V Geiger-counter supply: a dedicated
 10 MΩ high leg into the **shared** 1 Ω low leg, selected by a physical 3PDT NORMAL/HV toggle. It
 has been removed. The reasoning is recorded here because the numbers are the useful part:
 
@@ -167,7 +167,7 @@ has been removed. The reasoning is recorded here because the numbers are the use
   exactly what that path needed, and the shared 1 Ω leg was the one thing that would not give it.
 
 A dedicated fixed divider is free of all three constraints, because it chooses its own low leg. The
-450 V measurement therefore moves out of this instrument, and Rev0 stays single-purpose.
+450 V measurement therefore moves out of this instrument, and Rev A stays single-purpose.
 
 Removed with it: `R34`, `J3`, `SW1` and the panel toggle, `R24`/`R25`/`C5`, the `J9`/P3 harness,
 the `HV` netclass and its clearance/creepage rules, and 11 mm of board height. `SW1`'s two analog
@@ -215,7 +215,7 @@ flowchart LR
 
 ### 6.1 Controller
 
-Rev0 uses an integrated **2.8" ESP32 touch-display module** rather than a separate Arduino + TFT.
+Rev A uses an integrated **2.8" ESP32 touch-display module** rather than a separate Arduino + TFT.
 
 Expected module characteristics:
 
@@ -320,13 +320,13 @@ Temperature correction, once characterized, may use:
 k(T) = k_0 \left[1 + \alpha(T - T_0)\right]
 \]
 
-Rev0 firmware should support the field from the beginning but use **zero temperature correction until the coefficient is experimentally measured**.
+Rev A firmware should support the field from the beginning but use **zero temperature correction until the coefficient is experimentally measured**.
 
 ---
 
 ## 9. Planned SCPI interface
 
-Exact command names may evolve, but Rev0 should support these concepts:
+Exact command names may evolve, but Rev A should support these concepts:
 
 ```text
 *IDN?
@@ -408,11 +408,11 @@ The same sheet is instantiated five times. KiCad's multi-channel/repeat-layout w
 
 ---
 
-## 11. BOM — Rev0
+## 11. BOM — Rev A
 
 ### 11.1 Precision / analog components
 
-| Qty Rev0 | Part | Mfr. part number | Function / notes | Status |
+| Qty Rev A | Part | Mfr. part number | Function / notes | Status |
 |---:|---|---|---|---|
 | 1 | Vishay/Dale 1 Ω wirewound | `RS02C1R000FE70` | Shared low leg, 1%, 2.5 W, through-hole | **Purchased** |
 | 1 | Ohmite 100 kΩ metal film | `MOX70031003BZE` | Normal `1e-5` range, 0.1%, 5 ppm/°C | **Purchased** |
@@ -423,7 +423,7 @@ The same sheet is instantiated five times. KiCad's multi-channel/repeat-layout w
 
 ### 11.2 Relay-driver / control-board components
 
-| Qty Rev0 | Part | Mfr. part number | Function / notes | Status |
+| Qty Rev A | Part | Mfr. part number | Function / notes | Status |
 |---:|---|---|---|---|
 | 10 | NPN transistor, SOT-23 | `MMBT2222A` | Two low-side coil drivers per relay | **12 purchased** |
 | 10 | Switching diode | `1N4148W` | Flyback diode across each relay coil | **12 purchased** |
@@ -434,7 +434,7 @@ The same sheet is instantiated five times. KiCad's multi-channel/repeat-layout w
 
 ### 11.3 Decoupling / power
 
-| Qty Rev0 | Part | Mfr. part number | Function / notes | Status |
+| Qty Rev A | Part | Mfr. part number | Function / notes | Status |
 |---:|---|---|---|---|
 | as needed | 100 nF, 16 V, X7R, SMD | `SH31B104K160CT` | Local high-frequency decoupling | **20 purchased** |
 | 2–3 | 22 µF, 1206 MLCC | `EMK316BB7226ML-T` | Local/bulk 5 V decoupling | **3 purchased** |
@@ -467,7 +467,7 @@ The first Mouser order establishes the core passive-divider and relay-driver com
 - 1 × TMP117 *(DSBGA-6, superseded - see 11.1)*
 - 1 × TQ2-L2-5V-3 relay
 
-Additional Rev0 procurement is expected to include:
+Additional Rev A procurement is expected to include:
 
 - four more TQ2-L2-5V-3 relays,
 - one `TMP275AIDR` (SOIC-8) in place of the DSBGA-6 TMP117,
@@ -477,7 +477,7 @@ Additional Rev0 procurement is expected to include:
 
 ---
 
-## 13. Rev0 design principles
+## 13. Rev A design principles
 
 1. **Do not synthesize nanovolts directly.** Generate ordinary voltages well and attenuate them.
 2. **Keep the precision signal path passive.**
@@ -497,7 +497,7 @@ Additional Rev0 procurement is expected to include:
 ## 14. Immediate next steps
 
 1. Create the KiCad project and project-local symbol/footprint libraries.
-2. Draw the Rev0 root-sheet architecture first.
+2. Draw the Rev A root-sheet architecture first.
 3. Create the generic `relay_channel.kicad_sch` interface.
 4. Instantiate the relay channel five times.
 5. Implement and ERC-check one relay channel.

@@ -380,20 +380,45 @@ def dgnd_symbol_text() -> str:
 # so a wire that lands on the wrong pin is visible in the schematic instead of looking plausibly
 # correct - which matters more now than it did with a keyed header, because the board end is
 # soldered and nothing mechanical stops a conductor going to the wrong pad.
-# UNVERIFIED against the board in hand - see README "confirm the display module variant".
-# Only the conductors actually used get a pin and a pad.  The pin *numbers* stay the module
-# connector's own numbering (P1 keeps 3/4, it is not renumbered 1/2) so the schematic still reads
-# "this wire lands on module P1 pin 3".  The unused conductors are snipped and heatshrunk at the
-# pigtail rather than landed on the board.
+# Only the conductors actually used get a pin and a pad; the unused ones are snipped and heatshrunk
+# at the pigtail rather than landed on the board.
+#
+# The pin *numbers* are the Rev A pad numbers and cannot change: the board is fabricated.  They were
+# chosen as the module-connector pin numbers of the assumed ESP32-2432S028R pinout (P1 = TX/RX/VIN/
+# GND, CN1 = GND/IO22/IO27/3V3), and the module actually in hand (a "Cheap Yellow Display") does not
+# match it:
+#   UART connector : RXD, TXD, GND, 5V         -> 5V and GND are swapped against J7's pad numbers
+#   3V3 connector  : 3.3V, IO35, (nc), GND     -> power only; IO35 is input-only, useless for I2C
+#   SPI connector  : IO23 MOSI, IO19 MISO, IO18 SCK, IO27 CS
+# There is no IO22 on any connector, so I2C moves to IO18 (SCL) / IO27 (SDA) on the SPI connector,
+# and J8 is fed by two pigtails (3V3 connector for power, SPI connector for the bus).  The pin names
+# below are the module's labels for the wire that lands there; the pad number no longer says which
+# module pin it is.  Land wires by signal name, never by number.  See README "Display harness".
 ESP32_CONNECTORS = {
     "J_ESP32_P1": ("ESP32_DISP_P1",
-                   "Soldered pigtail to ESP32-2432S028R (ELEGOO 2.8in) connector P1 (power in). Only VIN and GND are used; "
-                   "TX (pin 1) and RX (pin 2) are cut back at the cable. Verify pinout against the module in hand.",
-                   [("3", "VIN_5V"), ("4", "GND")], "J_ESP32_P1_WirePads"),
+                   "Soldered pigtail from the display module UART/power connector (RXD, TXD, GND, 5V). Pad 3 = 5V wire, "
+                   "pad 4 = GND wire - the reverse of the module's own pin order. RXD and TXD are cut back at the cable.",
+                   [("3", "5V"), ("4", "GND")], "J_ESP32_P1_WirePads"),
     "J_ESP32_CN1": ("ESP32_DISP_CN1",
-                    "Soldered pigtail to ESP32-2432S028R connector CN1 (I2C + 3V3). All four conductors are used. "
-                    "Verify pinout against the module in hand.",
-                    [("1", "GND"), ("2", "SCL_IO22"), ("3", "SDA_IO27"), ("4", "P3V3")], "J_ESP32_CN1_WirePads"),
+                    "Soldered landing for two display-module pigtails: pad 1 GND and pad 4 3.3V from the 3V3 connector "
+                    "(3.3V, IO35, nc, GND); pad 2 IO18 (SCL) and pad 3 IO27 (SDA) from the SPI connector "
+                    "(IO23, IO19, IO18, IO27). IO35, IO23 and IO19 are cut back at the cable.",
+                    [("1", "GND"), ("2", "SCL_IO18"), ("3", "SDA_IO27"), ("4", "3V3")], "J_ESP32_CN1_WirePads"),
+}
+
+# The footprints as fabricated in Rev A.  Their F.Fab signal names and descriptions predate the
+# module in hand (see above) and are frozen here so the project library keeps matching the board -
+# regenerating them from ESP32_CONNECTORS would raise lib_footprint_mismatch on J7/J8.  Change this
+# only together with a board revision.
+HARNESS_PADS_REV_A = {
+    "J_ESP32_P1_WirePads": ("P1",
+                            "Soldered pigtail to ESP32-2432S028R (ELEGOO 2.8in) connector P1 (power in). Only VIN and GND are used; "
+                            "TX (pin 1) and RX (pin 2) are cut back at the cable. Verify pinout against the module in hand.",
+                            [("3", "VIN_5V"), ("4", "GND")]),
+    "J_ESP32_CN1_WirePads": ("CN1",
+                             "Soldered pigtail to ESP32-2432S028R connector CN1 (I2C + 3V3). All four conductors are used. "
+                             "Verify pinout against the module in hand.",
+                             [("1", "GND"), ("2", "SCL_IO22"), ("3", "SDA_IO27"), ("4", "P3V3")]),
 }
 
 
@@ -762,13 +787,13 @@ def build_control(lib: SymbolLib) -> Sheet:
     # ---- ESP32 display module harness pigtails ------------------------------------------
     # These are soldered wire landings, not headers: the module's own cable keeps its connector at
     # the module end.  Only the used conductors have a pin and a pad; the rest are cut at the cable.
-    # Both GND wires are kept deliberately - J7's returns the pulsed coil current (2 x 40 mA) and
-    # J8's serves I2C.  Same net, but two conductors cut the cable-side shared IR drop.  Do not
-    # collapse them to one wire.  (A third, J9/P3, went with the HV mode sense in Rev A.)
-    # J7 = module P1 (VIN / GND). mirror y -> pins on the right, lowest pin number on top.
+    # Both GND wires are kept deliberately - J7's (UART connector) returns the pulsed coil current
+    # (2 x 40 mA) and J8's (3V3 connector) serves I2C.  Same net, but two conductors cut the
+    # cable-side shared IR drop.  Do not collapse them to one wire.
+    # J7 = module UART/power connector (5V / GND). mirror y -> pins on the right, lowest pin number on top.
     sh.symbol(JP1, 38.1, 45.72, "J7", "ESP32_DISP_P1", mirror="y", footprint=FP_J7,
-              description="Soldered pigtail to ESP32-2432S028R (ELEGOO 2.8in) connector P1: 3 VIN(5V), 4 GND. "
-                          "TX(IO1) pin 1 and RX(IO3) pin 2 are cut back at the cable.",
+              description="Soldered pigtail from the display module UART/power connector (RXD, TXD, GND, 5V): "
+                          "pad 3 = 5V wire, pad 4 = GND wire (reverse of the module pin order). RXD/TXD cut back at the cable.",
               ref_pos=(33.02, 40.64), val_pos=(27.94, 43.18))
     p = lambda k: sh.pinpos(JP1, 38.1, 45.72, 0, k, mirror="y")
     vin, gnd = p("3"), p("4")
@@ -783,10 +808,11 @@ def build_control(lib: SymbolLib) -> Sheet:
     sh.wire(55.88, 58.42, 63.5, 58.42)
     flag(63.5, 58.42, "#FLG02")
 
-    # J8 = module CN1 (I2C + 3V3). angle 180 -> pins on the right, pin 1 at the bottom.
-    # All four conductors are used, so this one keeps its full pad count.
+    # J8 = I2C + 3V3, fed by two pigtails: GND / 3.3V from the module's 3V3 connector, SCL = IO18 and
+    # SDA = IO27 from its SPI connector.  angle 180 -> pins on the right, pin 1 at the bottom.
     sh.symbol(JCN1, 38.1, 76.2, "J8", "ESP32_DISP_CN1", angle=180, footprint=FP_J8,
-              description="Soldered pigtail to ESP32-2432S028R connector CN1: 1 GND, 2 IO22 (SCL), 3 IO27 (SDA), 4 3V3",
+              description="Two display-module pigtails: 1 GND and 4 3.3V from the 3V3 connector (3.3V, IO35, nc, GND); "
+                          "2 IO18 (SCL) and 3 IO27 (SDA) from the SPI connector (IO23, IO19, IO18, IO27).",
               ref_pos=(33.02, 66.04), val_pos=(27.94, 68.58))
     p = lambda k: sh.pinpos(JCN1, 38.1, 76.2, 180, k)
     g, scl, sda, v33 = p("1"), p("2"), p("3"), p("4")
@@ -907,12 +933,14 @@ def build_control(lib: SymbolLib) -> Sheet:
     cap(128.27, 165.1, "C2", "100n", "+3V3", "TMP275 decoupling, 100 nF X7R 16 V 1206 (SH31B104K160CT)", "SH31B104K160CT")
 
     # ---- notes -------------------------------------------------------------------------------
-    sh.text("ESP32 2.8in touch display module (ESP32-2432S028R type, ELEGOO) - off-board, connected by 3 harnesses:\n"
-            "  P1 : TX / RX / VIN(5V) / GND   -> VIN is the module's USB 5 V rail; it powers the relay coils (+5V).\n"
-            "  CN1: GND / IO22 / IO27 / 3V3    -> I2C: SCL = IO22, SDA = IO27. 3V3 from the module LDO feeds U1, U2, pull-ups.\n"
+    sh.text("ESP32 2.8in touch display module (Cheap Yellow Display, ESP32-2432S028R type) - off-board, 3 pigtails:\n"
+            "  UART: RXD / TXD / GND / 5V       -> J7: 5V -> pad 3, GND -> pad 4 (reversed!). USB 5V, powers the relay coils.\n"
+            "  3V3 : 3.3V / IO35 / nc / GND     -> J8: GND -> pad 1, 3.3V -> pad 4. Module LDO feeds U1, U2, pull-ups.\n"
+            "  SPI : IO23 / IO19 / IO18 / IO27  -> J8: IO18 (SCL) -> pad 2, IO27 (SDA) -> pad 3. IO18 shared w/ SD slot.\n"
+            "Rev A pad silk (P1 3/4, CN1 1-4) follows an assumed pinout: land wires by signal name, not by number.\n"
             "I2C addresses: MCP23017 0x20 (A2:A0 = 000), TMP275 0x48 (A2:A0 = GND). 4.7k pull-ups to 3V3 on this board.\n"
             "MCP23017 GPB0..GPB7 -> K4 S/R, K1 S/R, K2 S/R, K3 S/R; GPA0 -> K5 RESET, GPA1 -> K5 SET (layout order).\n"
-            "MCP23017 GPA2..GPA7 are spare; the ESP32 side has no board connection beyond P1 and CN1.",
+            "MCP23017 GPA2..GPA7 are spare; the ESP32 side has no board connection beyond J7 and J8.",
             172.72, 143.51, 1.0)
     sh.text("ESP32 display module harness", 25.4, 30.48, 2.0)
     sh.text("MCP23017 -> relay coil drivers", 66.04, 80.01, 2.0)
@@ -1193,14 +1221,15 @@ def harness_pads_footprint(name):
     1.25 mm-class connector, so an XH header meant crimping a bespoke cable to bridge the pitch.
 
     Only the used conductors get a pad, and each pad keeps the *module connector's* pin number, so
-    the silk reads as a map onto P1/CN1/P3 rather than a renumbered 1..n row.
+    the silk reads as a map onto P1/CN1 rather than a renumbered 1..n row.  That was the assumed
+    ESP32-2432S028R pinout; the module in hand differs (see ESP32_CONNECTORS), so on the Rev A board
+    the silk numbers and "P1"/"CN1" are not the module's - land wires by signal name.
 
     0.8 mm drill / 1.6 mm pad suits the 28-24 AWG pigtail wire; the panel jacks take much thicker
     wire and get their own larger pads.  Pitch is 2.54 mm - wide enough to hand-solder six separate
     wires in a row without bridging.
     """
-    value, descr, pins, _fp = ESP32_CONNECTORS[HARNESS_PAD_SOURCE[name]]
-    module_conn = value.rsplit("_", 1)[-1]      # ESP32_DISP_CN1 -> CN1
+    module_conn, descr, pins = HARNESS_PADS_REV_A[name]     # frozen: the board is fabricated
     body = []
     for i, (num, pname) in enumerate(pins):
         x = PAD_PITCH * i
@@ -1225,7 +1254,10 @@ def harness_pads_footprint(name):
 
 
 PAD_PITCH = 2.54
-HARNESS_PAD_SOURCE = {fp: sym for sym, (_v, _d, _p, fp) in ESP32_CONNECTORS.items()}
+# Every symbol's footprint must have a frozen pad table, and their pad numbers must agree.
+assert {fp for (_v, _d, _p, fp) in ESP32_CONNECTORS.values()} == set(HARNESS_PADS_REV_A)
+assert all([n for n, _ in pins] == [n for n, _ in HARNESS_PADS_REV_A[fp][2]]
+           for (_v, _d, pins, fp) in ESP32_CONNECTORS.values())
 
 
 PROJECT_FOOTPRINTS = {
@@ -1242,7 +1274,7 @@ PROJECT_FOOTPRINTS = {
         "R_Axial_Vishay_RS02C_L15.1mm_D5.6mm_P20.32mm_Horizontal",
         "Vishay Dale RS-2C wirewound power resistor, axial, body 15.06 x 5.54 mm max (doc 30204), lead 1.02 mm, 20.32 mm pitch",
         "resistor axial Vishay Dale RS-2C wirewound", 20.32, 15.06, 5.54, 1.02),
-    **{fp: (lambda f=fp: harness_pads_footprint(f)) for fp in HARNESS_PAD_SOURCE},
+    **{fp: (lambda f=fp: harness_pads_footprint(f)) for fp in HARNESS_PADS_REV_A},
 }
 
 

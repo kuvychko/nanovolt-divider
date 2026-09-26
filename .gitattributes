@@ -11,6 +11,11 @@
 *.step binary
 *.zip binary
 
+# SOLIDWORKS parts and their 3D-print / 3D-viewer exports.
+*.SLDPRT binary
+*.3MF binary
+*.3DXML binary
+
 # Fabrication files are a record of what was sent to the fab, byte for byte.  KiCad wrote them
 # with CRLF; eol=lf above would rewrite them.
 hardware/fab/** -text

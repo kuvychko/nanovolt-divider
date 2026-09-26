@@ -523,7 +523,7 @@
       "plot": "fab/",
       "pos_files": "",
       "specctra_dsn": "",
-      "step": "",
+      "step": "nanovolt-divider.step",
       "svg": "",
       "vrml": ""
     },

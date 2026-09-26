@@ -3,7 +3,7 @@
 
 **Revision:** Rev A  
 **Date:** 2026-09-06  
-**Status:** Rev A boards ordered from OSH Park, 2026-09-11 (fab files in `hardware/fab/`)  
+**Status:** Rev A boards ordered from OSH Park 2026-09-11 and received (fab files in `hardware/fab/`); enclosure in design (`enclosure/`)  
 **Primary use:** calibrated low-level DC injection and sub-LSB metrology with an external precision DMM  
 **Scope note:** a second, passive path for measuring a ~450 V Geiger-counter supply was specified for Rev A and then removed - see §4.3.
 
@@ -225,6 +225,12 @@ Expected module characteristics:
 - 320×240 ILI9341 TFT
 - resistive touchscreen / XPT2046-type controller
 
+The module in hand is a "Cheap Yellow Display" (ESP32-2432S028R family). Its three 4-pin
+connectors are UART / power (RXD, TXD, GND, 5V), 3V3 (3.3V, IO35, nc, GND) and SPI (IO23 MOSI,
+IO19 MISO, IO18 SCK, IO27 CS). The board takes 5 V and GND from the first, 3.3 V and GND from the
+second, and the I²C bus from the third: **SDA = IO27, SCL = IO18**. The module has no IO22, and
+IO35 is input-only. The pad-by-pad wiring is in the README, under "Display harness".
+
 ### 6.2 GPIO expansion
 
 Five TQ2-L2 relays require ten coil-control outputs:
@@ -430,7 +436,7 @@ The same sheet is instantiated five times. KiCad's multi-channel/repeat-layout w
 | 10 | 1 kΩ resistor, 1206 | existing stock/library | Transistor base resistor | On hand / source TBD |
 | 10 | 10 kΩ resistor, 1206 | existing stock/library | Base pulldown | On hand / source TBD |
 | 1 | MCP23017 | TBD | I²C GPIO expander for relay controls | **To order** |
-| 1 | Integrated 2.8" ESP32 touch TFT | ELEGOO / ESP32 2.8" ILI9341-type module | UI, Wi-Fi, USB, controller | Planned / status TBD |
+| 1 | Integrated 2.8" ESP32 touch TFT | "Cheap Yellow Display", ESP32-2432S028R family | UI, Wi-Fi, USB, controller | **On hand** |
 
 ### 11.3 Decoupling / power
 
@@ -446,11 +452,12 @@ The same sheet is instantiated five times. KiCad's multi-channel/repeat-layout w
 |---:|---|---|---|
 | 2 | Normal-input banana sockets | + / − | To select |
 | 2 | Output banana sockets | + / − | To select |
-| 1 | Stock instrument enclosure | RF-transparent body preferred, machinable metal front panel | TBD |
+| 1 | Enclosure | 3D-printed: front panel, back panel, base plate, PCB holder (SOLIDWORKS + 3MF in `enclosure/`) | In design (v0) |
 | 1 | Internal compartment divider | Plastic / FR4 / 3D printed | To design |
 | 1 | TFT mounting bezel | Optional 3D-printed bezel | To design |
 | misc. | PCB standoffs, harnesses | Mechanical integration | TBD |
-| - | *(no board-side harness headers)* | Display-module pigtails solder straight to `J7`/`J8`/`J9` pads | n/a |
+| 1 | Banana-jack nut wrench | 3D-printed tool (`enclosure/banana-plug-wrench-v0`) | In design (v0) |
+| - | *(no board-side harness headers)* | Display-module pigtails solder straight to the `J7`/`J8` pads | n/a |
 
 ---
 

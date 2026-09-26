@@ -35,6 +35,10 @@ hardware/fab/*.zip
 # --- Datasheets and vendor files (copyrighted, do not redistribute) ---
 docs/datasheets/
 
+# --- SOLIDWORKS ---
+# Lock files written next to an open part (~$name.SLDPRT)
+~$*
+
 # --- OS / editor ---
 .DS_Store
 Thumbs.db

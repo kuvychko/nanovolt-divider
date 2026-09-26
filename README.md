@@ -31,7 +31,9 @@ and clearance rules, and 11 mm of board.
 
 ## Status
 
-Rev A: sent to OSH Park for fabrication on 2026-09-11 (git tag `rev-a`). Schematics ERC-clean;
+Rev A: sent to OSH Park for fabrication on 2026-09-11 (git tag `rev-a`); bare boards received.
+The layout is frozen from here: later changes are harness wiring and documentation only, and the
+schematic is kept net-identical to the board. Schematics ERC-clean;
 PCB placed, routed and silkscreen tidied: DRC 0 errors, 0 unconnected, 56 benign
 silkscreen-clipped-by-mask warnings.
 
@@ -53,6 +55,8 @@ was uploaded is just these files zipped and is not committed. Two things to know
 
 ```
 docs/                      design specification, notes
+enclosure/                 SOLIDWORKS parts (.SLDPRT) and 3D-print exports (.3MF, .3DXML): front
+                           panel, back panel, base plate, PCB holder, banana-jack nut wrench
 docs/datasheets/           vendor datasheets (git-ignored, copyrighted; see docs/datasheets list below)
 hardware/                  KiCad 10 project
   nanovolt-divider.kicad_pro
@@ -106,17 +110,16 @@ capacitance, not its leakage to earth - remains attached to the measurement node
 
 ### Control wiring
 
-* Controller: integrated 2.8" ESP32 touch-TFT module (ESP32-2432S028R type, ELEGOO), off-board,
-  connected by two harnesses (P1: 5 V / GND, CN1: I2C + 3V3).
-* Those harnesses are the module's own pigtails, **soldered** to pads at the board end - there is no
-  board-side connector. The module end keeps its connector, so the display still unplugs. This is
-  why: the module side is a 1.25 mm-class connector, so a board-side header would have meant
-  crimping a bespoke pitch-bridging cable for a joint that never needs to unmate, and the panel
-  jacks (`J1`, `J2`, `J5`, `J6`) are already hard-wired the same way.
-* Only the six live conductors have pads: `J7` = P1 pins 3/4, `J8` = CN1 pins 1-4. The pads keep
-  the *module's* pin numbering rather than being renumbered 1..n. Both GND wires are run: P1's
-  returns the pulsed coil current and CN1's serves I2C. Same net, but two conductors cut the
-  cable-side shared IR drop - do not collapse them to one wire.
+* Controller: a 2.8" ESP32 touch-TFT module, a "Cheap Yellow Display" (ESP32-2432S028R family),
+  mounted off-board and connected by three of its own pigtails (see Display harness below).
+* Those pigtails are **soldered** to pads at the board end. There is no board-side connector. The
+  module end keeps its connector, so the display still unplugs. The reason: the module side is a
+  1.25 mm-class connector, so a board-side header would have meant crimping a bespoke
+  pitch-bridging cable for a joint that never needs to unmate. The panel jacks (`J1`, `J2`, `J5`,
+  `J6`) are already hard-wired the same way.
+* Only the six live conductors have pads: `J7` (5 V, GND) and `J8` (GND, SCL, SDA, 3V3). Both GND
+  wires are run: `J7`'s returns the pulsed coil current and `J8`'s serves I2C. They are the same
+  net, but two conductors cut the shared IR drop in the cable. Do not collapse them to one wire.
 * MCP23017 (I2C 0x20) drives the ten coil lines: GPB0..GPB7 = K4 SET, K4 RESET, K1 SET, K1 RESET,
   K2 SET, K2 RESET, K3 SET, K3 RESET; GPA0 = K5 RESET, GPA1 = K5 SET; GPA2..GPA7 spare. The order
   is the board's, not the relays': GPB0..GPB7 are the package row that faces the driver columns, and
@@ -131,13 +134,60 @@ capacitance, not its leakage to earth - remains attached to the measurement node
 * The control ground is the global net `DGND`, deliberately not `GND`, so it cannot be merged with
   the floating analog return (`SRC_RTN` / `ANALOG_RTN`) by accident.
 
+### Display harness
+
+The Rev A pads were laid out for an *assumed* ESP32-2432S028R pinout (P1 = TX / RX / VIN / GND,
+CN1 = GND / IO22 / IO27 / 3V3). The module actually in hand has three 4-pin connectors:
+
+| Module connector | Signals, in the order printed on the module |
+|---|---|
+| UART / power | RXD, TXD, GND, 5V |
+| 3V3 | 3.3V, IO35, *(nc)*, GND |
+| SPI | IO23 (MOSI), IO19 (MISO), IO18 (SCK), IO27 (CS) |
+
+This module has no IO22 on any connector, so the board is wired as follows. The board is not
+changed: the netlist and the copper are exactly Rev A. Only the harness and the firmware pin
+assignment move.
+
+| Board pad | Net | Wire from module | Pad silk on Rev A |
+|---|---|---|---|
+| `J7` pad 3 | `+5V` | UART / power: **5V** | `P1` `3` |
+| `J7` pad 4 | `DGND` | UART / power: **GND** | `P1` `4` |
+| `J8` pad 1 | `DGND` | 3V3: **GND** | `CN1` `1` |
+| `J8` pad 2 | `SCL` | SPI: **IO18** | `CN1` `2` |
+| `J8` pad 3 | `SDA` | SPI: **IO27** | `CN1` `3` |
+| `J8` pad 4 | `+3V3` | 3V3: **3.3V** | `CN1` `4` |
+| - | - | cut back and insulate: RXD, TXD, IO35, the nc pin, IO23, IO19 | - |
+
+* **Land every wire by signal name, never by pad number.** The silk numbers on `J7` are the
+  assumed P1 pin numbers, and on this module they are the wrong way round: module pin 3 is GND,
+  but pad `3` is `+5V`. Matching numbers would feed the coil drivers a reversed 5 V supply. On
+  `J8` the "CN1 1-4" silk no longer refers to any single module connector, because the pad row is
+  now fed by two pigtails. The F.Fab text on the board (`SCL_IO22`, `VIN_5V`) is stale for the same
+  reason. The schematic symbols carry the correct module labels.
+* **Why IO18 / IO27.** I2C needs two pins that can drive open-drain. IO35 cannot, because ESP32
+  GPIO34-39 are input-only and have no internal pull-ups. RXD / TXD are the USB-serial console, and
+  the SCPI-over-USB interface needs them. That leaves the SPI connector. SDA stays on IO27, where
+  the earlier pinout already had it, and SCL moves from IO22 to IO18. Firmware:
+  `Wire.begin(/*SDA*/ 27, /*SCL*/ 18)`.
+* **The cost of IO18.** On the standard CYD, IO18 / IO19 / IO23 are also the microSD slot's bus
+  (the slot has its own CS on IO5). While the SD card's CS is deasserted it ignores the clock line,
+  so I2C traffic on IO18 does not disturb it. However, the firmware cannot use the SD card and I2C
+  at the same time without switching the pin between peripherals. Rev A firmware does not use SD.
+  Before settling on this, check the module in hand for SD-slot pull-ups on IO18: they would sit in
+  parallel with `R22`.
+* Both GND conductors still run, now from two different connectors: the UART / power GND to `J7`
+  (coil current) and the 3V3 connector's GND to `J8` (I2C).
+
 ## Working with the schematics
 
 Open `hardware/nanovolt-divider.kicad_pro` in KiCad 10. The project library
 `hardware/lib/nanovolt-divider.kicad_sym` holds the TQ2-L2-5V relay, the TMP275, the `DGND` power
-symbol and the two ESP32 harness pigtail landings - these carry the module's own pin names
-(`SCL_IO22`, `SDA_IO27`, ...) rather than `Pin_1..Pin_4`, so a wire on the wrong pin is visible in
-the schematic instead of looking plausibly correct. Footprints for the relay, the precision
+symbol and the two ESP32 harness pigtail landings. These carry the module's own pin names
+(`SCL_IO18`, `SDA_IO27`, ...) rather than `Pin_1..Pin_4`, so a wire on the wrong pin is visible in
+the schematic instead of looking plausibly correct. The harness footprints are frozen as fabricated
+(`HARNESS_PADS_REV_A` in `gen_schematics.py`), so their F.Fab names still show the assumed pinout;
+see Display harness. Footprints for the relay, the precision
 resistors and the harness pads are in `hardware/lib/nanovolt-divider.pretty`; the TMP275 uses the
 stock `Package_SO:SOIC-8_3.9x4.9mm_P1.27mm`. Everything else is stock KiCad.
 
@@ -150,9 +200,12 @@ kicad-cli pcb drc --severity-error --severity-warning hardware/nanovolt-divider.
 ```
 
 None of the generator scripts runs DRC - run it yourself with the command above. The baseline is
-0 errors, 0 unconnected, 0 schematic-parity issues and 56 `silk_over_copper` warnings (silkscreen
-clipped by solder mask at pad openings, which the fab does anyway; judged benign). Check that a change
-does not add to it.
+0 errors, 0 unconnected and 56 `silk_over_copper` warnings (silkscreen clipped by solder mask at pad
+openings, which the fab does anyway; judged benign). With `--schematic-parity` there are also 2
+`footprint_symbol_field_mismatch` warnings: `J7` and `J8`'s Description field was updated for the
+display module in hand, and the board's copy was deliberately left as fabricated. They are metadata
+only. Update PCB from Schematic would sync them without touching copper. Check that a change does
+not add to this baseline.
 
 `tools/gen_schematics.py` generates all schematic files, the project symbol library and the
 project footprints; re-run it after editing the script. It will **not** overwrite an existing
@@ -315,10 +368,16 @@ uv run tools/route_pcb.py %TEMP%/nvd_geom.json %TEMP%/nvd_routes.json
 ## Open items
 
 * Firmware: the GPIO-to-coil table must follow the layout order above (GPB0..GPB7, GPA0 = K5
-  RESET, GPA1 = K5 SET), not the relay numbering.
-* Confirm the display module variant and its connector pinout (P1 / CN1) against the board in
-  hand. With soldered pigtails there is no keyed housing at the board end, so this continuity check
-  is the only thing standing between a mis-landed wire and 5 V on an I2C pin.
+  RESET, GPA1 = K5 SET), not the relay numbering. I2C is SDA = IO27, SCL = IO18 (see Display
+  harness).
+* Before soldering the harness, buzz each pigtail conductor from the module pin to the wire end
+  and label it. The signal order per connector is recorded above, but which end is pin 1 and the
+  module's silkscreen designators for the three connectors are not yet recorded. Put a meter on
+  `J7` before the first power-up and check that pad 3 reads +5 V against pad 4. With soldered
+  pigtails there is no keyed housing at the board end, and the silk numbers on `J7` are known to
+  mislead (see Display harness).
+* Check whether the module fits pull-ups on IO18 / IO27 (SD slot or otherwise) that would sit in
+  parallel with `R21` / `R22`.
 * Confirm the pigtail conductor gauge fits the 0.8 mm pad drill, and decide how the cable is strain
   relieved at the board end - the board no longer has a housing taking that load.
 * Verify pad numbering on the MOX-700, Slim-Mox SM102 and RS-2C footprints against the parts in

@@ -169,17 +169,19 @@ instance (K1 shown; K2-K5 identical):
       current silicon; every coil line is an output.
 - [ ] Per-pin draw is 2.5 mA against a 25 mA limit, and only one coil is pulsed at a time. Confirm
       nothing in the firmware can pulse two at once.
-- [ ] I2C pull-ups are 4.7 k to 3.3 V (~0.7 mA sink). Confirm the display module does **not** also
-      fit pull-ups on IO22/IO27 — doubled-up pull-ups over-stiffen the bus.
+- [ ] I2C pull-ups are 4.7 k to 3.3 V (~0.7 mA sink). The bus is SCL = IO18, SDA = IO27, both on
+      the module's SPI connector (the module in hand has no IO22). Confirm the display module does
+      **not** also fit pull-ups on IO18/IO27. IO18 doubles as the microSD SCK on the standard CYD,
+      so check the SD slot in particular: doubled-up pull-ups over-stiffen the bus.
 
 ---
 
 ## 6. Power
 
-- [ ] `+5V` comes from the display module USB `VIN` (`J7.3`, soldered pigtail) and feeds only the
+- [ ] `+5V` comes from the display module's 5V pin (UART / power connector, landed on `J7.3`) and feeds only the
       ten relay coils.
       Confirm the module regulator and the USB supply tolerate a 40 mA, 10-20 ms pulse.
-- [ ] `+3V3` comes from the module LDO (`J8.4`) and feeds `U1`, `U2` and the pull-ups. Confirm the
+- [ ] `+3V3` comes from the module LDO (3V3 connector, landed on `J8.4`) and feeds `U1`, `U2` and the pull-ups. Confirm the
       LDO has headroom for that on top of the display.
 - [ ] Bulk `C3` 22 uF on +5V and `C4` 22 uF on +3V3; decoupling `C1` 100 n at `U1`, `C2` 100 n at
       `U2`. Confirm 22 uF keeps the 5 V rail from sagging during a coil pulse.
@@ -190,19 +192,24 @@ instance (K1 shown; K2-K5 identical):
 
 ## 7. Physical reality — the part a tool cannot check
 
-- [ ] **ELEGOO module connector pinout.** `J7`/`J8` assume P1 = TX/RX/VIN/GND and
-      CN1 = GND/IO22/IO27/3V3. **These are unverified.** Do a continuity
-      check on the board in hand — CYD revisions vary. The symbols carry the module pin names so a
-      mismatch is visible; correct them if wrong. This check now carries more weight than it used
-      to: the harness is **soldered** at the board end, so there is no keyed housing and nothing
-      but this continuity check stands between a mis-landed wire and 5 V on an I2C pin.
-- [ ] **Harness conductor count.** Only the six live conductors have pads — `J7` = P1 pins 3/4 and
-      `J8` = CN1 pins 1–4 — and each pad keeps the *module's* pin number rather than being
-      renumbered 1..n. Confirm the cut conductors (P1 pins 1/2, and the whole P3 pigtail) are
-      snipped and insulated at the pigtail, not left bare near the board.
-- [ ] **Both GND wires are run.** They are one net, but they are not redundant: P1's ground returns
-      the pulsed coil current (2 × 40 mA) and CN1's serves I2C. Collapsing them to one wire pushes
-      coil pulse current through the I2C return. Confirm two separate conductors land.
+- [x] **Display module connector pinout.** The Rev A pads assumed P1 = TX/RX/VIN/GND and
+      CN1 = GND/IO22/IO27/3V3. The module in hand (Cheap Yellow Display) differs: UART / power =
+      RXD, TXD, GND, 5V; 3V3 = 3.3V, IO35, nc, GND; SPI = IO23, IO19, IO18, IO27. The schematic
+      now follows the module in hand; the board does not change. See README "Display harness".
+- [ ] **Continuity before soldering.** Buzz each pigtail conductor from module pin to wire end and
+      label it. Land by signal name: the `J7` silk numbers are reversed against the module
+      (module pin 3 is GND, but pad `3` is `+5V`), and the `J8` "CN1" silk no longer names a
+      single connector. The harness is **soldered** at the board end, so there is no keyed housing,
+      and nothing but this check stands between a mis-landed wire and a reversed 5 V supply.
+- [ ] **Harness conductor count.** Only the six live conductors have pads: `J7` = 5V (pad 3) and
+      GND (pad 4) from the UART / power connector; `J8` = GND (pad 1) and 3.3V (pad 4) from the 3V3
+      connector, IO18 / SCL (pad 2) and IO27 / SDA (pad 3) from the SPI connector. Confirm that the
+      cut conductors (RXD, TXD, IO35, the nc pin, IO23 and IO19) are snipped and insulated at the
+      pigtail, not left bare near the board.
+- [ ] **Both GND wires are run.** They are one net, but they are not redundant: the UART / power
+      connector's ground (`J7`) returns the pulsed coil current (2 × 40 mA), and the 3V3
+      connector's (`J8`) serves I2C. Collapsing them to one wire pushes coil pulse current through
+      the I2C return. Confirm that two separate conductors land.
 - [ ] **Pigtail gauge vs. pad drill.** Pads are 0.8 mm drill / 1.6 mm pad, sized for 28–24 AWG
       ribbon. Offer a real pigtail up to a 1:1 plot before ordering.
 - [ ] **Strain relief at the board end.** The board no longer has a connector housing taking the
@@ -214,8 +221,9 @@ instance (K1 shown; K2-K5 identical):
 - [ ] **`J_ESP32_P1/CN1_WirePads`** pad numbering: 2 and 4 pads respectively, numbered with
       the module's pin numbers (`J7` reads 3, 4 — it has no pads 1/2). Silk carries the module
       connector name (`P1`/`CN1`) and the pin numbers; the refdes is on F.Fab because the two groups
-      are stacked with only one usable silk line each. Confirm that labelling reads correctly on a
-      1:1 plot, and that `P1` above `CN1` is the order you want the two pigtails to enter in.
+      are stacked with only one usable silk line each. *Rev A as built:* that silk follows the
+      assumed pinout, not the module in hand. Treat it as a pad locator only, and land wires by
+      signal name.
 - [ ] `U2` is a **SOIC-8 at 1.27 mm pitch** (`TMP275AIDR`), chosen so the board can be
       hand-soldered; it replaced a DSBGA-6 TMP117 and the 0.1 mm intra-footprint DRC exception went
       with it. Confirm the +/-0.5 C absolute accuracy and 0.0625 C resolution are enough for the

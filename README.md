@@ -58,6 +58,8 @@ docs/                      design specification, notes
 enclosure/                 SOLIDWORKS parts (.SLDPRT) and 3D-print exports (.3MF, .3DXML): front
                            panel, back panel, base plate, PCB holder, banana-jack nut wrench
 docs/datasheets/           vendor datasheets (git-ignored, copyrighted; see docs/datasheets list below)
+firmware/                  ESP32 (CYD) firmware, PlatformIO: relay state machine, SCPI over USB, touch UI,
+                           microSD calibration backup and run log - see firmware/README.md
 hardware/                  KiCad 10 project
   nanovolt-divider.kicad_pro
   nanovolt-divider.kicad_sch   root sheet: metrology topology (inputs, relays, high legs, 1 ohm, outputs)
@@ -72,6 +74,7 @@ tools/gen_pcb.py           bootstrap script that produced the placed (unrouted) 
 tools/route_pcb.py         bootstrap maze router that produced the first routing (see Routing below)
 tools/route_hand.py        its hand routes and routing policy - the design intent of the routing
 tools/pcb_io.py            pcbnew side of the router: dump pads, apply routes
+tools/scpi.py              SCPI terminal for the instrument over USB serial (uv run tools/scpi.py)
 ```
 
 ### Hierarchy
@@ -173,9 +176,11 @@ assignment move.
 * **The cost of IO18.** On the standard CYD, IO18 / IO19 / IO23 are also the microSD slot's bus
   (the slot has its own CS on IO5). While the SD card's CS is deasserted it ignores the clock line,
   so I2C traffic on IO18 does not disturb it. However, the firmware cannot use the SD card and I2C
-  at the same time without switching the pin between peripherals. Rev A firmware does not use SD.
-  Before settling on this, check the module in hand for SD-slot pull-ups on IO18: they would sit in
-  parallel with `R22`.
+  at the same time without switching the pin between peripherals.
+  The module in hand has no pull-up on IO18 or IO27 stronger than the ESP32's ~45k internal
+  pull-downs (`DIAG:PINS?` with the module alone reads both pins low), so `R21` / `R22` alone set
+  the bus pull-up. The firmware does use the SD card, for calibration backup and the run log: it switches IO18
+  between I2C and SPI around each card access (see `firmware/README.md`).
 * Both GND conductors still run, now from two different connectors: the UART / power GND to `J7`
   (coil current) and the 3V3 connector's GND to `J8` (I2C).
 
@@ -367,17 +372,15 @@ uv run tools/route_pcb.py %TEMP%/nvd_geom.json %TEMP%/nvd_routes.json
 
 ## Open items
 
-* Firmware: the GPIO-to-coil table must follow the layout order above (GPB0..GPB7, GPA0 = K5
-  RESET, GPA1 = K5 SET), not the relay numbering. I2C is SDA = IO27, SCL = IO18 (see Display
-  harness).
+* Firmware: written and tested on the bare module (`firmware/`, see its README for the first
+  power-on procedure). The GPIO-to-coil table in `firmware/src/coils.cpp` follows the layout
+  order above. Still to do: Wi-Fi/TCP SCPI.
 * Before soldering the harness, buzz each pigtail conductor from the module pin to the wire end
   and label it. The signal order per connector is recorded above, but which end is pin 1 and the
   module's silkscreen designators for the three connectors are not yet recorded. Put a meter on
   `J7` before the first power-up and check that pad 3 reads +5 V against pad 4. With soldered
   pigtails there is no keyed housing at the board end, and the silk numbers on `J7` are known to
   mislead (see Display harness).
-* Check whether the module fits pull-ups on IO18 / IO27 (SD slot or otherwise) that would sit in
-  parallel with `R21` / `R22`.
 * Confirm the pigtail conductor gauge fits the 0.8 mm pad drill, and decide how the cable is strain
   relieved at the board end - the board no longer has a housing taking that load.
 * Verify pad numbering on the MOX-700, Slim-Mox SM102 and RS-2C footprints against the parts in

@@ -47,6 +47,9 @@ desktop.ini
 .vscode/
 .idea/
 
+# --- PlatformIO ---
+firmware/.pio/
+
 # --- Python tooling ---
 __pycache__/
 *.pyc

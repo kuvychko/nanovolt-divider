@@ -3,7 +3,7 @@
 
 **Revision:** Rev A  
 **Date:** 2026-09-06  
-**Status:** Rev A boards ordered from OSH Park 2026-09-11 and received (fab files in `hardware/fab/`); enclosure in design (`enclosure/`)  
+**Status:** Rev A boards ordered from OSH Park 2026-09-11 and received (fab files in `hardware/fab/`); v0 enclosure printed (`enclosure/`)  
 **Primary use:** calibrated low-level DC injection and sub-LSB metrology with an external precision DMM  
 **Scope note:** a second, passive path for measuring a ~450 V Geiger-counter supply was specified for Rev A and then removed - see §4.3.
 
@@ -450,7 +450,7 @@ The same sheet is instantiated five times. KiCad's multi-channel/repeat-layout w
 | 10 | 1 kΩ resistor, 1206 | existing stock/library | Transistor base resistor | On hand / source TBD |
 | 10 | 10 kΩ resistor, 1206 | existing stock/library | Base pulldown | On hand / source TBD |
 | 1 | MCP23017 | TBD | I²C GPIO expander for relay controls | **To order** |
-| 1 | Integrated 2.8" ESP32 touch TFT | "Cheap Yellow Display", ESP32-2432S028R family | UI, Wi-Fi, USB, controller | **On hand** |
+| 1 | Integrated 2.8" ESP32 touch TFT | "Cheap Yellow Display", ESP32-2432S028R family: [ELEGOO 2-Pack ESP32 2.8" touch display, 240×320 ILI9341, USB-C](https://www.amazon.com/dp/B0FJQ6RK39) | UI, USB, controller (the pack's second module is a spare) | **On hand** |
 
 ### 11.3 Decoupling / power
 
@@ -464,14 +464,30 @@ The same sheet is instantiated five times. KiCad's multi-channel/repeat-layout w
 
 | Qty | Item | Notes | Status |
 |---:|---|---|---|
-| 2 | Normal-input banana sockets | + / − | To select |
-| 2 | Output banana sockets | + / − | To select |
-| 1 | Enclosure | 3D-printed: front panel, back panel, base plate, PCB holder (SOLIDWORKS + 3MF in `enclosure/`) | In design (v0) |
-| 1 | Internal compartment divider | Plastic / FR4 / 3D printed | To design |
-| 1 | TFT mounting bezel | Optional 3D-printed bezel | To design |
-| misc. | PCB standoffs, harnesses | Mechanical integration | TBD |
-| 1 | Banana-jack nut wrench | 3D-printed tool (`enclosure/banana-plug-wrench-v0`) | In design (v0) |
+| 4 | Female banana jacks, 2 red + 2 black | NORMAL IN + / − and OUT + / −. [Amazon B07C7WG23G](https://www.amazon.com/dp/B07C7WG23G) | **Purchased** |
+| 1 | Enclosure | 3D-printed: front panel, back panel, base plate, cover, PCB holder (SOLIDWORKS + 3MF in `enclosure/`). The front panel also serves as the TFT bezel. Print settings: see the README | Printed (v0) |
+| 1 | Banana-jack nut wrench | 3D-printed tool (`enclosure/banana-plug-wrench-v0`) for the banana-jack nuts | Printed (v0) |
+| 3 | JST 1.25 mm 4-pin male plug, 100 mm pigtail, 26 AWG | Display-module harnesses. [Amazon B0DMT2GBZH](https://www.amazon.com/dp/B0DMT2GBZH) | **Purchased** |
+| 1 | 1 ft USB-to-USB extension cable | Brings the module's USB out to the back panel. [Amazon B0GRVZ62VR](https://www.amazon.com/dp/B0GRVZ62VR) | **Purchased** |
 | - | *(no board-side harness headers)* | Display-module pigtails solder straight to the `J7`/`J8` pads | n/a |
+
+### 11.5 Fasteners
+
+| Qty | Item | Use |
+|---:|---|---|
+| 4 | M2×4 machine screw | PCB to PCB holder |
+| 4 | M2 flat washer | PCB to PCB holder |
+| 4 | M2×4×3.2 knurled brass heat-set insert | Heat-set into the PCB holder, takes the PCB screws |
+| 4 | M3×6 button-head socket screw | Display module (CYD) mounting |
+| 4 | M3 nut | Display module (CYD) mounting |
+| 12 | M3×8 button-head socket screw | Enclosure assembly |
+| 12 | M3×4×4.2 knurled brass heat-set insert | Heat-set into the printed enclosure parts, take the assembly screws |
+| 2 | M2×12 machine screw | USB extension cable mount |
+| 2 | M2 flat washer | USB extension cable mount |
+| 2 | M2 nut | USB extension cable mount |
+
+Order totals: M2×4 screws ×4, M2×12 screws ×2, M2 washers ×6, M2 nuts ×2, M2×4×3.2 inserts ×4;
+M3×6 button-head ×4, M3×8 button-head ×12, M3 nuts ×4, M3×4×4.2 inserts ×12.
 
 ---
 
@@ -493,8 +509,8 @@ Additional Rev A procurement is expected to include:
 - four more TQ2-L2-5V-3 relays,
 - one `TMP275AIDR` (SOIC-8) in place of the DSBGA-6 TMP117,
 - MCP23017,
-- banana sockets,
-- enclosure/mechanical hardware.
+- banana sockets *(done, see 11.4)*,
+- enclosure/mechanical hardware *(done, see 11.4 and 11.5)*.
 
 ---
 

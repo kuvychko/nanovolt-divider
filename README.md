@@ -55,12 +55,25 @@ was uploaded is just these files zipped and is not committed. Two things to know
   (small), so `kicad-cli pcb export gerbers --board-plot-params` adds a 0.3 / 0.35 mm flash at every
   hole on the copper and mask layers. Turn them off when re-plotting for comparison or for a re-order.
 
+### Enclosure
+
+The v0 enclosure is 3D-printed. `enclosure/` has the SOLIDWORKS source (`.SLDPRT`) and a print-ready
+`.3MF` for each part: front panel (it also serves as the display bezel), back panel, base plate,
+cover, PCB holder, and a wrench for the banana-jack nuts.
+
+Every part was printed in PLA on a Prusa i3 MK3S with a 0.4 mm nozzle, using PrusaSlicer's
+**0.20 mm QUALITY** preset, 15 % infill, and **no supports**.
+
+Before assembling, heat-set the knurled brass inserts: the M2 ones go into the PCB holder, the M3
+ones into the enclosure parts. Fasteners, banana jacks, the display module, and the cables are
+listed in [BOM §11.4 and §11.5](docs/nanovolt_divider_rev_a.md#114-front-panel--mechanical).
+
 ## Repository layout
 
 ```
 docs/                      design specification, calibration protocol, bench (Raspberry Pi) handoff
 enclosure/                 SOLIDWORKS parts (.SLDPRT) and 3D-print exports (.3MF, .3DXML): front
-                           panel, back panel, base plate, PCB holder, banana-jack nut wrench
+                           panel, back panel, base plate, cover, PCB holder, banana-jack nut wrench
 docs/datasheets/           vendor datasheets (git-ignored, copyrighted; see docs/datasheets list below)
 firmware/                  ESP32 (CYD) firmware, PlatformIO: relay state machine, SCPI over USB, touch UI,
                            microSD calibration backup and run log - see firmware/README.md

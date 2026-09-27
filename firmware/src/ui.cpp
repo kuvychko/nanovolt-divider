@@ -142,8 +142,8 @@ void drawStatusBar() {
   lcd.fillRect(0, 0, W, BAR_H, C_BAR);
   text("NVD Rev A", 6, 10, C_TEXT, C_BAR, &fonts::Font2, middle_left);
   const instrument::State &s = instrument::state();
-  indicator(140, "MCP", s.board ? C_OK : C_BAD);
-  indicator(184, "TMP", tmp275::present() ? C_OK : C_BAD);
+  indicator(140, "BOARD", s.board ? C_OK : C_BAD);
+  indicator(184, "TEMP", tmp275::present() ? C_OK : C_BAD);
   indicator(228, "SD", sdstore::lastOk() ? C_OK : C_DIM);
   indicator(272, "LOG", sdstore::logging() ? C_WARN : C_DIM);
   g_drawn_log = sdstore::logging();

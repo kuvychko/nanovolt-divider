@@ -163,7 +163,7 @@ pulses are ones you fire by hand, not five at once at boot.
    | 3.3V | `J8` pad 4 |
 
    A reversed 5 V would reach the coil drivers the moment USB is plugged in, so this check comes before any power.
-2. **Power on.** The banner should read `STATE UNKNOWN`, and `MCP` and `TMP` should be green.
+2. **Power on.** The banner should read `STATE UNKNOWN`, and the `BOARD` and `TEMP` status lights should be green.
 3. `DIAG:I2C?` should return `0x20,0x48`. `DIAG:PINS?` should now report `PULLUP` on both pins: those are R21/R22,
    because the module itself has none (measured on the module in hand: `IO18=NONE,IO27=NONE`).
 4. `DIAG:MCP?` should show `IODIRA=0xFC`, `IODIRB=0x00` and both `OLAT` registers `0x00`.

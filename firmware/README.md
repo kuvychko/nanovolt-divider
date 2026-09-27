@@ -4,13 +4,15 @@ Firmware for the ESP32 "Cheap Yellow Display" (ESP32-2432S028R family) that runs
 
 * the relay state machine for K1..K5, through the MCP23017;
 * the TMP275;
-* per-range calibration in NVS, with a backup on the microSD card;
-* a CSV run log on the card;
+* per-range calibration k(T) in NVS, with a backup, an append-only history and a CSV run log on the microSD card;
 * SCPI over USB serial;
 * the touchscreen front panel.
 
-Wi-Fi/TCP comes later. The SCPI interpreter (`src/scpi.cpp`) has no transport dependency, so the TCP link will feed
-the same interpreter.
+The instrument is controlled over USB from the Raspberry Pi metrology hub: see
+[docs/bench_handoff.md](../docs/bench_handoff.md) for the host side, and
+[docs/calibration_protocol.md](../docs/calibration_protocol.md) for how the calibration is measured. **There is no
+Wi-Fi or Bluetooth.** The radio is never initialised, because a 2.4 GHz transmitter a few centimetres from a
+nanovolt path buys nothing when the Pi is on USB. The module's RGB LED is held off; it is inside the enclosure.
 
 ## Build and flash
 
@@ -18,7 +20,7 @@ The project uses PlatformIO. Install it with `uv tool install platformio`. The C
 `platformio.ini`.
 
 ```
-pio run -d firmware                        # build all environments
+pio run -d firmware -e cyd -e cyd_st7789 -e cyd_sim   # build every environment (plain `pio run` builds only cyd)
 pio run -d firmware -e cyd -t upload       # flash
 uv run tools/scpi.py                       # interactive SCPI terminal (COM8)
 uv run tools/scpi.py "*IDN?" "SYST:MODE?"  # one-shot
@@ -32,7 +34,7 @@ uv run tools/scpi.py "*IDN?" "SYST:MODE?"  # one-shot
 
 The platform is pinned to `espressif32@7.1.3` (Arduino core 2.0.17) and `LovyanGFX@1.2.30`. Core logging is compiled
 out (`CORE_DEBUG_LEVEL=0`), because it would land in the SCPI response stream. The firmware's own unsolicited lines
-(the boot banner and the pulse trace) all start with `#`, so a host can skip them.
+(the boot banner and the pulse trace) all start with `# `, so a host can skip them.
 
 ## How it drives the board
 
@@ -77,8 +79,24 @@ Files on the card:
 
 | Path | Contents |
 |---|---|
-| `/nvd/cal.txt` | Calibration backup: one line per range, `range k0 t0_C alpha_perC date`. |
-| `/nvd/log_NNNN.csv` | Run log: `ms,event,range,polarity,output,temp_C,factor,note`. It gets a row for every relay change, for every `SYST:LOG:MARK`, and a `TEMP` row every `SYST:LOG:INT` seconds (default 10; 0 turns it off). |
+| `/nvd/cal.txt` | Calibration backup (`CAL:EXP` / `CAL:IMP`): one `key=value` line per range, `range= k0= t0= alpha= beta= u_k0_ppm= u_alpha_ppm= tmin= tmax= date="" source=""`. An import requires every field. |
+| `/nvd/cal_history.txt` | Every `CAL:SAVE`, appended: a `# CAL:SAVE utc=… boot=…` line and the three records. The firmware never rewrites or deletes it. |
+| `/nvd/log_NNNN.csv` | Run log: `ms,utc,event,range,polarity,output,temp_C,factor,note`. It gets a row for every relay change, for every `SYST:LOG:MARK`, and a `TEMP` row every `SYST:LOG:INT` seconds (default 10; 0 turns it off). `utc` is `-` until the host sends `SYST:TIME`. |
+
+`MMEM:CAT?` and `MMEM:DATA?` read these over USB, so the card never has to come out:
+`uv run tools/scpi.py --fetch /nvd/cal_history.txt hist.txt`. From Git Bash, prefix the command with
+`MSYS_NO_PATHCONV=1`, or Bash rewrites `/nvd/...` into a Windows path.
+
+### Calibration model
+
+```
+k(T) = k0 · [1 + alpha (T − T0) + beta (T − T0)²]
+u(T) = sqrt(u_k0² + (u_alpha · (T − T0))²)   ppm
+```
+
+T is the TMP275 reading. Each range carries its own record, including the span [tmin, tmax] it was measured over.
+Before calibration the records are nominal: k0 = 1/(R_H + 1), no tempco, and u_k0 from the part tolerances
+(10050 / 10050 / 14142 ppm). Records are stored as one NVS blob per range, so a save is all-or-nothing per range.
 
 ## SCPI reference
 
@@ -94,23 +112,29 @@ These rules apply to every command:
 |---|---|
 | `*IDN?` `*RST` `*CLS` `*OPC?` | `*RST` pulses the safe state. |
 | `SYST:ERR?` `SYST:VERS?` | |
-| `SYST:MODE?` | Full state: `BOARD=,STATE=,RANGE=,POL=,OUTP=,TEMP=,FACTOR=,CAL=,LOG=`. |
+| `SYST:MODE?` | Full state: `BOARD=,STATE=,RANGE=,POL=,OUTP=,TEMP=,FACTOR=,CAL=,LOG=,BOOT=`. |
+| `SYST:TIME <unix s>` / `SYST:TIME?` | UTC from the host, kept in RAM (0 until set). Stamps the run log and the cal history. |
+| `SYST:BOOT:COUNT?` `SYST:UPT?` | Boots since the NVS was first written, and seconds since this boot. The count changing mid-run means the instrument restarted. |
 | `OUTP ON\|OFF` / `OUTP?` | INJECT / ISOLATE. `OUTP OFF` always pulses, even if already isolated. |
 | `POL NORM\|INV` / `POL?` | Changes happen while isolated. |
 | `RANG 1E-5\|1E-6\|1E-7\|NONE` / `RANG?` | Break-before-make, while isolated. |
-| `SOUR:FACT?` | Calibrated factor of the active range, temperature-corrected when alpha ≠ 0. |
+| `SOUR:FACT? [T]` | Calibrated factor of the active range, at the live TMP275 temperature or at T. |
+| `CAL:FACT? range[,T]` | `k,u_ppm,in_span` for any range, at the live temperature or at T. `in_span` is 0 outside the record's [tmin, tmax] or with no temperature. |
+| `CAL:REC range,k0,T0,alpha,beta,u_k0_ppm,u_alpha_ppm,tmin,tmax,"date","source"` / `CAL:REC? range` | One range's whole record, written atomically: any invalid field rejects the lot. The query returns the same fields after the range. This is the command the calibration write-back uses. |
 | `TEMP?` | TMP275, °C. |
 | `CAL:RAT [range,]k` / `CAL:RAT? [range]` | k0. The range defaults to the active one. Values more than 10 % from nominal are rejected. |
 | `CAL:TC [range,]alpha` / `CAL:TC?` | Ratio tempco, 1/°C. The default 0 means no correction. |
 | `CAL:TREF [range,]T0` / `CAL:TREF?` | Reference temperature, °C. |
 | `CAL:DATE [range,]"text"` / `CAL:DATE?` | Free text, e.g. an ISO 8601 date. |
 | `CAL:NOM? [range]` | Nominal factor, 1/(R_H + 1). |
-| `CAL:SAVE` | Writes the working calibration to NVS. The other `CAL:` edits change only the working copy (`SYST:MODE?` shows `CAL=UNSAVED`). |
+| `CAL:SAVE` | Writes the working calibration to NVS and appends it to `/nvd/cal_history.txt`. The other `CAL:` edits change only the working copy (`SYST:MODE?` shows `CAL=UNSAVED`). If the history append fails, the save still stands and `-250` is queued. |
 | `CAL:DEF` | Resets the working copy to nominal. |
 | `CAL:EXP` / `CAL:IMP` | Writes the working copy to `/nvd/cal.txt`, or reads it back from there. `CAL:SAVE` after an import. |
 | `SYST:LOG ON\|OFF` / `SYST:LOG?` | Starts a new `/nvd/log_NNNN.csv`, or stops logging. |
 | `SYST:LOG:FILE?` `SYST:LOG:MARK "text"` `SYST:LOG:INT s` | Log file name, a note row (e.g. `"A forward"` during an ABBA run), and the temperature-row interval. |
 | `SYST:BOOT:SAFE ON\|OFF` | Whether boot pulses the safe state. Stored in NVS; the default is ON. |
+| `MMEM:CAT? ["dir"]` | `"name",size,...` for a directory, `/nvd` by default. |
+| `MMEM:DATA? "path"[,offset[,length]]` | Up to 65536 bytes of a file, as an IEEE 488.2 definite-length block `#<n><len><bytes>` followed by `\n`. Must be the only command on its line. |
 | `DIAG:I2C?` | Bus scan. Expect `0x20,0x48` with the board connected. |
 | `DIAG:MCP?` | MCP23017 register dump. |
 | `DIAG:PULS K1..K5,SET\|RES` | One raw pulse, bypassing the rules. Leaves the state `UNKNOWN`. |

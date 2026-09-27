@@ -31,7 +31,11 @@ and clearance rules, and 11 mm of board.
 
 ## Status
 
-Rev A: sent to OSH Park for fabrication on 2026-09-11 (git tag `rev-a`); bare boards received.
+Rev A: sent to OSH Park for fabrication on 2026-09-11 (git tag `rev-a`); boards received and one
+populated. **Brought up on 2026-09-26:** both I2C devices answer, and every relay transition works. An
+end-to-end check (10 V into NORMAL IN, HP 3478A on OUT, polarity-reversed) read all three ratios within
+0.25 % of nominal, with the ISOLATE reading unchanged by the applied source. Firmware 0.2.0 is in
+`firmware/`; calibration is next.
 The layout is frozen from here: later changes are harness wiring and documentation only, and the
 schematic is kept net-identical to the board. Schematics ERC-clean;
 PCB placed, routed and silkscreen tidied: DRC 0 errors, 0 unconnected, 56 benign
@@ -54,7 +58,7 @@ was uploaded is just these files zipped and is not committed. Two things to know
 ## Repository layout
 
 ```
-docs/                      design specification, notes
+docs/                      design specification, calibration protocol, bench (Raspberry Pi) handoff
 enclosure/                 SOLIDWORKS parts (.SLDPRT) and 3D-print exports (.3MF, .3DXML): front
                            panel, back panel, base plate, PCB holder, banana-jack nut wrench
 docs/datasheets/           vendor datasheets (git-ignored, copyrighted; see docs/datasheets list below)
@@ -372,21 +376,17 @@ uv run tools/route_pcb.py %TEMP%/nvd_geom.json %TEMP%/nvd_routes.json
 
 ## Open items
 
-* Firmware: written and tested on the bare module (`firmware/`, see its README for the first
-  power-on procedure). The GPIO-to-coil table in `firmware/src/coils.cpp` follows the layout
-  order above. Still to do: Wi-Fi/TCP SCPI.
-* Before soldering the harness, buzz each pigtail conductor from the module pin to the wire end
-  and label it. The signal order per connector is recorded above, but which end is pin 1 and the
-  module's silkscreen designators for the three connectors are not yet recorded. Put a meter on
-  `J7` before the first power-up and check that pad 3 reads +5 V against pad 4. With soldered
-  pigtails there is no keyed housing at the board end, and the silk numbers on `J7` are known to
-  mislead (see Display harness).
-* Confirm the pigtail conductor gauge fits the 0.8 mm pad drill, and decide how the cable is strain
-  relieved at the board end - the board no longer has a housing taking that load.
-* Verify pad numbering on the MOX-700, Slim-Mox SM102 and RS-2C footprints against the parts in
-  hand. The TQ2 relay footprint is already checked (pads 1-5 / 6-10 in two rows at 2.54 mm, 7.62 mm
-  apart, DIP order with 1 opposite 10).
-* Schematic architecture / safety review before ordering boards.
+* **Calibration.** It is designed ([docs/calibration_protocol.md](docs/calibration_protocol.md)) and
+  supported by firmware 0.2.0, but not yet run. It runs from the Raspberry Pi hub. The driver, the
+  experiments and the write-back belong in the `bench-metrology` repo, and
+  [docs/bench_handoff.md](docs/bench_handoff.md) is the checklist. Until then the instrument carries
+  nominal ratios, with tolerance-sized uncertainties.
+* **Reset on USB open under Linux** is unverified: the boot-count test in the handoff doc has to pass
+  on the Pi before a long run.
+* Harness: landed and working (bring-up 2026-09-26). Still unrecorded for a future build: which end
+  of each pigtail is pin 1, and the module's silkscreen designators for its three connectors.
+* Decide how the harness cable is strain relieved at the board end - the board has no housing
+  taking that load.
 
 ## Datasheets
 

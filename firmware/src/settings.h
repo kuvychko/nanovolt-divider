@@ -17,8 +17,12 @@ struct Settings {
   TouchCal touch;
 };
 
-void begin();
+void begin();  // also increments the boot counter
 Settings &get();
 bool save();
+
+// Incremented once per boot and kept in NVS, so a host can tell that the instrument restarted
+// (e.g. a USB reconnect that pulsed EN) even though uptime alone would look plausible.
+uint32_t bootCount();
 
 }  // namespace settings

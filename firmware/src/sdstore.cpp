@@ -7,7 +7,9 @@
 #include "bus.h"
 #include "calibration.h"
 #include "instrument.h"
+#include "settings.h"
 #include "tmp275.h"
+#include "utc.h"
 
 namespace sdstore {
 
@@ -19,12 +21,16 @@ char g_path[24] = "";
 uint32_t g_interval_s = 10;
 uint32_t g_last_row = 0;
 
+constexpr const char *LOG_HEADER = "ms,utc,event,range,polarity,output,temp_C,factor,note\n";
+
 bool ensureDir() { return SD.exists(DIR) || SD.mkdir(DIR); }
 
 void row(Print &out, const char *event, const char *note) {
   const instrument::State &s = instrument::state();
   const float t = tmp275::celsius();
-  out.printf("%lu,%s,%s,%s,%s,", (unsigned long)millis(), event, instrument::rangeName(s.range),
+  char when[21];
+  utc::format(when, utc::now());
+  out.printf("%lu,%s,%s,%s,%s,%s,", (unsigned long)millis(), when, event, instrument::rangeName(s.range),
              s.polarity == instrument::POL_INV ? "INV" : "NORM",
              !s.known ? "UNKNOWN" : s.inject ? "INJECT" : "ISOLATE");
   if (isnan(t)) out.print(',');
@@ -64,6 +70,21 @@ bool exportCal() {
   return g_last_ok = true;
 }
 
+bool appendCalHistory() {
+  bus::SdSession sd;
+  g_last_ok = false;
+  if (!sd.ok() || !ensureDir()) return false;
+  File f = SD.open(CAL_HISTORY_FILE, FILE_APPEND);
+  if (!f) return false;
+  char when[21];
+  utc::format(when, utc::now());
+  f.printf("# CAL:SAVE utc=%s boot=%lu uptime_ms=%lu\n", when, (unsigned long)settings::bootCount(),
+           (unsigned long)millis());
+  for (uint8_t i = 1; i < instrument::RANGE_COUNT; i++) cal::writeRecord(f, instrument::Range(i));
+  f.close();
+  return g_last_ok = true;
+}
+
 bool importCal() {
   bus::SdSession sd;
   g_last_ok = false;
@@ -90,7 +111,7 @@ bool logStart() {
     if (SD.exists(g_path)) continue;
     File f = SD.open(g_path, FILE_WRITE);
     if (!f) return false;
-    f.print("ms,event,range,polarity,output,temp_C,factor,note\n");
+    f.print(LOG_HEADER);
     row(f, "LOG_START", "");
     f.close();
     g_logging = g_last_ok = true;
@@ -132,5 +153,45 @@ void poll() {
 }
 
 bool lastOk() { return g_last_ok; }
+
+bool catalog(Print &out, const char *dir) {
+  bus::SdSession sd;
+  g_last_ok = sd.ok();
+  if (!sd.ok()) return false;
+  File d = SD.open(dir);
+  if (!d || !d.isDirectory()) return false;
+  bool first = true;
+  for (File f = d.openNextFile(); f; f = d.openNextFile()) {
+    out.printf("%s\"%s\",%lu", first ? "" : ",", f.name(), f.isDirectory() ? 0ul : (unsigned long)f.size());
+    first = false;
+  }
+  return true;
+}
+
+long readBlock(Print &out, const char *path, uint32_t offset, uint32_t length) {
+  bus::SdSession sd;
+  g_last_ok = sd.ok();
+  if (!sd.ok()) return -1;
+  File f = SD.open(path, FILE_READ);
+  if (!f || f.isDirectory()) return -1;
+  const uint32_t size = f.size();
+  const uint32_t start = offset < size ? offset : size;
+  const uint32_t n = min(length, size - start);
+  if (!f.seek(start)) return -1;
+  // IEEE 488.2 definite-length block: '#', the digit count, the length, then the raw bytes.
+  char hdr[16];
+  const int digits = snprintf(hdr, sizeof(hdr), "%lu", (unsigned long)n);
+  out.printf("#%d%s", digits, hdr);
+  uint8_t buf[512];
+  uint32_t left = n;
+  while (left) {
+    const size_t got = f.read(buf, min<uint32_t>(left, sizeof(buf)));
+    if (!got) break;  // short read: the block is now truncated; the host sees the length mismatch
+    out.write(buf, got);
+    left -= got;
+  }
+  f.close();
+  return long(n - left);
+}
 
 }  // namespace sdstore

@@ -14,6 +14,7 @@
 #include "settings.h"
 #include "tmp275.h"
 #include "ui.h"
+#include "utc.h"
 
 namespace scpi {
 
@@ -31,13 +32,15 @@ int g_queue_n = 0;
 
 // ---------------------------------------------------------------- parsing
 
-constexpr int MAX_PARAMS = 4;
+constexpr int MAX_PARAMS = 12;
 constexpr int MAX_NODES = 5;
 
 struct Ctx {
   const char *params[MAX_PARAMS];
   int nparams;
   String resp;  // this command's response (queries only)
+  Print *out;   // for the one command that streams its response (MMEM:DATA?)
+  int lineCommands;  // commands in this program message
 };
 
 typedef void (*Handler)(Ctx &);
@@ -208,12 +211,14 @@ void systVers(Ctx &c) { c.resp = "1999.0"; }
 void systMode(Ctx &c) {
   const instrument::State &s = instrument::state();
   const float t = tmp275::celsius();
-  char b[200];
-  snprintf(b, sizeof(b), "BOARD=%s,STATE=%s,RANGE=%s,POL=%s,OUTP=%s,TEMP=%s,FACTOR=%s,CAL=%s,LOG=%s",
+  char b[240];
+  snprintf(b, sizeof(b),
+           "BOARD=%s,STATE=%s,RANGE=%s,POL=%s,OUTP=%s,TEMP=%s,FACTOR=%s,CAL=%s,LOG=%s,BOOT=%lu",
            s.board ? "OK" : "NONE", s.known ? "KNOWN" : "UNKNOWN", instrument::rangeName(s.range),
            s.polarity == instrument::POL_INV ? "INV" : "NORM", s.inject ? "INJECT" : "ISOLATE",
            fmtDouble(t, "%.4f").c_str(), fmtDouble(cal::factor(s.range, t)).c_str(),
-           cal::dirty() ? "UNSAVED" : "SAVED", sdstore::logging() ? "ON" : "OFF");
+           cal::dirty() ? "UNSAVED" : "SAVED", sdstore::logging() ? "ON" : "OFF",
+           (unsigned long)settings::bootCount());
   c.resp = b;
 }
 
@@ -272,9 +277,25 @@ void rang(Ctx &c) {
 }
 void rangQ(Ctx &c) { c.resp = instrument::rangeName(instrument::state().range); }
 
+// Temperature argument shared by SOUR:FACT? and CAL:FACT?: explicit, or the live TMP275 reading.
+bool tempParam(Ctx &c, int index, float &t) {
+  if (c.nparams <= index) {
+    t = tmp275::celsius();
+    return true;
+  }
+  double v;
+  if (!parseDouble(c.params[index], v) || v < -55 || v > 150) {
+    fail(-222, "Data out of range;temperature");
+    return false;
+  }
+  t = v;
+  return true;
+}
+
 void factQ(Ctx &c) {
-  const instrument::State &s = instrument::state();
-  respondDouble(c, cal::factor(s.range, tmp275::celsius()));
+  float t;
+  if (c.nparams > 1) return fail(-108, "Parameter not allowed");
+  if (tempParam(c, 0, t)) respondDouble(c, cal::factor(instrument::state().range, t));
 }
 void tempQ(Ctx &c) { respondDouble(c, tmp275::celsius(), "%.4f"); }
 
@@ -331,7 +352,10 @@ void calDateQ(Ctx &c) {
   if (calRange(c, 0, r)) c.resp = String("\"") + cal::get(r).date + "\"";
 }
 void calSave(Ctx &) {
-  if (!cal::save()) fail(-200, "Execution error;NVS write failed");
+  if (!cal::save()) return fail(-200, "Execution error;NVS write failed");
+  // NVS is the record of truth; the SD history is the audit trail. Report a failed append, but
+  // the calibration is saved either way.
+  if (!sdstore::appendCalHistory()) fail(-250, "Mass storage error;saved, but cal history not written");
 }
 void calDef(Ctx &) { cal::resetToNominal(); }
 void calExp(Ctx &) {
@@ -430,6 +454,99 @@ void diagTouchQ(Ctx &c) {
   ui::printTouch(sp);
 }
 
+// CAL:REC <r>,<k0>,<T0>,<alpha>,<beta>,<u_k0_ppm>,<u_alpha_ppm>,<tmin>,<tmax>,"<date>","<source>"
+// Replaces one range's whole record at once, or nothing if any field is invalid.
+void calRec(Ctx &c) {
+  instrument::Range r;
+  if (!needParams(c, 11)) return;
+  if (!parseRange(c.params[0], r) || r == instrument::RANGE_NONE)
+    return fail(-224, "Illegal parameter value;range");
+  double v[8];
+  for (int i = 0; i < 8; i++)
+    if (!parseDouble(c.params[i + 1], v[i])) return fail(-224, "Illegal parameter value;not a number");
+  const double k0 = v[0], t0 = v[1], alpha = v[2], beta = v[3], uk = v[4], ua = v[5], tmin = v[6],
+               tmax = v[7];
+  if (!cal::plausible(r, k0)) return fail(-222, "Data out of range;k0 >10% from nominal");
+  if (t0 < -40 || t0 > 125 || tmin > tmax || tmin < -40 || tmax > 125)
+    return fail(-222, "Data out of range;temperatures");
+  if (fabs(alpha) > 1e-3 || fabs(beta) > 1e-4) return fail(-222, "Data out of range;alpha/beta");
+  if (uk < 0 || ua < 0) return fail(-222, "Data out of range;negative uncertainty");
+  cal::RangeCal &rc = cal::get(r);
+  if (strlen(c.params[9]) >= sizeof(rc.date) || strlen(c.params[10]) >= sizeof(rc.source))
+    return fail(-223, "Too much data;date or source too long");
+  rc.k0 = k0;
+  rc.t0 = t0;
+  rc.alpha = alpha;
+  rc.beta = beta;
+  rc.u_k0_ppm = uk;
+  rc.u_alpha_ppm = ua;
+  rc.tmin = tmin;
+  rc.tmax = tmax;
+  strlcpy(rc.date, c.params[9], sizeof(rc.date));
+  strlcpy(rc.source, c.params[10], sizeof(rc.source));
+  cal::markDirty();
+}
+void calRecQ(Ctx &c) {
+  instrument::Range r;
+  if (!calRange(c, 0, r)) return;
+  const cal::RangeCal &rc = cal::get(r);
+  char b[240];
+  snprintf(b, sizeof(b), "%.12e,%.4f,%.6e,%.6e,%.3f,%.4f,%.2f,%.2f,\"%s\",\"%s\"", rc.k0, rc.t0,
+           rc.alpha, rc.beta, rc.u_k0_ppm, rc.u_alpha_ppm, rc.tmin, rc.tmax, rc.date, rc.source);
+  c.resp = b;
+}
+
+// CAL:FACT? <r>[,<T>] -> k,u_ppm,in_span
+void calFactQ(Ctx &c) {
+  instrument::Range r;
+  float t;
+  if (c.nparams < 1) return fail(-109, "Missing parameter");
+  if (c.nparams > 2) return fail(-108, "Parameter not allowed");
+  if (!parseRange(c.params[0], r) || r == instrument::RANGE_NONE)
+    return fail(-224, "Illegal parameter value;range");
+  if (!tempParam(c, 1, t)) return;
+  const cal::Eval e = cal::evaluate(r, t);
+  c.resp = fmtDouble(e.k, "%.12e") + "," + fmtDouble(e.u_ppm, "%.3f") + (e.in_span ? ",1" : ",0");
+}
+
+void systTime(Ctx &c) {
+  double v;
+  if (!needParams(c, 1)) return;
+  // 2020-01-01 .. 2100-01-01: anything else is a unit mistake (ms, a local time string, ...).
+  if (!parseDouble(c.params[0], v) || v < 1577836800.0 || v > 4102444800.0)
+    return fail(-222, "Data out of range;unix seconds, UTC");
+  utc::set(uint32_t(v));
+}
+void systTimeQ(Ctx &c) { c.resp = String(utc::now()); }
+void bootCountQ(Ctx &c) { c.resp = String(settings::bootCount()); }
+void uptimeQ(Ctx &c) { c.resp = String(millis() / 1000); }
+
+void mmemCat(Ctx &c) {
+  if (c.nparams > 1) return fail(-108, "Parameter not allowed");
+  StringPrint sp(c.resp);
+  if (!sdstore::catalog(sp, c.nparams ? c.params[0] : sdstore::DIR)) {
+    c.resp = "";
+    fail(-250, "Mass storage error;no card or no such directory");
+  }
+}
+
+// MMEM:DATA? "<path>"[,<offset>[,<length>]] -> definite-length block. Streams straight to the
+// transport, so it must be the only command in its line.
+constexpr uint32_t MMEM_CHUNK_MAX = 65536;
+void mmemData(Ctx &c) {
+  if (c.lineCommands != 1) return fail(-100, "Command error;MMEM:DATA? must be sent alone");
+  if (c.nparams < 1) return fail(-109, "Missing parameter");
+  if (c.nparams > 3) return fail(-108, "Parameter not allowed");
+  double off = 0, len = MMEM_CHUNK_MAX;
+  if (c.nparams > 1 && (!parseDouble(c.params[1], off) || off < 0))
+    return fail(-222, "Data out of range;offset");
+  if (c.nparams > 2 && (!parseDouble(c.params[2], len) || len < 0 || len > MMEM_CHUNK_MAX))
+    return fail(-222, "Data out of range;length 0..65536");
+  if (sdstore::readBlock(*c.out, c.params[0], uint32_t(off), uint32_t(len)) < 0)
+    return fail(-256, "File name not found");
+  c.out->print('\n');
+}
+
 const Command COMMANDS[] = {
     {"*IDN?", idn},
     {"*RST", rst},
@@ -440,6 +557,12 @@ const Command COMMANDS[] = {
     {"SYSTem:MODE?", systMode},
     {"SYSTem:BOOT:SAFE", bootSafe},
     {"SYSTem:BOOT:SAFE?", bootSafeQ},
+    {"SYSTem:BOOT:COUNt?", bootCountQ},
+    {"SYSTem:UPTime?", uptimeQ},
+    {"SYSTem:TIME", systTime},
+    {"SYSTem:TIME?", systTimeQ},
+    {"MMEMory:CATalog?", mmemCat},
+    {"MMEMory:DATA?", mmemData},
     {"SYSTem:LOG:[STATe]", systLog},
     {"SYSTem:LOG:[STATe]?", logQ},
     {"SYSTem:LOG:FILE?", logFileQ},
@@ -463,6 +586,9 @@ const Command COMMANDS[] = {
     {"CALibration:TREF?", calTrefQ},
     {"CALibration:DATE", calDate},
     {"CALibration:DATE?", calDateQ},
+    {"CALibration:RECord", calRec},
+    {"CALibration:RECord?", calRecQ},
+    {"CALibration:FACTor?", calFactQ},
     {"CALibration:SAVE", calSave},
     {"CALibration:DEFault", calDef},
     {"CALibration:EXPort", calExp},
@@ -506,7 +632,7 @@ char *trim(char *s) {
   return s;
 }
 
-void executeOne(char *cmd, String &resp) {
+void executeOne(char *cmd, String &resp, Print &out, int lineCommands) {
   cmd = trim(cmd);
   if (!*cmd) return;
   size_t hlen = strcspn(cmd, " \t");
@@ -514,6 +640,8 @@ void executeOne(char *cmd, String &resp) {
 
   Ctx c;
   c.nparams = 0;
+  c.out = &out;
+  c.lineCommands = lineCommands;
   args = trim(args);
   if (*args) {
     char *parts[MAX_PARAMS];
@@ -559,7 +687,7 @@ void execute(const char *line, Print &out) {
   const int n = splitQuoted(buf, ';', cmds, 8);
   if (n < 0) return fail(-100, "Command error;too many commands in one line");
   String resp;
-  for (int i = 0; i < n; i++) executeOne(cmds[i], resp);
+  for (int i = 0; i < n; i++) executeOne(cmds[i], resp, out, n);
   if (resp.length()) {
     out.print(resp);
     out.print('\n');

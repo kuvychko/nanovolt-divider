@@ -31,7 +31,7 @@ constexpr int TOUCH_MISO = 39;  // input-only pin
 constexpr int TOUCH_CS = 33;
 constexpr int TOUCH_IRQ = 36;   // input-only pin, low while touched
 
-// RGB status LED, active low.
+// RGB LED, active low. Held off permanently: it is inside the enclosure (main.cpp).
 constexpr int LED_R = 4;
 constexpr int LED_G = 16;
 constexpr int LED_B = 17;

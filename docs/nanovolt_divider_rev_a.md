@@ -70,9 +70,10 @@ The precision signal path should remain as passive and electrically quiet as pra
    - display shows active mode, range, polarity, output state, calibrated factor, temperature, and communications status
 
 9. **Remote control**
-   - SCPI-style command interface over USB serial
-   - SCPI-style command interface over Wi-Fi/TCP
-   - USB and Wi-Fi use the same internal parser/state machine
+   - SCPI-style command interface over USB serial, to the Raspberry Pi metrology hub
+   - ~~SCPI-style command interface over Wi-Fi/TCP~~: *dropped. With the Pi on USB, a 2.4 GHz radio a few
+     centimetres from a nanovolt path buys nothing, and it would be a second control route the hub cannot see. The
+     firmware never initialises the radio.*
 
 ---
 
@@ -291,7 +292,8 @@ The enclosure should have two physically distinct regions.
 
 A physical divider wall inside the enclosure is desirable for airflow isolation, thermal isolation, and wiring organization.
 
-The enclosure should not be fully metallic because the ESP32 Wi-Fi antenna requires an RF-transparent path. A plastic-bodied instrument enclosure with a machinable metal front panel is preferred.
+The enclosure should not be fully metallic because the ESP32 Wi-Fi antenna requires an RF-transparent path.
+*(No longer binding: Wi-Fi was dropped, see §2 item 9.)* A plastic-bodied instrument enclosure with a machinable metal front panel is preferred.
 
 ### 1 Ω thermal region
 
@@ -328,6 +330,13 @@ k(T) = k_0 \left[1 + \alpha(T - T_0)\right]
 
 Rev A firmware should support the field from the beginning but use **zero temperature correction until the coefficient is experimentally measured**.
 
+**As built (firmware 0.2.0).** The record grew. It adds a quadratic term β, standard uncertainties for k0 and α, the
+TMP275 span [Tmin, Tmax] it was measured over, and a provenance string:
+k(T) = k0 [1 + α(T − T0) + β(T − T0)²], with T the TMP275 reading on the 1 Ω island. The instrument answers
+"the ratio at this board temperature" directly (`CAL:FACT? <range>,<T>` → k, uncertainty, in-span flag). Every
+saved calibration is appended to an audit trail on the SD card. How the record is measured is in
+[calibration_protocol.md](calibration_protocol.md).
+
 ---
 
 ## 9. Planned SCPI interface
@@ -362,6 +371,11 @@ Exact command names may evolve, but Rev A should support these concepts:
 ```
 
 USB serial and Wi-Fi/TCP should share the same parser and instrument state machine.
+
+**As built.** All of the above exist, with `*RST` as a command (not a query) and `SOUR:FACT?` for the factor. The
+additions are diagnostics, calibration records, file access to the SD card, and reset detection. The command
+reference is `firmware/README.md`; the host-side contract is [bench_handoff.md](bench_handoff.md). There is no
+Wi-Fi (§2).
 
 ---
 

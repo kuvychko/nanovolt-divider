@@ -42,7 +42,9 @@ bool init() {
   g_present = configure();
   g_valid = false;
   g_celsius = NAN;
-  g_last = millis();
+  // First read 300 ms from now: the first 12-bit conversion takes 220 ms, and the regular
+  // once-a-second cadence would otherwise leave the first second with no temperature.
+  g_last = millis() - 700;
   return g_present;
 }
 

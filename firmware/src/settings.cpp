@@ -10,6 +10,7 @@ namespace {
 constexpr const char *TOUCH_KEY = "touch_r3";
 Settings g = {true, 20, 20, {false, false, 0, 0, 0, 0}};
 constexpr const char *NVS_NS = "nvd";
+uint32_t g_boot_count = 0;
 }  // namespace
 
 void begin() {
@@ -20,8 +21,12 @@ void begin() {
   g.gapMs = p.getUShort("gap_ms", g.gapMs);
   if (p.isKey(TOUCH_KEY) && p.getBytesLength(TOUCH_KEY) == sizeof(TouchCal))
     p.getBytes(TOUCH_KEY, &g.touch, sizeof(TouchCal));
+  g_boot_count = p.getULong("boot_n", 0) + 1;
+  p.putULong("boot_n", g_boot_count);
   p.end();
 }
+
+uint32_t bootCount() { return g_boot_count; }
 
 Settings &get() { return g; }
 

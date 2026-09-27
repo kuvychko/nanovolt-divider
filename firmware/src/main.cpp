@@ -47,16 +47,6 @@ void pollSerial() {
   }
 }
 
-void setLed() {
-  const instrument::State &s = instrument::state();
-  const bool red = s.board && s.known && s.inject;
-  const bool green = s.board && s.known && !s.inject;
-  const bool blue = !s.board || !s.known;
-  digitalWrite(pins::LED_R, !red);  // active low
-  digitalWrite(pins::LED_G, !green);
-  digitalWrite(pins::LED_B, !blue);
-}
-
 void logChange(const char *event) { sdstore::logEvent(event); }
 
 }  // namespace
@@ -66,6 +56,8 @@ void setup() {
   mcp::init();  // clears any coil left energised by a reboot mid-pulse
 
   Serial.begin(115200);
+  // The RGB LED is inside the enclosure, where it only costs power: driven off (it is active
+  // low) and never touched again.
   for (int p : {pins::LED_R, pins::LED_G, pins::LED_B}) {
     pinMode(p, OUTPUT);
     digitalWrite(p, HIGH);
@@ -84,6 +76,7 @@ void setup() {
                 ""
 #endif
   );
+  Serial.printf("# boot %lu\n", (unsigned long)settings::bootCount());
   Serial.printf("# MCP23017 %s, TMP275 %s, boot safe state %s\n",
                 mcp::present() ? "found" : "NOT FOUND", tmp275::present() ? "found" : "NOT FOUND",
                 settings::get().bootSafe ? "ON" : "OFF (relays not pulsed)");
@@ -95,7 +88,6 @@ void setup() {
   sdstore::info(np);  // sets the SD status indicator
 
   ui::begin();
-  setLed();
   Serial.println("# ready");
 }
 
@@ -105,5 +97,4 @@ void loop() {
   tmp275::poll();
   sdstore::poll();
   ui::loop();
-  setLed();
 }

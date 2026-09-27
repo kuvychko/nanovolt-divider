@@ -165,10 +165,12 @@ void drawBanner() {
     sub = "tap here to reset relays";
     bg = C_BAD;
   } else if (s.inject) {
-    label = "INJECT";
+    // The banner names the state (participles); the output button names the action (verbs), so
+    // the two never show the same word. SCPI keeps INJECT / ISOLATE.
+    label = "INJECTING";
     bg = C_INJECT;
   } else {
-    label = "ISOLATE";
+    label = "ISOLATED";
     bg = C_ISOLATE;
   }
   lcd.fillRect(0, BANNER_Y, W, BANNER_H, bg);

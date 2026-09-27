@@ -447,9 +447,9 @@ The same sheet is instantiated five times. KiCad's multi-channel/repeat-layout w
 |---:|---|---|---|---|
 | 10 | NPN transistor, SOT-23 | `MMBT2222A` | Two low-side coil drivers per relay | **12 purchased** |
 | 10 | Switching diode | `1N4148W` | Flyback diode across each relay coil | **12 purchased** |
-| 10 | 1 kΩ resistor, 1206 | existing stock/library | Transistor base resistor | On hand / source TBD |
-| 10 | 10 kΩ resistor, 1206 | existing stock/library | Base pulldown | On hand / source TBD |
-| 1 | MCP23017 | TBD | I²C GPIO expander for relay controls | **To order** |
+| 10 | 1 kΩ resistor, 1206 | [1206 chip-resistor kit, 0R–10M, 72 values, 1%](https://www.amazon.com/dp/B0DF74GXKL) | Transistor base resistor | **On hand** |
+| 10 | 10 kΩ resistor, 1206 | 1206 resistor kit (as above) | Base pulldown | **On hand** |
+| 1 | Microchip MCP23017, SOIC-28 | `MCP23017-E/SO` (Mouser `579-MCP23017-E/SO`) | I²C GPIO expander for relay controls, 0x20 | **Purchased** |
 | 1 | Integrated 2.8" ESP32 touch TFT | "Cheap Yellow Display", ESP32-2432S028R family: [ELEGOO 2-Pack ESP32 2.8" touch display, 240×320 ILI9341, USB-C](https://www.amazon.com/dp/B0FJQ6RK39) | UI, USB, controller (the pack's second module is a spare) | **On hand** |
 
 ### 11.3 Decoupling / power
@@ -458,7 +458,7 @@ The same sheet is instantiated five times. KiCad's multi-channel/repeat-layout w
 |---:|---|---|---|---|
 | as needed | 100 nF, 16 V, X7R, SMD | `SH31B104K160CT` | Local high-frequency decoupling | **20 purchased** |
 | 2–3 | 22 µF, 1206 MLCC | `EMK316BB7226ML-T` | Local/bulk 5 V decoupling | **3 purchased** |
-| 2 | I²C pull-up resistors, 1206 | TBD | SDA/SCL pull-ups if required | On hand / TBD |
+| 2 | 4.7 kΩ resistor, 1206 | 1206 resistor kit (see 11.2) | SDA/SCL pull-ups to 3V3 | **On hand** |
 
 ### 11.4 Front panel / mechanical
 
@@ -508,7 +508,7 @@ Additional Rev A procurement is expected to include:
 
 - four more TQ2-L2-5V-3 relays,
 - one `TMP275AIDR` (SOIC-8) in place of the DSBGA-6 TMP117,
-- MCP23017,
+- MCP23017 *(done: `MCP23017-E/SO`)*,
 - banana sockets *(done, see 11.4)*,
 - enclosure/mechanical hardware *(done, see 11.4 and 11.5)*.
 

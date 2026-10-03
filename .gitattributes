@@ -19,3 +19,6 @@
 # Fabrication files are a record of what was sent to the fab, byte for byte.  KiCad wrote them
 # with CRLF; eol=lf above would rewrite them.
 hardware/fab/** -text
+
+# STEP exports. The lowercase pattern above only matches on case-insensitive filesystems.
+*.STEP binary

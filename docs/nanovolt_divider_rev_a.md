@@ -1,31 +1,31 @@
 # Programmable Nanovolt Divider / Precision Attenuator
-## Rev A Design Specification
+## Rev A design
 
-**Revision:** Rev A  
-**Date:** 2026-09-06  
-**Status:** Rev A boards ordered from OSH Park 2026-09-11 and received (fab files in `hardware/fab/`); v0 enclosure printed (`enclosure/`)  
-**Primary use:** calibrated low-level DC injection and sub-LSB metrology with an external precision DMM  
-**Scope note:** a second, passive path for measuring a ~450 V Geiger-counter supply was specified for Rev A and then removed - see §4.3.
+**Revision:** Rev A, as built (fab files in `hardware/fab/`, enclosure in `enclosure/`)  
+**Primary use:** calibrated low-level DC injection and sub-LSB metrology with an external precision DMM
 
 ---
 
-## 1. Problem statement
+## 1. Purpose
 
-The goal is to build a compact bench instrument that converts an ordinary, controllable DC source into a stable and calibrated nanovolt-to-microvolt signal by **passive resistive attenuation**, rather than attempting to synthesize nanovolts directly.
+The instrument converts an ordinary, controllable DC source into a stable and calibrated
+nanovolt-to-microvolt signal by **passive resistive attenuation**, rather than synthesizing nanovolts
+directly.
 
-The motivating experiment used a LAN-controlled bench power supply, a simple ~1:10^6 divider built from inexpensive resistors, an HP 3478A 5½-digit DMM on its 30 mV range, and ABBA modulation/averaging. That setup demonstrated reliable recovery of signals well below the DMM's 100 nV quantization count, including signals around 20 nV.
-
-The Rev A instrument should preserve the simplicity of the successful experiment:
+The method it supports is a LAN- or USB-controlled bench supply, a ~1:10^n divider, a 5½-digit DMM on
+its most sensitive range, and ABBA modulation with averaging. With an HP 3478A on its 30 mV range,
+that combination recovers signals well below the meter's 100 nV quantization step, down to tens of
+nanovolts.
 
 > **A conventional voltage source + passive precision attenuation + reversal + true zero + calibration + averaging.**
 
-The precision signal path should remain as passive and electrically quiet as practical.
+The precision signal path is kept as passive and electrically quiet as practical.
 
 ---
 
-## 2. Planned capabilities
+## 2. Capabilities
 
-1. **Three programmable normal-input attenuation ranges**
+1. **Three programmable attenuation ranges**
    - approximately `1e-5`
    - approximately `1e-6`
    - approximately `1e-7`
@@ -33,73 +33,59 @@ The precision signal path should remain as passive and electrically quiet as pra
 2. **Shared 1 Ω low-leg resistor**
    - permanent part of the DMM measurement path
    - never switched out of the low-voltage path
-   - serves as the "heart" of the divider
+   - the "heart" of the divider
 
 3. **Programmable polarity reversal**
-   - implemented with a latching relay
+   - a latching relay
    - reversal occurs upstream of the precision divider
 
 4. **Programmable injection / isolation**
-   - implemented with a latching relay upstream of the 1 Ω resistor
-   - `INJECT`: selected source drives current through the 1 Ω resistor
-   - `ISOLATE`: high-side source is disconnected while the DMM remains connected across the same 1 Ω resistor
-   - provides a physically meaningful zero without perturbing the low-voltage measurement path
+   - a latching relay upstream of the 1 Ω resistor
+   - `INJECT`: the source drives current through the 1 Ω resistor
+   - `ISOLATE`: the source is disconnected at both ends while the DMM remains connected across the same 1 Ω resistor
+   - a physically meaningful zero that does not perturb the low-voltage measurement path
 
-5. **~~Dedicated high-voltage input~~** — *removed, see §4.3*
+5. **Temperature monitoring**
+   - one TMP275 adjacent to the 1 Ω resistor
+   - drives the stored temperature correction of the ratio
+   - the correction depends on the *change* in temperature since calibration, so short-term repeatability
+     (12-bit, 0.0625 °C) matters and absolute accuracy (±0.5 °C) does not
 
-6. **Temperature monitoring**
-   - one TMP275 located adjacent to the 1 Ω resistor
-   - used to characterize thermal behavior and support optional ratio correction
-   - SOIC-8, because the board is hand-soldered; the TMP117 it replaced is DSBGA-6 only
-   - ±0.5 °C / 12-bit rather than the TMP117's ±0.1 °C / 16-bit. The correction is driven by the
-     *change* in temperature since calibration, so short-term repeatability matters here and
-     absolute accuracy does not.
+6. **Stored calibration**
+   - per range: calibrated ratio, reference temperature, temperature coefficients, uncertainties, valid temperature span
+   - stored in nonvolatile memory, backed up and audit-logged on microSD
 
-7. **Stored calibration**
-   - calibrated divider multiplier for each normal range
-   - reference temperature
-   - optional measured temperature coefficient for each range
-   - calibration metadata stored in nonvolatile memory
-
-8. **Local user interface**
+7. **Local user interface**
    - integrated 2.8" ESP32 + 320×240 resistive-touch TFT module
-   - touchscreen control of:
-     - range
-     - polarity
-     - injection/isolation
-   - display shows active mode, range, polarity, output state, calibrated factor, temperature, and communications status
+   - touchscreen control of range, polarity and injection/isolation
+   - the display shows range, polarity, output state, calibrated factor, temperature and status
 
-9. **Remote control**
-   - SCPI-style command interface over USB serial, to the Raspberry Pi metrology hub
-   - ~~SCPI-style command interface over Wi-Fi/TCP~~: *dropped. With the Pi on USB, a 2.4 GHz radio a few
-     centimetres from a nanovolt path buys nothing, and it would be a second control route the hub cannot see. The
-     firmware never initialises the radio.*
+8. **Remote control**
+   - SCPI over USB serial. There is no wireless interface: the radio is never initialised.
 
 ---
 
-## 3. Rev A non-goals
+## 3. Non-goals
 
-Rev A intentionally avoids becoming a general-purpose precision source or full HV instrument.
+The instrument is deliberately not a general-purpose precision source:
 
-Not planned for Rev A:
+- no direct nanovolt generation with DACs/op-amps
+- no precision voltage reference
+- no closed-loop output regulation
+- no internal DMM/ADC as the metrology reference
+- no control of the external supply
+- no sub-nanovolt absolute-accuracy claims
+- no active analog circuitry in the precision signal path
 
-- direct nanovolt generation with DACs/op-amps
-- precision voltage reference
-- closed-loop output regulation
-- internal DMM/ADC as the metrology reference
-- automatic PSU control inside the instrument
-- sub-nanovolt absolute-accuracy claims
-- complex active analog circuitry in the precision signal path
-
-The external PSU remains the voltage source; the external DMM remains the measurement reference.
+The external supply is the voltage source; the external DMM is the measurement reference.
 
 ---
 
 ## 4. Electrical architecture
 
-### 4.1 Normal-input signal path
+### 4.1 Signal path
 
-The normal input uses five identical dual-coil latching relay channels:
+Five identical dual-coil latching relay channels:
 
 | Relay | Function |
 |---|---|
@@ -111,13 +97,13 @@ The normal input uses five identical dual-coil latching relay channels:
 
 Only one range relay is active at a time.
 
-Nominal divider factors are:
+Nominal divider factors are
 
 \[
 k = \frac{R_L}{R_H + R_L}
 \]
 
-with \(R_L = 1\ \Omega\).
+with \(R_L = 1\ \Omega\):
 
 | Range | High leg | Nominal factor |
 |---|---:|---:|
@@ -125,9 +111,9 @@ with \(R_L = 1\ \Omega\).
 | `1e-6` | 1 MΩ | 9.999990000e-7 |
 | `1e-7` | 10 MΩ | 9.999999000e-8 |
 
-Actual factors will be determined by calibration and stored in firmware.
+Actual factors are determined by calibration and stored in the instrument ([calibration.md](calibration.md)).
 
-### 4.2 Zero / isolation philosophy
+### 4.2 Zero / isolation
 
 The 1 Ω low-leg resistor is **never shorted and never removed from the DMM path**.
 
@@ -149,32 +135,8 @@ selected high leg -> OPEN
                        DMM HI               DMM LO
 ```
 
-This preserves the same 1 Ω resistor, PCB traces, solder joints, output connector, cable, and DMM terminals. Only the intentionally injected current is removed.
-
-### 4.3 High-voltage path — removed
-
-Rev A originally carried a second passive input for a ~450 V Geiger-counter supply: a dedicated
-10 MΩ high leg into the **shared** 1 Ω low leg, selected by a physical 3PDT NORMAL/HV toggle. It
-has been removed. The reasoning is recorded here because the numbers are the useful part:
-
-- Sharing the 1 Ω leg capped the ratio. At 10 MΩ the divider drew 45 µA and delivered **45 µV**
-  out; more output meant a smaller high leg, and 1 MΩ draws 450 µA where 10 MΩ draws 45 µA.
-- A Geiger supply is built to source microamps into a tube that draws almost none, so its output
-  impedance is high — often set by a deliberate series anode resistor. Against a 1 MΩ source
-  impedance a 10 MΩ divider already reads 9 % low, and a 1 MΩ divider reads 50 % low. That error
-  tracks the supply's operating point, so calibration cannot remove it.
-- The HV path had **no polarity reversal** — K4 serves the NORMAL input only — so thermal EMF and
-  DMM offset could not be nulled by ABBA the way they are on the normal ranges. More output was
-  exactly what that path needed, and the shared 1 Ω leg was the one thing that would not give it.
-
-A dedicated fixed divider is free of all three constraints, because it chooses its own low leg. The
-450 V measurement therefore moves out of this instrument, and Rev A stays single-purpose.
-
-Removed with it: `R34`, `J3`, `SW1` and the panel toggle, `R24`/`R25`/`C5`, the `J9`/P3 harness,
-the `HV` netclass and its clearance/creepage rules, and 11 mm of board height. `SW1`'s two analog
-poles were only ever selecting between the normal path and the HV path, so with the HV path gone
-both collapse to plain nets: K5's `A_NO` lands directly on `MEAS_NODE` and its `B_NO` directly on
-`ANALOG_RTN`. The ISOLATE function is untouched — K5 was always what performed it.
+The zero therefore keeps the same 1 Ω resistor, PCB traces, solder joints, output connector, cable and
+DMM terminals. Only the injected current is removed.
 
 ---
 
@@ -190,7 +152,7 @@ flowchart LR
         UI <-->|I²C| T
     end
 
-    subgraph NORMAL["Normal Precision Divider"]
+    subgraph NORMAL["Precision Divider"]
         NIN["NORMAL IN\n+ / -"]
         POL["K4\nPOLARITY"]
         RSEL["K1 / K2 / K3\nRange select"]
@@ -209,39 +171,24 @@ flowchart LR
     T -. "thermal proximity only; no analog connection" .-> RL
 ```
 
-
 ---
 
 ## 6. Control architecture
 
 ### 6.1 Controller
 
-Rev A uses an integrated **2.8" ESP32 touch-display module** rather than a separate Arduino + TFT.
+An integrated **2.8" ESP32 touch-display module**, a "Cheap Yellow Display" (ESP32-2432S028R
+family): ESP32, CH340 USB serial, 320×240 ILI9341 TFT, XPT2046-type resistive touch, microSD slot.
 
-Expected module characteristics:
-
-- ESP32 MCU
-- Wi-Fi
-- USB serial interface
-- 320×240 ILI9341 TFT
-- resistive touchscreen / XPT2046-type controller
-
-The module in hand is a "Cheap Yellow Display" (ESP32-2432S028R family). Its three 4-pin
-connectors are UART / power (RXD, TXD, GND, 5V), 3V3 (3.3V, IO35, nc, GND) and SPI (IO23 MOSI,
-IO19 MISO, IO18 SCK, IO27 CS). The board takes 5 V and GND from the first, 3.3 V and GND from the
-second, and the I²C bus from the third: **SDA = IO27, SCL = IO18**. The module has no IO22, and
-IO35 is input-only. The pad-by-pad wiring is in the README, under "Display harness".
+Its three 4-pin connectors are UART / power (RXD, TXD, GND, 5V), 3V3 (3.3V, IO35, nc, GND) and SPI
+(IO23 MOSI, IO19 MISO, IO18 SCK, IO27 CS). The board takes 5 V and GND from the first, 3.3 V and GND
+from the second, and the I²C bus from the third: **SDA = IO27, SCL = IO18**. The pad-by-pad wiring is
+in the README, under "Display harness".
 
 ### 6.2 GPIO expansion
 
-Five TQ2-L2 relays require ten coil-control outputs:
-
-- 5 × SET
-- 5 × RESET
-
-An **MCP23017** I²C GPIO expander provides these outputs.
-
-The ten MCP23017 outputs drive ten identical low-side transistor stages:
+Five TQ2-L2 relays need ten coil-control outputs (5 × SET, 5 × RESET), provided by an **MCP23017**
+I²C GPIO expander. Each output drives an identical low-side transistor stage:
 
 ```text
 MCP23017 GPIO
@@ -257,27 +204,28 @@ MMBT2222A emitter -> DGND
 1N4148W flyback diode across relay coil
 ```
 
-The same I²C bus is used for the TMP275 (address 0x48, `A2`/`A1`/`A0` all on `DGND`).
+The same I²C bus carries the TMP275 (address 0x48, `A2`/`A1`/`A0` all on `DGND`).
 
 ### 6.3 Relay safety/state rules
 
-1. Power-up into a deterministic safe state.
+1. Power up into a deterministic safe state.
 2. Establish `ISOLATE` before configuring other relay states.
 3. Only one range relay may be active at a time.
 4. Range changes use break-before-make.
 5. Polarity changes occur while isolated.
 6. Relay coils are pulsed only briefly; they are never continuously energized.
 
+The firmware enforces all six; see `firmware/README.md`.
+
 ---
 
 ## 7. Mechanical / thermal architecture
 
-The enclosure should have two physically distinct regions.
+The enclosure has two physically distinct regions.
 
 ### Control / warm / noisy region
 
 - ESP32 + touchscreen
-- Wi-Fi antenna
 - MCP23017
 - relay-driver electronics
 - USB/power wiring
@@ -290,100 +238,63 @@ The enclosure should have two physically distinct regions.
 - TMP275
 - output connector
 
-A physical divider wall inside the enclosure is desirable for airflow isolation, thermal isolation, and wiring organization.
-
-The enclosure should not be fully metallic because the ESP32 Wi-Fi antenna requires an RF-transparent path.
-*(No longer binding: Wi-Fi was dropped, see §2 item 9.)* A plastic-bodied instrument enclosure with a machinable metal front panel is preferred.
+The enclosure is 3D-printed plastic, with the front panel doubling as the display bezel.
 
 ### 1 Ω thermal region
 
-The 1 Ω resistor should receive special layout treatment:
+The 1 Ω resistor gets special layout treatment:
 
-- located near the output connector,
+- near the output connector,
 - minimal low-level trace length,
-- output/sense traces branch directly from the resistor terminals,
-- TMP275 placed nearby,
+- output/sense traces branch directly from the resistor terminals (Kelvin),
+- TMP275 alongside,
 - no relay coil or TFT/backlight heat nearby,
-- optional PCB cutouts/slots to reduce thermal conduction from the rest of the board.
+- PCB slots that leave the resistor on an island joined by narrow bridges, to reduce thermal
+  conduction from the rest of the board.
 
 ---
 
 ## 8. Calibration model
 
-Each range stores a calibration record:
+Each range stores a record:
 
 ```text
-RangeCalibration
-    range_id
-    nominal_factor
-    calibrated_factor_at_Tref
-    reference_temperature
-    measured_ratio_tempco
-    calibration_timestamp
+k(T) = k0 [1 + α(T − T0) + β(T − T0)²]
+u(T) = sqrt(u_k0² + (u_α (T − T0))²)          (ppm, k = 1)
 ```
 
-Temperature correction, once characterized, may use:
-
-\[
-k(T) = k_0 \left[1 + \alpha(T - T_0)\right]
-\]
-
-Rev A firmware should support the field from the beginning but use **zero temperature correction until the coefficient is experimentally measured**.
-
-**As built (firmware 0.2.0).** The record grew. It adds a quadratic term β, standard uncertainties for k0 and α, the
-TMP275 span [Tmin, Tmax] it was measured over, and a provenance string:
-k(T) = k0 [1 + α(T − T0) + β(T − T0)²], with T the TMP275 reading on the 1 Ω island. The instrument answers
-"the ratio at this board temperature" directly (`CAL:FACT? <range>,<T>` → k, uncertainty, in-span flag). Every
-saved calibration is appended to an audit trail on the SD card. How the record is measured is in
-[calibration_protocol.md](calibration_protocol.md).
+with T the TMP275 reading on the 1 Ω island, valid over the span [Tmin, Tmax] it was measured over,
+plus a date and a provenance string. The instrument answers "the ratio at this board temperature"
+directly (`CAL:FACT? <range>,<T>` → k, uncertainty, in-span flag). Every saved calibration is
+appended to an audit trail on the SD card. Before calibration the records are nominal, with
+tolerance-sized uncertainties. How the records are measured is in [calibration.md](calibration.md).
 
 ---
 
-## 9. Planned SCPI interface
+## 9. SCPI interface
 
-Exact command names may evolve, but Rev A should support these concepts:
+SCPI over USB serial, 115200 8N1. The core commands:
 
 ```text
-*IDN?
-*RST?
-
-:OUTP ON
-:OUTP OFF
-:OUTP?
-
-:POL NORM
-:POL INV
-:POL?
-
-:RANG 1E-5
-:RANG 1E-6
-:RANG 1E-7
-:RANG?
-
-:TEMP?
-
-:CAL:RATIO?
-:CAL:TC?
-:CAL:TREF?
-
-:SOUR:FACTOR?
-:SYST:MODE?
+*IDN?  *RST  *OPC?  SYST:ERR?
+OUTP ON|OFF         INJECT / ISOLATE
+POL NORM|INV
+RANG 1E-5|1E-6|1E-7|NONE
+TEMP?
+SOUR:FACT?          calibrated factor of the active range
+CAL:FACT? <range>[,<T>]
+CAL:REC <range>,...  /  CAL:REC? <range>
+SYST:MODE?          whole state in one line
 ```
 
-USB serial and Wi-Fi/TCP should share the same parser and instrument state machine.
-
-**As built.** All of the above exist, with `*RST` as a command (not a query) and `SOUR:FACT?` for the factor. The
-additions are diagnostics, calibration records, file access to the SD card, and reset detection. The command
-reference is `firmware/README.md`; the host-side contract is [bench_handoff.md](bench_handoff.md). There is no
-Wi-Fi (§2).
+The full command reference is in `firmware/README.md`; what a host program relies on (error queue,
+completion, timing, reset detection) is in [host_interface.md](host_interface.md).
 
 ---
 
 ## 10. KiCad schematic organization
 
-The schematic should be created **top-down**.
-
-Recommended hierarchy:
+The schematic is hierarchical:
 
 ```text
 nanovolt-divider.kicad_sch        # root / system architecture
@@ -402,14 +313,14 @@ nanovolt-divider.kicad_sch        # root / system architecture
       K5 INJECT
 ```
 
-The root sheet owns the actual metrology topology:
+The root sheet owns the metrology topology:
 
-- NORMAL input
-- 100 kΩ / 1 MΩ / 10 MΩ divider network
-- 1 Ω low leg
-- output terminals
+- the input
+- the 100 kΩ / 1 MΩ / 10 MΩ divider network
+- the 1 Ω low leg
+- the output terminals
 
-`relay_channel.kicad_sch` should be generic and expose:
+`relay_channel.kicad_sch` is generic and exposes:
 
 ```text
 SET
@@ -424,52 +335,54 @@ B_NO
 B_NC
 ```
 
-The same sheet is instantiated five times. KiCad's multi-channel/repeat-layout workflow can then duplicate the physical relay-driver layout after one channel is placed and routed.
+Because all five channels share one sheet, KiCad's multichannel / repeat-layout tooling can replicate
+the driver layout after one channel is placed and routed.
 
 ---
 
-## 11. BOM — Rev A
+## 11. BOM
 
 ### 11.1 Precision / analog components
 
-| Qty Rev A | Part | Mfr. part number | Function / notes | Status |
-|---:|---|---|---|---|
-| 1 | Vishay/Dale 1 Ω wirewound | `RS02C1R000FE70` | Shared low leg, 1%, 2.5 W, through-hole | **Purchased** |
-| 1 | Ohmite 100 kΩ metal film | `MOX70031003BZE` | Normal `1e-5` range, 0.1%, 5 ppm/°C | **Purchased** |
-| 1 | Ohmite 1 MΩ metal film | `MOX70031004BYE` | Normal `1e-6` range, 0.1%, 10 ppm/°C | **Purchased** |
-| 1 | Ohmite 10 MΩ thick film | `SM102031005FE` | Normal `1e-7` range, 1% | **Purchased** |
-| 5 | Panasonic latching relay | `TQ2-L2-5V-3` | K1–K5 | 1 purchased; **4 more required** |
-| 1 | TI temperature sensor, SOIC-8 | `TMP275AIDR` | Temperature of 1 Ω region, I²C 0x48 | **To order** (the purchased `TMP117MAIYBGR` is DSBGA-6 and cannot be hand-soldered) |
+| Qty | Part | Mfr. part number | Function / notes |
+|---:|---|---|---|
+| 1 | Vishay/Dale 1 Ω wirewound | `RS02C1R000FE70` | Shared low leg, 1%, 2.5 W, through-hole |
+| 1 | Ohmite 100 kΩ metal film | `MOX70031003BZE` | `1e-5` range, 0.1%, 5 ppm/°C |
+| 1 | Ohmite 1 MΩ metal film | `MOX70031004BYE` | `1e-6` range, 0.1%, 10 ppm/°C |
+| 1 | Ohmite 10 MΩ thick film | `SM102031005FE` | `1e-7` range, 1% |
+| 5 | Panasonic latching relay | `TQ2-L2-5V-3` | K1–K5 |
+| 1 | TI temperature sensor, SOIC-8 | `TMP275AIDR` | Temperature of the 1 Ω region, I²C 0x48 |
 
-### 11.2 Relay-driver / control-board components
+### 11.2 Relay-driver / control components
 
-| Qty Rev A | Part | Mfr. part number | Function / notes | Status |
-|---:|---|---|---|---|
-| 10 | NPN transistor, SOT-23 | `MMBT2222A` | Two low-side coil drivers per relay | **12 purchased** |
-| 10 | Switching diode | `1N4148W` | Flyback diode across each relay coil | **12 purchased** |
-| 10 | 1 kΩ resistor, 1206 | [1206 chip-resistor kit, 0R–10M, 72 values, 1%](https://www.amazon.com/dp/B0DF74GXKL) | Transistor base resistor | **On hand** |
-| 10 | 10 kΩ resistor, 1206 | 1206 resistor kit (as above) | Base pulldown | **On hand** |
-| 1 | Microchip MCP23017, SOIC-28 | `MCP23017-E/SO` (Mouser `579-MCP23017-E/SO`) | I²C GPIO expander for relay controls, 0x20 | **Purchased** |
-| 1 | Integrated 2.8" ESP32 touch TFT | "Cheap Yellow Display", ESP32-2432S028R family: [ELEGOO 2-Pack ESP32 2.8" touch display, 240×320 ILI9341, USB-C](https://www.amazon.com/dp/B0FJQ6RK39) | UI, USB, controller (the pack's second module is a spare) | **On hand** |
+| Qty | Part | Mfr. part number | Function / notes |
+|---:|---|---|---|
+| 10 | NPN transistor, SOT-23 | `MMBT2222A` | Two low-side coil drivers per relay |
+| 10 | Switching diode | `1N4148W` | Flyback diode across each relay coil |
+| 10 | 1 kΩ resistor, 1206 | any 1% 1206 (e.g. [1206 chip-resistor kit, 0R–10M, 72 values](https://www.amazon.com/dp/B0DF74GXKL)) | Transistor base resistor |
+| 11 | 10 kΩ resistor, 1206 | any 1% 1206 | Base pulldowns (10), MCP23017 `~RESET` pull-up R23 (1) |
+| 1 | Microchip MCP23017, SOIC-28 | `MCP23017-E/SO` | I²C GPIO expander for relay controls, 0x20 |
+| 1 | Integrated 2.8" ESP32 touch TFT | "Cheap Yellow Display", ESP32-2432S028R family, e.g. [ELEGOO ESP32 2.8" touch display, 240×320 ILI9341, USB-C](https://www.amazon.com/dp/B0FJQ6RK39) | UI, USB, controller |
 
 ### 11.3 Decoupling / power
 
-| Qty Rev A | Part | Mfr. part number | Function / notes | Status |
-|---:|---|---|---|---|
-| as needed | 100 nF, 16 V, X7R, SMD | `SH31B104K160CT` | Local high-frequency decoupling | **20 purchased** |
-| 2–3 | 22 µF, 1206 MLCC | `EMK316BB7226ML-T` | Local/bulk 5 V decoupling | **3 purchased** |
-| 2 | 4.7 kΩ resistor, 1206 | 1206 resistor kit (see 11.2) | SDA/SCL pull-ups to 3V3 | **On hand** |
+| Qty | Part | Mfr. part number | Function / notes |
+|---:|---|---|---|
+| 2 | 100 nF, 16 V, X7R, SMD | `SH31B104K160CT` | Decoupling at the MCP23017 (C1) and the TMP275 (C2) |
+| 2 | 22 µF, 1206 MLCC | `EMK316BB7226ML-T` | Bulk decoupling at the power entry (C3, C4) |
+| 2 | 4.7 kΩ resistor, 1206 | any 1% 1206 | SDA/SCL pull-ups to 3V3 |
 
 ### 11.4 Front panel / mechanical
 
-| Qty | Item | Notes | Status |
-|---:|---|---|---|
-| 4 | Female banana jacks, 2 red + 2 black | NORMAL IN + / − and OUT + / −. [Amazon B07C7WG23G](https://www.amazon.com/dp/B07C7WG23G) | **Purchased** |
-| 1 | Enclosure | 3D-printed: front panel, back panel, base plate, cover, PCB holder (SOLIDWORKS, STEP and 3MF in `enclosure/`). The front panel also serves as the TFT bezel. Print settings: see the README | Printed (v0). Base plate and cover are now v1, which add two screws |
-| 1 | Banana-jack nut wrench | 3D-printed tool (`enclosure/banana-plug-wrench-v0`) for the banana-jack nuts | Printed (v0) |
-| 3 | JST 1.25 mm 4-pin male plug, 100 mm pigtail, 26 AWG | Display-module harnesses. [Amazon B0DMT2GBZH](https://www.amazon.com/dp/B0DMT2GBZH) | **Purchased** |
-| 1 | 1 ft USB-to-USB extension cable | Brings the module's USB out to the back panel. [Amazon B0GRVZ62VR](https://www.amazon.com/dp/B0GRVZ62VR) | **Purchased** |
-| - | *(no board-side harness headers)* | Display-module pigtails solder straight to the `J7`/`J8` pads | n/a |
+| Qty | Item | Notes |
+|---:|---|---|
+| 4 | Female banana jacks, 2 red + 2 black | NORMAL IN + / − and OUT + / −. e.g. [Amazon B07C7WG23G](https://www.amazon.com/dp/B07C7WG23G) |
+| 1 | Enclosure | 3D-printed: front panel, back panel, base plate, cover, PCB holder (SOLIDWORKS, STEP and 3MF in `enclosure/`). The front panel also serves as the TFT bezel. Print settings: see the README |
+| 1 | Banana-jack nut wrench | 3D-printed tool (`enclosure/banana-plug-wrench-v0`) for the banana-jack nuts |
+| 3 | JST 1.25 mm 4-pin male plug, 100 mm pigtail, 26 AWG | Display-module harnesses. e.g. [Amazon B0DMT2GBZH](https://www.amazon.com/dp/B0DMT2GBZH) |
+| 1 | 1 ft USB-to-USB extension cable | Brings the module's USB out to the back panel. e.g. [Amazon B0GRVZ62VR](https://www.amazon.com/dp/B0GRVZ62VR) |
+
+The display-module pigtails solder straight to the `J7`/`J8` pads; there are no board-side headers.
 
 ### 11.5 Fasteners
 
@@ -486,59 +399,21 @@ The same sheet is instantiated five times. KiCad's multi-channel/repeat-layout w
 | 2 | M2 flat washer | USB extension cable mount |
 | 2 | M2 nut | USB extension cable mount |
 
-Order totals: M2×4 screws ×4, M2×12 screws ×2, M2 washers ×6, M2 nuts ×2, M2×4×3.2 inserts ×4;
+Totals: M2×4 screws ×4, M2×12 screws ×2, M2 washers ×6, M2 nuts ×2, M2×4×3.2 inserts ×4;
 M3×6 button-head ×4, M3×8 button-head ×14, M3 nuts ×4, M3×4×4.2 inserts ×14.
 
 ---
 
-## 12. First Mouser order
-
-The first Mouser order establishes the core passive-divider and relay-driver component set:
-
-- 1 Ω low-leg resistor
-- 100 kΩ, 1 MΩ, and 10 MΩ divider resistors
-- 12 × MMBT2222A
-- 12 × 1N4148W
-- 20 × 100 nF X7R MLCCs
-- 3 × 1206 bulk MLCCs
-- 1 × TMP117 *(DSBGA-6, superseded - see 11.1)*
-- 1 × TQ2-L2-5V-3 relay
-
-Additional Rev A procurement is expected to include:
-
-- four more TQ2-L2-5V-3 relays,
-- one `TMP275AIDR` (SOIC-8) in place of the DSBGA-6 TMP117,
-- MCP23017 *(done: `MCP23017-E/SO`)*,
-- banana sockets *(done, see 11.4)*,
-- enclosure/mechanical hardware *(done, see 11.4 and 11.5)*.
-
----
-
-## 13. Rev A design principles
+## 12. Design principles
 
 1. **Do not synthesize nanovolts directly.** Generate ordinary voltages well and attenuate them.
 2. **Keep the precision signal path passive.**
 3. **Nothing switches below the 1 Ω measurement node.**
-4. **A zero measurement should preserve the same low-voltage path.**
+4. **A zero measurement preserves the same low-voltage path.**
 5. **Use latching relays so coil power and heating vanish during measurement.**
 6. **Separate digital/warm electronics physically from the precision divider.**
 7. **Calibrate actual ratios; do not depend on nominal resistor tolerance.**
 8. **Measure temperature before attempting temperature correction.**
 9. **Favor simple, inspectable circuitry over unnecessary analog sophistication.**
-10. **Keep the instrument single-purpose.** A capability that has to share the 1 Ω low leg inherits
-    its constraints; if those constraints make it a poor version of the thing, it belongs in its own
-    box. This is what retired the 450 V path — see §4.3.
-
----
-
-## 14. Immediate next steps
-
-1. Create the KiCad project and project-local symbol/footprint libraries.
-2. Draw the Rev A root-sheet architecture first.
-3. Create the generic `relay_channel.kicad_sch` interface.
-4. Instantiate the relay channel five times.
-5. Implement and ERC-check one relay channel.
-6. Build the control sheet around the ESP32 module, MCP23017, and TMP275.
-7. Complete the precision signal path on the root sheet.
-9. Assign real footprints from component datasheets.
-10. Perform a schematic architecture/safety review before starting PCB placement.
+10. **Keep the instrument single-purpose.** A capability that has to share the 1 Ω low leg inherits its
+    constraints; if those make it a poor version of the thing, it belongs in its own box.

@@ -8,22 +8,22 @@ Firmware for the ESP32 "Cheap Yellow Display" (ESP32-2432S028R family) that runs
 * SCPI over USB serial;
 * the touchscreen front panel.
 
-The instrument is controlled over USB from the Raspberry Pi metrology hub: see
-[docs/bench_handoff.md](../docs/bench_handoff.md) for the host side, and
-[docs/calibration_protocol.md](../docs/calibration_protocol.md) for how the calibration is measured. **There is no
-Wi-Fi or Bluetooth.** The radio is never initialised, because a 2.4 GHz transmitter a few centimetres from a
-nanovolt path buys nothing when the Pi is on USB. The module's RGB LED is held off; it is inside the enclosure.
+The instrument is controlled over USB from a host computer (e.g. a Raspberry Pi): see
+[docs/host_interface.md](../docs/host_interface.md) for the host side, and
+[docs/calibration.md](../docs/calibration.md) for how the calibration is measured. **The radio is never
+initialised:** there is no Wi-Fi or Bluetooth, and no 2.4 GHz transmitter a few centimetres from a nanovolt path.
+The module's RGB LED is held off; it is inside the enclosure.
 
 ## Build and flash
 
-The project uses PlatformIO. Install it with `uv tool install platformio`. The CYD's CH340 is `COM8` in
-`platformio.ini`.
+The project uses PlatformIO. Install it with `uv tool install platformio`. Set `upload_port` and `monitor_port`
+in `platformio.ini` to your module's serial port (they are `COM8` there), and pass `-p <port>` to `tools/scpi.py`.
 
 ```
 pio run -d firmware -e cyd -e cyd_st7789 -e cyd_sim   # build every environment (plain `pio run` builds only cyd)
 pio run -d firmware -e cyd -t upload       # flash
-uv run tools/scpi.py                       # interactive SCPI terminal (COM8)
-uv run tools/scpi.py "*IDN?" "SYST:MODE?"  # one-shot
+uv run tools/scpi.py -p <port>             # interactive SCPI terminal
+uv run tools/scpi.py -p <port> "*IDN?" "SYST:MODE?"  # one-shot
 ```
 
 | Environment | Use |
@@ -46,7 +46,7 @@ out (`CORE_DEBUG_LEVEL=0`), because it would land in the SCPI response stream. T
   (20 ms).
 * **The MCP23017 survives an ESP32 reboot.** R23 ties `~RESET` high, so a reboot mid-pulse would leave a coil
   energised. Boot therefore clears OLATA/OLATB before anything else, including before it makes any pin an output.
-* **Relay rules (spec §6.3).**
+* **Relay rules ([design §6.3](../docs/nanovolt_divider_rev_a.md#63-relay-safetystate-rules)).**
   * At boot, and on `*RST`, the firmware pulses the safe state: K5 RESET (ISOLATE) first, then K1..K3 RESET, then K4
     RESET.
   * A range or polarity change runs this sequence:
@@ -165,7 +165,7 @@ pulses are ones you fire by hand, not five at once at boot.
    A reversed 5 V would reach the coil drivers the moment USB is plugged in, so this check comes before any power.
 2. **Power on.** The banner should read `STATE UNKNOWN`, and the `BOARD` and `TEMP` status lights should be green.
 3. `DIAG:I2C?` should return `0x20,0x48`. `DIAG:PINS?` should now report `PULLUP` on both pins: those are R21/R22,
-   because the module itself has none (measured on the module in hand: `IO18=NONE,IO27=NONE`).
+   because the module itself has none (with the module alone, `DIAG:PINS?` reads `IO18=NONE,IO27=NONE`).
 4. `DIAG:MCP?` should show `IODIRA=0xFC`, `IODIRB=0x00` and both `OLAT` registers `0x00`.
 5. `TEMP?` should give a plausible room temperature.
 6. `DIAG:TRAC ON`, then pulse each coil by hand, listening for the click and ideally watching the collector on a scope:

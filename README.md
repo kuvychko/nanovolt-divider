@@ -1,102 +1,66 @@
 # nanovolt-divider
 
-Programmable nanovolt divider / precision attenuator: a compact bench instrument that turns an
-ordinary programmable DC source into a calibrated nanovolt-to-microvolt signal by **passive resistive
-attenuation** (1e-5 / 1e-6 / 1e-7), with relay-controlled polarity reversal and a true-zero
-(isolate) function, read by an external precision DMM.
+A programmable precision attenuator that turns an ordinary bench power supply into a calibrated
+nanovolt-to-microvolt source by **passive resistive division**, read by an external precision DMM.
+Three ratios (1e-5, 1e-6, 1e-7), relay-controlled polarity reversal for ABBA modulation, and a true
+zero that disconnects the source without touching the measurement path.
 
-The design rationale, architecture, relay rules, calibration model and Rev A BOM live in
-[docs/nanovolt_divider_rev_a.md](docs/nanovolt_divider_rev_a.md).
+![Rev A board, top](docs/images/board-top.png)
 
-### The 450 V path was removed
-
-Rev A originally carried a second, passive input for measuring a ~450 V Geiger-counter supply,
-sharing the 1 ohm low leg through a 3PDT NORMAL/HV toggle. It is gone, and the reasoning is worth
-keeping:
-
-* The shared 1 ohm leg capped what the HV range could be. With a 10 M high leg the output was
-  45 uV; getting more meant a smaller high leg, and 1 M draws 450 uA where 10 M draws 45 uA.
-* A Geiger supply is built to source microamps into a tube that draws almost none, so its output
-  impedance is high and often set by a series anode resistor. Loading it at 450 uA measures the
-  divider, not the supply - and the error moves with the supply's operating point, so calibration
-  cannot remove it.
-* The HV path had no polarity reversal (K4 serves the NORMAL input only), so thermal EMF and DMM
-  offset could not be nulled by ABBA the way they are on the normal ranges. That is exactly where
-  more output would have helped, and it was the one thing the 1 ohm leg would not give.
-
-A dedicated fixed divider has none of those constraints - it can pick its own low leg - so the HV
-measurement moves out of this instrument entirely. What this bought Rev A: `R34`, `J3`, `SW1` and
-the panel toggle, `R24`/`R25`/`C5`, the `J9`/P3 harness, the `HV` netclass and its three creepage
-and clearance rules, and 11 mm of board.
+| | |
+|---|---|
+| Ranges | `1E-5`, `1E-6`, `1E-7`: high legs of 100 kΩ (0.1 %, 5 ppm/°C), 1 MΩ (0.1 %, 10 ppm/°C) and 10 MΩ (1 %) over one shared 1 Ω low leg |
+| Polarity | K4 reverses the source *upstream* of the high leg, so relay-contact EMFs reach the output divided by ~1/k |
+| Zero | ISOLATE opens the source at both ends; the 1 Ω, its Kelvin taps and the DMM path are never switched |
+| Switching | Five latching relays, pulsed for 20 ms and never held: no coil heat while measuring |
+| Temperature | TMP275 on a slotted island next to the 1 Ω |
+| Calibration | Per-range k(T) = k0 [1 + α(T−T0) + β(T−T0)²] with uncertainties, stored in NVS and backed up to microSD |
+| Control | SCPI over USB serial, and a 2.8" touchscreen (ESP32 "Cheap Yellow Display") |
 
 ## Status
 
-Rev A: sent to OSH Park for fabrication on 2026-09-11 (git tag `rev-a`); boards received and one
-populated. **Brought up on 2026-09-26:** both I2C devices answer, and every relay transition works. An
-end-to-end check (10 V into NORMAL IN, HP 3478A on OUT, polarity-reversed) read all three ratios within
-0.25 % of nominal, with the ISOLATE reading unchanged by the applied source. Firmware 0.2.0 is in
-`firmware/`; calibration is next.
-The layout is frozen from here: later changes are harness wiring and documentation only, and the
-schematic is kept net-identical to the board. Schematics ERC-clean;
-PCB placed, routed and silkscreen tidied: DRC 0 errors, 0 unconnected, 56 benign
-silkscreen-clipped-by-mask warnings.
+Rev A is built and verified: all relay transitions work, and with 10 V applied all three ratios read
+within 0.25 % of nominal, with the ISOLATE reading unchanged by the source. Firmware is 0.2.0.
 
-### Fabrication files
+**Calibration is in progress.** Until it completes, the instrument carries nominal ratios with
+tolerance-sized uncertainties. The method, and each result as it comes in, are in
+[docs/calibration.md](docs/calibration.md).
 
-`hardware/fab/` holds the Gerbers and drill files exactly as sent to OSH Park - byte for byte, so
-`.gitattributes` marks the folder `-text` and git leaves their CRLF line endings alone. The zip that
-was uploaded is just these files zipped and is not committed. Two things to know about them:
+## Documentation
 
-* They were plotted before the revision was renamed, so their metadata still says `Rev0`
-  (`TF.ProjectId` in every Gerber, `Revision` in the job file). The copper is the tagged board's:
-  re-plotting the board and diffing against these files leaves only the creation date and the drill
-  marks.
-* They were plotted with drill marks **off**. The board file's stored plot settings have them on
-  (small), so `kicad-cli pcb export gerbers --board-plot-params` adds a 0.3 / 0.35 mm flash at every
-  hole on the copper and mask layers. Turn them off when re-plotting for comparison or for a re-order.
-
-### Enclosure
-
-The enclosure is 3D-printed. `enclosure/` has the SOLIDWORKS source (`.SLDPRT`), a neutral `.STEP`
-and a print-ready `.3MF` for each part: front panel (it also serves as the display bezel), back panel,
-base plate, cover, PCB holder, and a wrench for the banana-jack nuts.
-
-The base plate and cover are at v1, which adds two M3 screws (with their inserts) to the v0 parts.
-The v0 base plate and cover were printed and work well; v1 replaces them in the repository. The other
-parts are still v0.
-
-Every part was printed in PLA on a Prusa i3 MK3S with a 0.4 mm nozzle, using PrusaSlicer's
-**0.20 mm QUALITY** preset, 15 % infill, and **no supports**.
-
-Before assembling, heat-set the knurled brass inserts: the M2 ones go into the PCB holder, the M3
-ones into the enclosure parts. Fasteners, banana jacks, the display module, and the cables are
-listed in [BOM §11.4 and §11.5](docs/nanovolt_divider_rev_a.md#114-front-panel--mechanical).
+| Document | Contents |
+|---|---|
+| [docs/nanovolt_divider_rev_a.md](docs/nanovolt_divider_rev_a.md) | Design: architecture, relay rules, control, calibration model, BOM |
+| [docs/host_interface.md](docs/host_interface.md) | Driving it from a computer: the USB link, the reset-on-open trap, the SCPI contract |
+| [docs/calibration.md](docs/calibration.md) | How the ratios are calibrated, the uncertainty budget, and the results so far |
+| [firmware/README.md](firmware/README.md) | Building and flashing, the full SCPI command reference, first power-on |
 
 ## Repository layout
 
 ```
-docs/                      design specification, calibration protocol, bench (Raspberry Pi) handoff
-enclosure/                 SOLIDWORKS parts (.SLDPRT), STEP, and 3D-print exports (.3MF, .3DXML): front
-                           panel, back panel, base plate, cover, PCB holder, banana-jack nut wrench
-docs/datasheets/           vendor datasheets (git-ignored, copyrighted; see docs/datasheets list below)
-firmware/                  ESP32 (CYD) firmware, PlatformIO: relay state machine, SCPI over USB, touch UI,
-                           microSD calibration backup and run log - see firmware/README.md
+docs/                      design, host interface, calibration
+calibration/               calibration result data (summaries and figures)
+enclosure/                 SOLIDWORKS parts (.SLDPRT), STEP, and 3D-print files (.3MF, .3DXML)
+firmware/                  ESP32 firmware, PlatformIO: relay state machine, SCPI over USB, touch UI,
+                           microSD calibration backup and run log
 hardware/                  KiCad 10 project
   nanovolt-divider.kicad_pro
-  nanovolt-divider.kicad_sch   root sheet: metrology topology (inputs, relays, high legs, 1 ohm, outputs)
+  nanovolt-divider.kicad_sch   root sheet: metrology topology (input, relays, high legs, 1 ohm, output)
   control.kicad_sch            ESP32 display-module harness, MCP23017, TMP275, power
   relay_channel.kicad_sch      generic latching-relay channel, instantiated 5x (K1..K5)
-  nanovolt-divider.kicad_pcb   board: 60 x 69.1 mm, 2 layers, placed and routed
+  nanovolt-divider.kicad_pcb   board: 60 x 69.1 mm, 2 layers
   nanovolt-divider.kicad_dru   custom DRC rules (1 ohm bridge track width)
-  lib/                         project-local symbol and footprint libraries
-  fab/                         Rev A Gerbers and drill files, as sent to OSH Park
-tools/gen_schematics.py    bootstrap script that produced the first version of the schematics
-tools/gen_pcb.py           bootstrap script that produced the placed (unrouted) board
-tools/route_pcb.py         bootstrap maze router that produced the first routing (see Routing below)
-tools/route_hand.py        its hand routes and routing policy - the design intent of the routing
+  lib/                         project symbol and footprint libraries
+  fab/                         Rev A Gerbers and drill files
+tools/gen_schematics.py    generates the schematics and the project libraries
+tools/gen_pcb.py           generates the placed, unrouted board
+tools/route_pcb.py         grid maze router around the hand routes (see Routing)
+tools/route_hand.py        the hand routes and routing policy: the design intent of the routing
 tools/pcb_io.py            pcbnew side of the router: dump pads, apply routes
 tools/scpi.py              SCPI terminal for the instrument over USB serial (uv run tools/scpi.py)
 ```
+
+## Circuit
 
 ### Hierarchy
 
@@ -112,8 +76,7 @@ nanovolt-divider.kicad_sch (root)
 
 `relay_channel.kicad_sch` exposes `SET`, `RESET`, `A_COM`, `A_NC`, `A_NO`, `B_COM`, `B_NC`, `B_NO`.
 Each instance contains one Panasonic TQ2-L2-5V (2-coil latching DPDT) and two MMBT2222A low-side
-coil drivers with 1N4148W flyback diodes. Because all five channels share one sheet file, KiCad's
-multichannel / repeat-layout tooling can replicate the driver layout after one channel is routed.
+coil drivers with 1N4148W flyback diodes.
 
 ### Relay states
 
@@ -125,43 +88,36 @@ multichannel / repeat-layout tooling can replicate the driver layout after one c
 
 K1..K3 use **both** poles of their relay: pole A breaks the top of the high leg (`R*_IN`), pole B
 breaks the bottom (`R*_OUT`). A deselected resistor is therefore isolated at both ends and never
-loads `RANGE_BUS` - worth having on the 10 M range in particular.
+loads `RANGE_BUS`, which matters most on the 10 M range.
 
 K5 does the same for the source as a whole: pole A breaks the high side (`RANGE_BUS` -> `MEAS_NODE`)
-and pole B breaks the return (`SRC_RTN` -> `ANALOG_RTN`). In ISOLATE the programmable source is
-disconnected from the 1 ohm and the DMM path at both ends, so nothing of the source - not its output
-capacitance, not its leakage to earth - remains attached to the measurement node.
+and pole B breaks the return (`SRC_RTN` -> `ANALOG_RTN`). In ISOLATE the source is disconnected
+from the 1 ohm and the DMM path at both ends, so nothing of it - not its output capacitance, not its
+leakage to earth - remains attached to the measurement node.
 
 ### Control wiring
 
 * Controller: a 2.8" ESP32 touch-TFT module, a "Cheap Yellow Display" (ESP32-2432S028R family),
-  mounted off-board and connected by three of its own pigtails (see Display harness below).
-* Those pigtails are **soldered** to pads at the board end. There is no board-side connector. The
-  module end keeps its connector, so the display still unplugs. The reason: the module side is a
-  1.25 mm-class connector, so a board-side header would have meant crimping a bespoke
-  pitch-bridging cable for a joint that never needs to unmate. The panel jacks (`J1`, `J2`, `J5`,
-  `J6`) are already hard-wired the same way.
+  mounted off-board and connected by three of its own pigtails (see Display harness).
+* The pigtails are **soldered** to pads at the board end; the module end keeps its connector, so
+  the display still unplugs. The panel jacks (`J1`, `J2`, `J5`, `J6`) are hard-wired the same way.
 * Only the six live conductors have pads: `J7` (5 V, GND) and `J8` (GND, SCL, SDA, 3V3). Both GND
   wires are run: `J7`'s returns the pulsed coil current and `J8`'s serves I2C. They are the same
   net, but two conductors cut the shared IR drop in the cable. Do not collapse them to one wire.
 * MCP23017 (I2C 0x20) drives the ten coil lines: GPB0..GPB7 = K4 SET, K4 RESET, K1 SET, K1 RESET,
   K2 SET, K2 RESET, K3 SET, K3 RESET; GPA0 = K5 RESET, GPA1 = K5 SET; GPA2..GPA7 spare. The order
-  is the board's, not the relays': GPB0..GPB7 are the package row that faces the driver columns, and
-  in the columns' left-to-right order the lines fan out without a single crossing or via (see
-  Routing). The firmware maps GPIO to coil by table.
+  follows the board: in the driver columns' left-to-right order the lines fan out without a
+  crossing or a via. The firmware maps GPIO to coil by table.
 * TMP275 (I2C 0x48, `A2:A0` all on `DGND`) sits next to the 1 ohm resistor, thermal proximity only.
-  It replaced a TMP117 because the whole board is hand-soldered and the TMP117 only comes in a
-  DSBGA-6 at 0.4 mm ball pitch. The price is absolute accuracy - +/-0.5 C and 12-bit (0.0625 C)
-  instead of +/-0.1 C and 16-bit - which is not what this sensor is for: it tracks the *change* in
-  the 1 ohm region's temperature for the optional ratio correction, and that needs short-term
-  repeatability, not absolute accuracy. The address is unchanged, so nothing on the bus moves.
+  It tracks the *change* in the 1 ohm region's temperature for the ratio correction, which needs
+  short-term repeatability (12-bit, 0.0625 C) rather than absolute accuracy (+/-0.5 C). SOIC-8, so the
+  whole board can be hand-soldered.
 * The control ground is the global net `DGND`, deliberately not `GND`, so it cannot be merged with
   the floating analog return (`SRC_RTN` / `ANALOG_RTN`) by accident.
 
 ### Display harness
 
-The Rev A pads were laid out for an *assumed* ESP32-2432S028R pinout (P1 = TX / RX / VIN / GND,
-CN1 = GND / IO22 / IO27 / 3V3). The module actually in hand has three 4-pin connectors:
+The module has three 4-pin connectors:
 
 | Module connector | Signals, in the order printed on the module |
 |---|---|
@@ -169,11 +125,9 @@ CN1 = GND / IO22 / IO27 / 3V3). The module actually in hand has three 4-pin conn
 | 3V3 | 3.3V, IO35, *(nc)*, GND |
 | SPI | IO23 (MOSI), IO19 (MISO), IO18 (SCK), IO27 (CS) |
 
-This module has no IO22 on any connector, so the board is wired as follows. The board is not
-changed: the netlist and the copper are exactly Rev A. Only the harness and the firmware pin
-assignment move.
+Wire them to the board like this:
 
-| Board pad | Net | Wire from module | Pad silk on Rev A |
+| Board pad | Net | Wire from module | Pad silk |
 |---|---|---|---|
 | `J7` pad 3 | `+5V` | UART / power: **5V** | `P1` `3` |
 | `J7` pad 4 | `DGND` | UART / power: **GND** | `P1` `4` |
@@ -183,165 +137,55 @@ assignment move.
 | `J8` pad 4 | `+3V3` | 3V3: **3.3V** | `CN1` `4` |
 | - | - | cut back and insulate: RXD, TXD, IO35, the nc pin, IO23, IO19 | - |
 
-* **Land every wire by signal name, never by pad number.** The silk numbers on `J7` are the
-  assumed P1 pin numbers, and on this module they are the wrong way round: module pin 3 is GND,
-  but pad `3` is `+5V`. Matching numbers would feed the coil drivers a reversed 5 V supply. On
-  `J8` the "CN1 1-4" silk no longer refers to any single module connector, because the pad row is
-  now fed by two pigtails. The F.Fab text on the board (`SCL_IO22`, `VIN_5V`) is stale for the same
-  reason. The schematic symbols carry the correct module labels.
-* **Why IO18 / IO27.** I2C needs two pins that can drive open-drain. IO35 cannot, because ESP32
-  GPIO34-39 are input-only and have no internal pull-ups. RXD / TXD are the USB-serial console, and
-  the SCPI-over-USB interface needs them. That leaves the SPI connector. SDA stays on IO27, where
-  the earlier pinout already had it, and SCL moves from IO22 to IO18. Firmware:
-  `Wire.begin(/*SDA*/ 27, /*SCL*/ 18)`.
-* **The cost of IO18.** On the standard CYD, IO18 / IO19 / IO23 are also the microSD slot's bus
-  (the slot has its own CS on IO5). While the SD card's CS is deasserted it ignores the clock line,
-  so I2C traffic on IO18 does not disturb it. However, the firmware cannot use the SD card and I2C
-  at the same time without switching the pin between peripherals.
-  The module in hand has no pull-up on IO18 or IO27 stronger than the ESP32's ~45k internal
-  pull-downs (`DIAG:PINS?` with the module alone reads both pins low), so `R21` / `R22` alone set
-  the bus pull-up. The firmware does use the SD card, for calibration backup and the run log: it switches IO18
-  between I2C and SPI around each card access (see `firmware/README.md`).
-* Both GND conductors still run, now from two different connectors: the UART / power GND to `J7`
-  (coil current) and the 3V3 connector's GND to `J8` (I2C).
-
-## Working with the schematics
-
-Open `hardware/nanovolt-divider.kicad_pro` in KiCad 10. The project library
-`hardware/lib/nanovolt-divider.kicad_sym` holds the TQ2-L2-5V relay, the TMP275, the `DGND` power
-symbol and the two ESP32 harness pigtail landings. These carry the module's own pin names
-(`SCL_IO18`, `SDA_IO27`, ...) rather than `Pin_1..Pin_4`, so a wire on the wrong pin is visible in
-the schematic instead of looking plausibly correct. The harness footprints are frozen as fabricated
-(`HARNESS_PADS_REV_A` in `gen_schematics.py`), so their F.Fab names still show the assumed pinout;
-see Display harness. Footprints for the relay, the precision
-resistors and the harness pads are in `hardware/lib/nanovolt-divider.pretty`; the TMP275 uses the
-stock `Package_SO:SOIC-8_3.9x4.9mm_P1.27mm`. Everything else is stock KiCad.
-
-Run ERC / exports from the command line:
-
-```
-kicad-cli sch erc --severity-all --exit-code-violations hardware/nanovolt-divider.kicad_sch
-kicad-cli sch export pdf --output build/schematic.pdf hardware/nanovolt-divider.kicad_sch
-kicad-cli pcb drc --severity-error --severity-warning hardware/nanovolt-divider.kicad_pcb
-```
-
-None of the generator scripts runs DRC - run it yourself with the command above. The baseline is
-0 errors, 0 unconnected and 56 `silk_over_copper` warnings (silkscreen clipped by solder mask at pad
-openings, which the fab does anyway; judged benign). With `--schematic-parity` there are also 2
-`footprint_symbol_field_mismatch` warnings: `J7` and `J8`'s Description field was updated for the
-display module in hand, and the board's copy was deliberately left as fabricated. They are metadata
-only. Update PCB from Schematic would sync them without touching copper. Check that a change does
-not add to this baseline.
-
-`tools/gen_schematics.py` generates all schematic files, the project symbol library and the
-project footprints; re-run it after editing the script. It will **not** overwrite an existing
-`nanovolt-divider.kicad_pro` - KiCad owns that file, and it holds the DRC severities.
-
-### Regenerating the board produces a huge, meaningless diff
-
-The board is routed now, and `tools/gen_pcb.py` writes an unrouted one from scratch: re-running it
-throws the routing away. If you must, re-run the routing pipeline (see Routing) straight after, and
-know that any hand edits made in KiCad since are gone either way.
-
-`tools/gen_pcb.py` is **not idempotent**, and this has been rediscovered three times. `kicad-cli pcb
-upgrade` assigns fresh random UUIDs to the graphics it materialises inside stock footprints, so
-about 683 of the board's ~1400 UUIDs change on *every* run. Re-running the script with no edits at
-all still reports ~680 changed lines. On top of that `kicad-cli` writes CRLF while `.gitattributes`
-pins the repo to LF, so git warns about line endings too.
-
-Neither is a real change. Before you act on a board diff, normalise both and compare again:
-
-```python
-import re, io, subprocess
-strip = lambda t: re.sub(r'"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"', '"U"',
-                         t.replace("
-", "
-"))
-cur  = io.open("hardware/nanovolt-divider.kicad_pcb", "rb").read().decode("utf-8")
-head = subprocess.run(["git", "show", "HEAD:hardware/nanovolt-divider.kicad_pcb"],
-                      capture_output=True).stdout.decode("utf-8")
-print(strip(head) == strip(cur))    # True -> nothing changed; restore the file, do not commit it
-```
-
-Read both sides as bytes and decode UTF-8 explicitly. Decoding one side through
-`subprocess.run(text=True)` uses the locale codec and manufactures fake differences around non-ASCII
-characters - KiCad's stock `SolderWire` footprint description genuinely contains a U+FFFD, which is
-in the vendor file and not corruption.
-
-What actually proves a board change is real: the exported netlist, and an ERC/DRC comparison against
-the previous run. Not the file diff.
-
-`tools/gen_schematics.py` does not have this problem - it writes its files directly with derived
-UUIDs and never round-trips through `kicad-cli`, so re-running it leaves the working tree clean.
+* **Land every wire by signal name, never by pad number.** The silk numbers on the board do not
+  match this module: on `J7`, module pin 3 is GND but pad `3` is `+5V`, so matching numbers would
+  feed the coil drivers a reversed 5 V supply. The `J8` pad row is fed by two different pigtails, so
+  its "CN1 1-4" silk refers to no single connector. The F.Fab text on the board (`SCL_IO22`,
+  `VIN_5V`) does not match either. The schematic symbols carry the correct module labels.
+* **Why IO18 / IO27.** I2C needs two pins that can drive open-drain. IO35 cannot (ESP32 GPIO34-39
+  are input-only), and RXD / TXD carry the USB-serial SCPI interface, which leaves the SPI
+  connector. Firmware: `Wire.begin(/*SDA*/ 27, /*SCL*/ 18)`.
+* **IO18 is shared with the microSD slot** (its SCK; the slot has its own CS on IO5). With the card's
+  CS deasserted, I2C traffic on IO18 does not disturb it; the firmware switches IO18 between I2C and
+  SPI around each card access (see `firmware/README.md`). The module has no pull-ups on IO18 or IO27,
+  so `R21` / `R22` set the bus pull-up.
+* Both GND conductors run from different connectors: the UART / power GND to `J7` (coil current) and
+  the 3V3 connector's GND to `J8` (I2C).
 
 ## Board
 
-`hardware/nanovolt-divider.kicad_pcb` is placed and routed (first pass; see Routing below):
-
-* 60 x 69.1 mm portrait, two layers, laid out top-down: one control band, ten coil-driver columns,
-  the five relays, then the three high legs flat in one row.
-* **The control band is a single row**, not a harness row above an MCP23017 row:
-  `[H1] P1/CN1 | C3,C4 | R21,R22 | U1 | R23,C1 [H2]`. The harness pads are 2.9 mm tall against
-  `U1`'s 11.9, so putting them beside it rather than above it costs no height at all - 3.4 mm off
-  the board. `P1` is stacked above `CN1`: side by side the two groups are 17.2 mm wide and the band
-  needs 48.2 mm of the 49.1 mm available, which does not fit. They are separate 4-pin connectors on
-  the module and therefore separate pigtails, so one landing above the other crosses nothing. What
-  sets the column gaps is each column's *designator*, which sits 1.85 mm to its left, not the parts.
-* **The passive columns follow the nets.** `U1`'s `VDD`/`VSS`/`SCL`/`SDA` are all on its lower pad
-  row at x 36-41 and `~RESET` on the upper row; power and I2C both arrive at the harness on the far
-  left. So the bulk caps sit at the power entry, the I2C pull-ups sit between `CN1` and `U1` - so
-  the bus runs left to right instead of doubling back past the chip, which is what it did when they
-  were on the far side - and `C1` sits right of `U1`, the closest slot to its mid-row power pins.
-  Measured against the previous arrangement: SCL bus 56.1 -> 35.3 mm, SDA 41.1 -> 34.5 mm,
-  `C4` to the 3V3 entry 32.1 -> 7.2 mm, `C1` to `VDD` 16.3 -> 11.2 mm.
-* **Driver cells.** Each relay carries its SET/RESET driver pair directly above it, so
-  `RANGE_BUS` runs as one short chain across the three cells instead of a long row-to-row bus.
-* **The three high legs lie flat in one row** under the relays, rather than standing vertically
-  one per cell. Standing, each was 16 mm tall and `R33` reached y 67.7 - that, not the mounting
-  holes, was what held the slots and the whole 1 ohm island down the board. Flat they are 3.2 mm
-  tall and the row clears the relays by 0.55 mm. They no longer align one-per-relay, because they
-  cannot: three 12 mm-plus resistors do not fit in three 10.2 mm relay cells. Nothing is lost by
-  that - `A_NO` and `B_NO` are both on the relay's *upper* contact row, so a resistor hanging below
-  the relay never landed across them either; it ran 14 mm to one and 24 mm to the other. Flat and
-  offset, both runs are 2-5 mm.
-* **M2 mounting holes, not M3.** The hole is 1 mm smaller but the courtyard radius drops
-  3.45 -> 2.45, and both ends of that count: the top sets how close the hole sits under `K4`/`K5`,
-  the bottom sets how close the slots sit under the hole. Worth 1.5 mm of board height for screws
-  that only hold a 60 x 69.1 mm board in an enclosure. The lower pair now sits in the same band as
-  the high-leg row, flanking it at the board edges.
-* There is no strict warm/quiet partition any more. The relay coils are pulsed for 10-20 ms and
-  never held, so their average dissipation is ~0 and co-locating them with the range resistors
-  costs nothing while making the routing far shorter. What is preserved is the part that actually
-  matters for thermal EMF: the continuously powered parts (MCP23017, harness pads, bulk caps) stay
-  at the top edge, away from `MEAS_NODE`, and the 1 ohm strip stays physically isolated.
-* The 1 ohm strip is separated by two slots that leave a 10 mm centre bridge and 3 mm bridges at
-  both board edges for stiffness; `MEAS_NODE`, `ANALOG_RTN` and the TMP275 lines cross the centre
-  one. The OUT HI / OUT LO wire pads are at the resistor's own terminals. Both lower mounting holes
-  sit *above* the slots: a screw on the island would add a thermal and mechanical-stress path
-  straight to the precision resistor.
-* The TMP275 sits on that island above `R35`, not over the resistor body: a SOIC-8 courtyard is
-  5.4 mm tall and the band between the slots and `R35` is 5.38 mm. What couples the sensor to `R35`
-  is the island, not the millimetre of air over the body. `U2`'s designator is on F.Fab and `R35`'s
-  is at its pad-1 end (`REF_OVERRIDE` in `gen_pcb.py`) - there is no silk line left between them.
-* **`J1` / `J2` sit beside `K4`, not below it.** In the 4.85 mm strip left of the polarity relay
-  they clear the lower-left mounting hole, and they land opposite the K4 pole-B contacts they wire
-  to. While they were below the relay row they pinned that hole - and through it the slots and the
-  whole 1 ohm island - 11 mm further down the board.
+* 60 x 69.1 mm, two layers, laid out top-down: one control band, ten coil-driver columns, the five
+  relays, then the three high legs flat in one row.
+* **The control band is a single row**: `[H1] P1/CN1 | C3,C4 | R21,R22 | U1 | R23,C1 [H2]`. The bulk
+  caps sit at the power entry, the I2C pull-ups between the harness and `U1` so the bus runs left to
+  right, and `C1` beside `U1`'s power pins.
+* **Driver cells.** Each relay carries its SET/RESET driver pair directly above it, so `RANGE_BUS`
+  runs as one short chain across the three range cells.
+* **The three high legs lie flat in one row** under the relays. `A_NO` and `B_NO` are both on each
+  relay's upper contact row, and the flat, offset placement keeps both runs to 2-5 mm.
+* **M2 mounting holes.** The smaller courtyard lets the holes sit closer to `K4`/`K5` above and the
+  slots below, which saves board height.
+* The relay coils are pulsed for 20 ms and never held, so their average dissipation is ~0 and they
+  can sit next to the range resistors. The continuously powered parts (MCP23017, harness pads, bulk
+  caps) stay at the top edge, away from `MEAS_NODE`.
+* **The 1 ohm island.** Two slots leave a 10 mm centre bridge and 3 mm bridges at both board edges
+  for stiffness; `MEAS_NODE`, `ANALOG_RTN` and the TMP275 lines cross the centre one. The OUT HI / OUT
+  LO wire pads are at the resistor's own terminals. Both lower mounting holes sit *above* the slots:
+  a screw on the island would add a thermal and mechanical-stress path to the precision resistor.
+* The TMP275 sits on the island above `R35`. What couples the sensor to `R35` is the island copper,
+  not the air over the body.
+* **`J1` / `J2` sit beside `K4`**, opposite the K4 pole-B contacts they wire to, clear of the lower
+  left mounting hole.
 * `DGND` pour on B.Cu covers the digital circuitry (control cluster and coil drivers). The only
-  copper keepout is over the isolated 1 ohm island.
+  copper keepout is over the 1 ohm island.
 * Panel parts (four banana jacks) terminate on solder-wire pads. Nothing is wired panel-to-panel,
   so every conductor appears in the netlist.
 
-DRC is clean (0 errors, 0 unconnected, 0 schematic-parity issues) apart from 56 benign
-silkscreen-clipped-by-mask warnings.
-
 ### Routing
 
-The routing came from `tools/route_pcb.py`: a grid maze router that routes around a set of
-hand-laid tracks in `tools/route_hand.py`. The hand-laid part is the design - the precision path,
-the driver cells and the whole control band; the router only filled in the rest (the precision
-chains between relays, +5V to the coils, DGND ties). Rules the routing follows, and that hand edits
-should keep:
+The precision path, the driver cells and the whole control band are hand-laid
+(`tools/route_hand.py`); a grid maze router (`tools/route_pcb.py`) filled in the rest around them.
+Rules the routing follows, and that hand edits should keep:
 
 * **`MEAS_NODE` and `ANALOG_RTN` run as one tight pair on B.Cu** from K5 to R35: 0.4 mm, 0.3 mm
   apart, via-free. `ANALOG_RTN` is on the side facing the high-leg pads, so it rather than
@@ -356,34 +200,62 @@ should keep:
   the 10 M range. Where the two chains must cross they do it on opposite layers, through 1.6 mm of
   FR4 bulk. `SRC_RTN` / `ANALOG_RTN` are in neither class: leakage into them only loads the source.
 * **Nothing reaches the 1 ohm island except over the centre bridge**, and the bridge carries no
-  vias. A track over an edge bridge brings heat in at one end of R35, and a temperature difference
-  between its terminals is a thermal EMF in series with the measurement.
+  vias. A track over an edge bridge would bring heat in at one end of R35, and a temperature
+  difference between its terminals is a thermal EMF in series with the measurement.
 * **The TMP275 lines are one F.Cu spine**: SDA, SCL, DGND, +3V3 at 0.65 mm pitch, down the gap
   between the K1 and K2 driver pairs, through the left half of K2, under R32's body and onto the
   island left of the pair. The precision chains cross it on B.Cu.
 * **Driver cells are identical.** Each column is the same template: the base node runs straight
-  from the 1k to the 10k, which is why R1-R20 sit at 270 degrees rather than 90 (at 90 the MCP23017
-  line landed on the 1k's lower pad and the base node had to run past it). DGND goes to the B.Cu
-  pour through a via beside the 10k and one beside the emitter; cathodes drop to a +5V bus on B.Cu
-  at y 32.5 along the bottom of the pour.
+  from the 1k to the 10k, which is why R1-R20 sit at 270 degrees. DGND goes to the B.Cu pour through
+  a via beside the 10k and one beside the emitter; cathodes drop to a +5V bus on B.Cu at y 32.5 along
+  the bottom of the pour.
 * **One coil crossing per relay, the same for all five.** The SET column feeds the right-hand coil
-  pin and the RESET column the left, so they cross: SET stays on F.Cu, RESET drops to B.Cu. That
-  way round leaves the left half of each relay's top free on F.Cu, which is how the TMP275 spine
-  gets into K2.
-* **The MCP23017 fan-out has no crossings and no vias.** That is the GPIO order above, not the
-  routing: eight lines drop off U1's lower row in the driver columns' order, five of them left in
-  0.2 mm lanes at 0.4 mm pitch (four is all that fits between pin 1 and R7's pad), and K5's two leave
-  under the package to the right. SDA, SCL and 3V3 reach U1 under its body, stacked in the order
-  they drop to pins 13, 12 and 9. Before the remap the same ten lines took 30 vias and 237 mm; now
-  161 mm and none.
-* **What the control band still needs vias for**, and why each is unavoidable: the TMP275 spine's
-  SDA, SCL and 3V3 each rise on B.Cu past the coil lanes (the spine runs between U1 and the K4/K1
-  columns, so every ordering crosses it); R21's 3V3 pad is fenced in by SDA and SCL; and C1/R23 sit
-  beyond the K5 lines, so their 3V3 hops from pin 9 on B.Cu. SDA and SCL squeeze between C3 and C4
-  in two 0.2 mm lanes; +5V comes down the left edge from P1.
+  pin and the RESET column the left: SET stays on F.Cu, RESET drops to B.Cu. That leaves the left
+  half of each relay's top free on F.Cu, which is how the TMP275 spine gets into K2.
+* **The MCP23017 fan-out has no crossings and no vias.** Eight lines drop off U1's lower row in the
+  driver columns' order, five of them left in 0.2 mm lanes at 0.4 mm pitch, and K5's two leave under
+  the package to the right. SDA, SCL and 3V3 reach U1 under its body, stacked in the order they drop
+  to pins 13, 12 and 9.
+* **The control band's vias are each unavoidable:** the TMP275 spine's SDA, SCL and 3V3 each rise on
+  B.Cu past the coil lanes; R21's 3V3 pad is fenced in by SDA and SCL; and C1/R23 sit beyond the K5
+  lines, so their 3V3 hops from pin 9 on B.Cu. SDA and SCL squeeze between C3 and C4 in two 0.2 mm
+  lanes; +5V comes down the left edge from P1.
 
-The router is deterministic and reproduces the committed routing exactly, but `pcb_io.py apply`
-deletes every track first, so it is historical as soon as the board is edited by hand:
+## Working with the design files
+
+Open `hardware/nanovolt-divider.kicad_pro` in KiCad 10. The project library
+`hardware/lib/nanovolt-divider.kicad_sym` holds the TQ2-L2-5V relay, the TMP275, the `DGND` power
+symbol and the two ESP32 harness pigtail landings. These carry the module's own pin names
+(`SCL_IO18`, `SDA_IO27`, ...) rather than `Pin_1..Pin_4`, so a wire on the wrong pin is visible in
+the schematic. The harness footprints are kept exactly as fabricated (`HARNESS_PADS_REV_A` in
+`gen_schematics.py`), which is why their F.Fab names differ; see Display harness. Footprints for the
+relay, the precision resistors and the harness pads are in `hardware/lib/nanovolt-divider.pretty`;
+the TMP275 uses the stock `Package_SO:SOIC-8_3.9x4.9mm_P1.27mm`. Everything else is stock KiCad.
+
+ERC, DRC and exports from the command line:
+
+```
+kicad-cli sch erc --severity-all --exit-code-violations hardware/nanovolt-divider.kicad_sch
+kicad-cli sch export pdf --output build/schematic.pdf hardware/nanovolt-divider.kicad_sch
+kicad-cli pcb drc --severity-error --severity-warning hardware/nanovolt-divider.kicad_pcb
+```
+
+The baseline is ERC clean, and DRC 0 errors, 0 unconnected and 56 `silk_over_copper` warnings
+(silkscreen clipped by solder mask at pad openings, which the fab does anyway). With
+`--schematic-parity` there are also 2 `footprint_symbol_field_mismatch` warnings: the Description
+field of `J7` and `J8` names the display module, while the board keeps the fabricated text. They
+are metadata only. Check that a change does not add to this baseline.
+
+### Generators
+
+`tools/gen_schematics.py` generates all schematic files, the project symbol library and the project
+footprints; re-run it after editing the script. It will **not** overwrite an existing
+`nanovolt-divider.kicad_pro`, which KiCad owns and which holds the DRC severities. It writes its
+files directly with derived UUIDs, so re-running it leaves the working tree clean.
+
+`tools/gen_pcb.py` writes a placed, **unrouted** board from scratch, so running it discards the
+routing and any hand edits. The router then reproduces the committed routing exactly (it deletes
+every track before applying its own):
 
 ```
 "C:/Program Files/KiCad/10.0/bin/python.exe" tools/pcb_io.py dump  hardware/nanovolt-divider.kicad_pcb %TEMP%/nvd_geom.json
@@ -391,26 +263,70 @@ uv run tools/route_pcb.py %TEMP%/nvd_geom.json %TEMP%/nvd_routes.json
 "C:/Program Files/KiCad/10.0/bin/python.exe" tools/pcb_io.py apply hardware/nanovolt-divider.kicad_pcb %TEMP%/nvd_routes.json
 ```
 
-## Open items
+**A regenerated board produces a large, meaningless diff.** `kicad-cli pcb upgrade` assigns fresh
+random UUIDs to the graphics it materialises inside stock footprints, so about 683 of the board's
+~1400 UUIDs change on every run, and `kicad-cli` writes CRLF while `.gitattributes` pins the repo to
+LF. Neither is a real change. Before acting on a board diff, normalise both sides and compare:
 
-* **Calibration.** It is designed ([docs/calibration_protocol.md](docs/calibration_protocol.md)) and
-  supported by firmware 0.2.0, but not yet run. It runs from the Raspberry Pi hub. The driver, the
-  experiments and the write-back belong in the `bench-metrology` repo, and
-  [docs/bench_handoff.md](docs/bench_handoff.md) is the checklist. Until then the instrument carries
-  nominal ratios, with tolerance-sized uncertainties.
-* **Reset on USB open under Linux** is unverified: the boot-count test in the handoff doc has to pass
-  on the Pi before a long run.
-* Harness: landed and working (bring-up 2026-09-26). Still unrecorded for a future build: which end
-  of each pigtail is pin 1, and the module's silkscreen designators for its three connectors.
-* Decide how the harness cable is strain relieved at the board end - the board has no housing
-  taking that load.
+```python
+import re, io, subprocess
+strip = lambda t: re.sub(r'"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"', '"U"',
+                         t.replace("\r\n", "\n"))
+cur  = io.open("hardware/nanovolt-divider.kicad_pcb", "rb").read().decode("utf-8")
+head = subprocess.run(["git", "show", "HEAD:hardware/nanovolt-divider.kicad_pcb"],
+                      capture_output=True).stdout.decode("utf-8")
+print(strip(head) == strip(cur))    # True -> nothing changed; restore the file, do not commit it
+```
+
+Read both sides as bytes and decode UTF-8 explicitly. Decoding one side through
+`subprocess.run(text=True)` uses the locale codec and manufactures fake differences around non-ASCII
+characters - KiCad's stock `SolderWire` footprint description genuinely contains a U+FFFD.
+
+What proves a board change is real is the exported netlist and an ERC/DRC comparison, not the
+file diff.
+
+## Fabrication files
+
+`hardware/fab/` holds the Rev A Gerbers and drill files exactly as sent to the fab (OSH Park, git
+tag `rev-a`). `.gitattributes` marks the folder `-text` so git leaves their CRLF line endings alone.
+To order boards, zip the folder's contents. Two things to know about them:
+
+* Their metadata says `Rev0` (`TF.ProjectId` in every Gerber, `Revision` in the job file). The
+  copper is the Rev A board's: re-plotting the board and diffing against these files leaves only the
+  creation date and the drill marks.
+* They are plotted with drill marks **off**. The board file's stored plot settings have them on
+  (small), so `kicad-cli pcb export gerbers --board-plot-params` adds a 0.3 / 0.35 mm flash at every
+  hole on the copper and mask layers. Turn them off when re-plotting.
+
+## Enclosure
+
+The enclosure is 3D-printed. `enclosure/` has the SOLIDWORKS source (`.SLDPRT`), a neutral `.STEP`
+and a print-ready `.3MF` for each part: front panel (it also serves as the display bezel), back
+panel, base plate (v1), cover (v1), PCB holder, and a wrench for the banana-jack nuts. The version
+is in each file name.
+
+Every part prints in PLA on a Prusa i3 MK3S with a 0.4 mm nozzle, using PrusaSlicer's
+**0.20 mm QUALITY** preset, 15 % infill, and **no supports**.
+
+Before assembling, heat-set the knurled brass inserts: the M2 ones go into the PCB holder, the M3
+ones into the enclosure parts. Fasteners, banana jacks, the display module, and the cables are
+listed in [BOM §11.4 and §11.5](docs/nanovolt_divider_rev_a.md#114-front-panel--mechanical).
+
+## Known limitations
+
+* The board's harness silk and F.Fab text describe a different module pinout from the module the
+  instrument uses. Wire by signal name (see Display harness).
+* The harness cable has no strain relief at the board end; nothing on the board takes that load.
 
 ## Datasheets
 
-Not redistributed in this repository. Panasonic TQ relays: catalog ASCTB14E
-(`industry.panasonic.com`); Ohmite MOX-700 and Slim-Mox; Vishay Dale RS/NS; Microchip MCP23017;
-TI TMP275.
+Not redistributed here. Panasonic TQ relays: catalog ASCTB14E (`industry.panasonic.com`); Ohmite
+MOX-700 and Slim-Mox; Vishay Dale RS/NS; Microchip MCP23017; TI TMP275.
 
 ## License
 
-To be decided before the repository is made public (hardware: CERN-OHL-P or similar; firmware: MIT).
+* Hardware (`hardware/`), enclosure (`enclosure/`) and documentation (`docs/`, `calibration/`):
+  [CERN-OHL-P-2.0](LICENSE-CERN-OHL-P-2.0).
+* Firmware (`firmware/`) and tools (`tools/`): [MIT](LICENSE-MIT).
+
+Source location: <https://github.com/kuvychko/nanovolt-divider>. See [LICENSE](LICENSE).

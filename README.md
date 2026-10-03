@@ -57,9 +57,13 @@ was uploaded is just these files zipped and is not committed. Two things to know
 
 ### Enclosure
 
-The v0 enclosure is 3D-printed. `enclosure/` has the SOLIDWORKS source (`.SLDPRT`) and a print-ready
-`.3MF` for each part: front panel (it also serves as the display bezel), back panel, base plate,
-cover, PCB holder, and a wrench for the banana-jack nuts.
+The enclosure is 3D-printed. `enclosure/` has the SOLIDWORKS source (`.SLDPRT`), a neutral `.STEP`
+and a print-ready `.3MF` for each part: front panel (it also serves as the display bezel), back panel,
+base plate, cover, PCB holder, and a wrench for the banana-jack nuts.
+
+The base plate and cover are at v1, which adds two M3 screws (with their inserts) to the v0 parts.
+The v0 base plate and cover were printed and work well; v1 replaces them in the repository. The other
+parts are still v0.
 
 Every part was printed in PLA on a Prusa i3 MK3S with a 0.4 mm nozzle, using PrusaSlicer's
 **0.20 mm QUALITY** preset, 15 % infill, and **no supports**.
@@ -72,7 +76,7 @@ listed in [BOM §11.4 and §11.5](docs/nanovolt_divider_rev_a.md#114-front-panel
 
 ```
 docs/                      design specification, calibration protocol, bench (Raspberry Pi) handoff
-enclosure/                 SOLIDWORKS parts (.SLDPRT) and 3D-print exports (.3MF, .3DXML): front
+enclosure/                 SOLIDWORKS parts (.SLDPRT), STEP, and 3D-print exports (.3MF, .3DXML): front
                            panel, back panel, base plate, cover, PCB holder, banana-jack nut wrench
 docs/datasheets/           vendor datasheets (git-ignored, copyrighted; see docs/datasheets list below)
 firmware/                  ESP32 (CYD) firmware, PlatformIO: relay state machine, SCPI over USB, touch UI,

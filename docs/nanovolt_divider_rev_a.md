@@ -465,7 +465,7 @@ The same sheet is instantiated five times. KiCad's multi-channel/repeat-layout w
 | Qty | Item | Notes | Status |
 |---:|---|---|---|
 | 4 | Female banana jacks, 2 red + 2 black | NORMAL IN + / − and OUT + / −. [Amazon B07C7WG23G](https://www.amazon.com/dp/B07C7WG23G) | **Purchased** |
-| 1 | Enclosure | 3D-printed: front panel, back panel, base plate, cover, PCB holder (SOLIDWORKS + 3MF in `enclosure/`). The front panel also serves as the TFT bezel. Print settings: see the README | Printed (v0) |
+| 1 | Enclosure | 3D-printed: front panel, back panel, base plate, cover, PCB holder (SOLIDWORKS, STEP and 3MF in `enclosure/`). The front panel also serves as the TFT bezel. Print settings: see the README | Printed (v0). Base plate and cover are now v1, which add two screws |
 | 1 | Banana-jack nut wrench | 3D-printed tool (`enclosure/banana-plug-wrench-v0`) for the banana-jack nuts | Printed (v0) |
 | 3 | JST 1.25 mm 4-pin male plug, 100 mm pigtail, 26 AWG | Display-module harnesses. [Amazon B0DMT2GBZH](https://www.amazon.com/dp/B0DMT2GBZH) | **Purchased** |
 | 1 | 1 ft USB-to-USB extension cable | Brings the module's USB out to the back panel. [Amazon B0GRVZ62VR](https://www.amazon.com/dp/B0GRVZ62VR) | **Purchased** |
@@ -480,14 +480,14 @@ The same sheet is instantiated five times. KiCad's multi-channel/repeat-layout w
 | 4 | M2×4×3.2 knurled brass heat-set insert | Heat-set into the PCB holder, takes the PCB screws |
 | 4 | M3×6 button-head socket screw | Display module (CYD) mounting |
 | 4 | M3 nut | Display module (CYD) mounting |
-| 12 | M3×8 button-head socket screw | Enclosure assembly |
-| 12 | M3×4×4.2 knurled brass heat-set insert | Heat-set into the printed enclosure parts, take the assembly screws |
+| 14 | M3×8 button-head socket screw | Enclosure assembly |
+| 14 | M3×4×4.2 knurled brass heat-set insert | Heat-set into the printed enclosure parts, take the assembly screws |
 | 2 | M2×12 machine screw | USB extension cable mount |
 | 2 | M2 flat washer | USB extension cable mount |
 | 2 | M2 nut | USB extension cable mount |
 
 Order totals: M2×4 screws ×4, M2×12 screws ×2, M2 washers ×6, M2 nuts ×2, M2×4×3.2 inserts ×4;
-M3×6 button-head ×4, M3×8 button-head ×12, M3 nuts ×4, M3×4×4.2 inserts ×12.
+M3×6 button-head ×4, M3×8 button-head ×14, M3 nuts ×4, M3×4×4.2 inserts ×14.
 
 ---
 

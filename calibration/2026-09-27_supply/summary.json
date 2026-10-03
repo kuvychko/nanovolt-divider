@@ -1,0 +1,198 @@
+{
+  "run": "2026-09-27_psu-tempco_001",
+  "quantity": "UDP3305S-E CH1 output at the divider's NORMAL IN, divider isolated (no load)",
+  "setpoint_v": 29.0,
+  "meter": "HP 3478A, DC V, 30 V range, 5.5 digits, autozero on, 1 Hz",
+  "temperature": "divider TMP275 (1/16 degC), polled every 10 s",
+  "start_utc": "2026-09-27 22:53:00+00:00",
+  "end_utc": "2026-10-03 22:55:00+00:00",
+  "duration_h": 144.03333333333333,
+  "samples": 518401,
+  "failed_samples": 0,
+  "gaps": [
+    "33 s at 2026-09-27T23:23:07Z (service restart to extend the run)"
+  ],
+  "tmp275_span_c": [
+    21.8125,
+    28.125
+  ],
+  "v_first_hour_v": 29.00915223365997,
+  "settling": {
+    "skip_h": 30.0,
+    "change_over_skip_ppm": -118.66475572788579
+  },
+  "model": "y_ppm = a + gamma*(T_eff - 25 C) + delta*(t - t_mean); T_eff = TMP275 first_order",
+  "fit": {
+    "lag_kind": "first_order",
+    "lag_min": 69,
+    "lag_min_flat_interval": [
+      48,
+      92
+    ],
+    "gamma_ppm_per_c": -16.051309245880553,
+    "gamma_uv_per_c": -465.48796813053605,
+    "gamma_se_jackknife_6h": 1.4342335778107942,
+    "drift_ppm_per_h": -0.01899287922785247,
+    "intercept_ppm_at_25c": 190.0166445079732,
+    "v_at_25c_v": 29.00551048269073,
+    "resid_rms_ppm": 6.43720386504053,
+    "resid_rms_uv": 186.6789120861754,
+    "pure_delay_best": {
+      "lag_min": 40,
+      "resid_rms_ppm": 6.6977024541350705
+    },
+    "first_order_best": {
+      "tau_min": 69,
+      "resid_rms_ppm": 6.437203865040536
+    }
+  },
+  "per_day": [
+    {
+      "start_h": 30.0,
+      "gamma_ppm_per_c": -12.791905435300434,
+      "lag_min": 57,
+      "drift_ppm_per_h": 0.13758663741234892,
+      "resid_rms_ppm": 2.38552126942396,
+      "temp_span_c": [
+        24.5,
+        26.0625
+      ]
+    },
+    {
+      "start_h": 54.0,
+      "gamma_ppm_per_c": -14.50685622753715,
+      "lag_min": 33,
+      "drift_ppm_per_h": -0.3788226078852156,
+      "resid_rms_ppm": 2.3477357341121725,
+      "temp_span_c": [
+        24.1125,
+        28.125
+      ]
+    },
+    {
+      "start_h": 78.0,
+      "gamma_ppm_per_c": -13.01042507108545,
+      "lag_min": 25,
+      "drift_ppm_per_h": 0.19951575391489867,
+      "resid_rms_ppm": 1.8156869888718261,
+      "temp_span_c": [
+        24.1875,
+        26.875
+      ]
+    },
+    {
+      "start_h": 102.0,
+      "gamma_ppm_per_c": -10.478577218878344,
+      "lag_min": 20,
+      "drift_ppm_per_h": 0.6204317459437585,
+      "resid_rms_ppm": 2.258513629878741,
+      "temp_span_c": [
+        24.25,
+        26.125
+      ]
+    }
+  ],
+  "per_day_gamma_mean_sd": [
+    -12.696940988200344,
+    1.663752936692571
+  ],
+  "per_day_lag_min": [
+    57,
+    33,
+    25,
+    20
+  ],
+  "warmup_scan": [
+    {
+      "skip_h": 2,
+      "gamma_ppm_per_c": -17.26102807368726,
+      "drift_ppm_per_h": -0.23707725898568555
+    },
+    {
+      "skip_h": 6,
+      "gamma_ppm_per_c": -19.171514322291664,
+      "drift_ppm_per_h": -0.14402796176620924
+    },
+    {
+      "skip_h": 12,
+      "gamma_ppm_per_c": -18.670649805086114,
+      "drift_ppm_per_h": -0.08250187291296564
+    },
+    {
+      "skip_h": 18,
+      "gamma_ppm_per_c": -17.297671009052518,
+      "drift_ppm_per_h": -0.06503424686754113
+    },
+    {
+      "skip_h": 24,
+      "gamma_ppm_per_c": -16.289877215266827,
+      "drift_ppm_per_h": -0.041580916653997414
+    },
+    {
+      "skip_h": 30,
+      "gamma_ppm_per_c": -16.051309245880553,
+      "drift_ppm_per_h": -0.01899287922785247
+    },
+    {
+      "skip_h": 36,
+      "gamma_ppm_per_c": -15.991305324070835,
+      "drift_ppm_per_h": -0.008547201466956585
+    },
+    {
+      "skip_h": 48,
+      "gamma_ppm_per_c": -15.278251779841261,
+      "drift_ppm_per_h": 0.039506730135208466
+    },
+    {
+      "skip_h": 60,
+      "gamma_ppm_per_c": -14.987041660150831,
+      "drift_ppm_per_h": 0.1470289852086942
+    }
+  ],
+  "residual_adev": [
+    {
+      "tau_min": 1,
+      "adev_ppm": 1.0036654374374554
+    },
+    {
+      "tau_min": 2,
+      "adev_ppm": 0.9549686672405945
+    },
+    {
+      "tau_min": 4,
+      "adev_ppm": 0.9338517526266447
+    },
+    {
+      "tau_min": 8,
+      "adev_ppm": 0.9507185221572119
+    },
+    {
+      "tau_min": 16,
+      "adev_ppm": 0.989321937947398
+    },
+    {
+      "tau_min": 32,
+      "adev_ppm": 1.1003162437184277
+    },
+    {
+      "tau_min": 64,
+      "adev_ppm": 1.364665861829017
+    },
+    {
+      "tau_min": 128,
+      "adev_ppm": 1.8318626000005396
+    },
+    {
+      "tau_min": 256,
+      "adev_ppm": 2.5661604380413485
+    },
+    {
+      "tau_min": 512,
+      "adev_ppm": 3.28704803707836
+    },
+    {
+      "tau_min": 1024,
+      "adev_ppm": 4.184702770290236
+    }
+  ]
+}

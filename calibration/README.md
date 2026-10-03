@@ -23,6 +23,7 @@ Each step directory holds:
 * Per-dwell or per-block CSV where the result is built from blocks: one row per block with its UTC
   time, range, polarity pattern, mean, scatter, sample count and TMP275 reading.
 * The figures used in the results section.
+* `analyze.py`: the script that produced them from the raw logs, so the method is exact.
 
 All timestamps are UTC (ISO 8601). Temperatures are TMP275 readings in °C. Voltages are in volts and
 resistances in ohms unless a column name says otherwise.

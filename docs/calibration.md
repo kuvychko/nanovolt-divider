@@ -10,8 +10,8 @@ k0 = 1/(R_H + 1 Ω), no temperature correction, and u_k0 from the part tolerance
 
 | Step | What it yields | Status |
 |---|---|---|
-| 1. [Supply characterisation](#1-supply-characterisation) | Supply tempco, lag and drift; the residual the ratio run inherits | Running (144 h, ends 2026-10-03) |
-| 2. [High legs by resistance](#2-high-legs-by-resistance) | R_total per range; the R_L consistency check | Pending |
+| 1. [Supply characterisation](#1-supply-characterisation) | Supply tempco, lag and drift; the residual the ratio run inherits | **Done** 2026-10-03, [result](#supply-characterisation-2026-09-27--10-03) |
+| 2. [High legs by resistance](#2-high-legs-by-resistance) | R_total per range; the R_L consistency check | Running |
 | 3. [Null tests](#3-null-tests) | Any signal produced by switching alone | Pending |
 | 4. [Ratio run](#4-ratio-run) | k0 and α per range | Pending |
 | 5. [End-to-end injection](#5-end-to-end-injection) | Acceptance: known nanovolt signals recovered | Pending |
@@ -205,7 +205,55 @@ Each completed step adds a subsection here: its conditions, its numbers with unc
 they were derived, anything unexpected, and a figure. The data behind each result is in
 [`calibration/`](../calibration/).
 
-*No results yet. Step 1 is running.*
+### Supply characterisation, 2026-09-27 – 10-03
+
+**Conditions.** UNI-T UDP3305S-E CH1 at 29.00 V into NORMAL IN, the divider isolated with no range
+selected (no load). HP 3478A across NORMAL IN, 30 V range, 5½ digits, autozero on, 1 Hz. TMP275
+polled every 10 s. 144 h; 518,401 readings, none failed; one 33 s gap. TMP275 span 21.8–28.1 °C.
+Fits are on 1-minute means. Data, figures and the analysis script:
+[`calibration/2026-09-27_supply/`](../calibration/2026-09-27_supply/).
+
+![Supply output and TMP275 over 144 h](../calibration/2026-09-27_supply/timeseries.png)
+
+**Switch-on settling takes about 30 hours.** The supply came up at 29.0096 V (+330 ppm), fell 119 ppm
+(3.4 mV) over the next 30 h, and only then behaved as a function of temperature. Everything below
+excludes the first 30 h. Leave the supply on between calibration steps.
+
+**Settled level:** 29.0055 V at 25 °C (+190 ppm above its setpoint), so V_in must be measured, not
+taken from the setpoint.
+
+**Tempco.** Model y = a + γ·T_eff + δ·t (y in ppm of 29 V), with T_eff the TMP275 through a lag:
+
+| Fit | γ (ppm/°C) | Lag | Drift (ppm/h) | Residual rms |
+|---|---|---|---|---|
+| Whole settled span (114 h), first-order lag | −16.1 ± 1.4 | τ = 69 min | −0.02 | 6.4 ppm |
+| Day 1 | −12.8 | τ = 57 min | +0.14 | 2.4 ppm |
+| Day 2 | −14.5 | τ = 33 min | −0.38 | 2.3 ppm |
+| Day 3 | −13.0 | τ = 25 min | +0.20 | 1.8 ppm |
+| Day 4 | −10.5 | τ = 20 min | +0.62 | 2.3 ppm |
+
+The ± on the whole-span fit is a jackknife over 6-hour segments, not the fit's formal error, which
+assumes independent minutes and is ~10× smaller. Per-day fits each have their own drift term, which
+can absorb part of the day's temperature cycle. The whole-span fit has one drift line, so slow level
+wander can alias onto the multi-day temperature trend. Both estimates are kept:
+
+> **γ = −14 ± 2 ppm/°C** (−0.41 ± 0.06 mV/°C at 29 V). The supply lags the TMP275 with a first-order
+> time constant of roughly 20–70 min, and the lag is not stable from day to day.
+
+![Supply output against the lagged TMP275](../calibration/2026-09-27_supply/tempco.png)
+
+**Drift and wander.** Once settled there is no consistent drift (per-day slopes of both signs).
+Instead the level wanders: the residual is ~2 ppm rms within a day but 6.4 ppm across days. Its Allan
+deviation is flat near 1 ppm (≈ 28 µV) from 1 to 16 min, then rises to 2.6 ppm at 4 h and 4.2 ppm at
+17 h.
+
+![Allan deviation of the residual](../calibration/2026-09-27_supply/residual_adev.png)
+
+**What this means for the ratio run.** Over one ABBA block (4 min) the supply contributes about 1 ppm.
+Over a 72 h run, a supply model from this step is good to a few ppm over hours and 4–6 ppm over days.
+On 1E-5 that is comparable to the statistical limit on k0, and it is well below the meter's
+range-to-range gain term. α on 1E-5 inherits about ±2 ppm/°C from γ. The before-and-after anchors on IN
+pin the level; a mid-run anchor would bound the multi-day wander.
 
 ### Stored records
 

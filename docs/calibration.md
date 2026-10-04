@@ -295,9 +295,37 @@ identified. The size of the shift grows steeply with resistance, about 1 Ω on 1
 would move each leg by a similar number of ppm.
 
 **A polarity difference.** Normal and inverted polarity differ by +21 ppm on 1E-6 and +102 ppm on
-1E-7, unchanged across the step, and not at all on 1E-5. It also grows with resistance, which points
-to a leakage to a third point (the meter's or the bench's ground) rather than a thermal EMF.
-Averaging the two polarities, as here, cancels its first-order effect on R_total.
+1E-7, unchanged across the step, and not at all on 1E-5. A network of resistors cannot do this on
+its own, however many leakage paths it has. It is reciprocal: measured between two terminals, its
+resistance is the same whichever way round the meter is connected, and reversing K4 is equivalent to
+swapping the meter leads on the divider. 1E-5, with N − I = 0.000 ppm, behaves exactly that way.
+
+What breaks the symmetry is a third terminal that stays with one of the meter's leads. The meter's LO
+has some leakage to its chassis. The chassis is connected through the GPIB adapter and the host
+computer to the USB ground, which is the divider's control ground (DGND). DGND sits within
+relay-insulation and board-surface distance of the precision nodes. A leak from a precision node to
+DGND therefore closes a path back to the meter's LO, whichever end of the divider K4 has put there.
+In NORM the meter's HI is on the top of the high leg; in INV it is on the 1 Ω end. Each reading is
+R_total in parallel with a different leak, and N ≠ I. N reads higher, so the 1 Ω end is the
+leakier: it is the end nearest the relay coils and the DGND pour.
+
+A thermal EMF would also flip sign with K4, adding 2E/I_test to N − I. The EMF would be the same on
+every range, because the path through K4 is the same, while the meter's test current falls about
+tenfold per ohms range. The difference would then be largest in ppm on 1E-5, not zero there, and the
+10–50 µV it would need on the larger ranges is implausible. A ~10¹¹ Ω shunt instead matters about R²
+times more on 10 MΩ than on 100 kΩ, which is the pattern observed.
+
+Averaging the two polarities does **not** remove this. Each polarity is shunted by a different
+leak, and the average is shunted by roughly their mean. R_total on 1E-6 and 1E-7 may therefore read
+low by up to the polarity difference.
+
+**Why the ratio is probably unaffected.** In ratio mode, a leak from a precision node to ground
+carries a sub-nanoamp current from the supply round through ground and the meter's LO back to the
+analog return. It passes through neither R_H nor R_L, so it does not change the output. What would
+change the ratio is leakage *across* the high leg. A planned check is to repeat 1E-7 in both
+polarities with the divider's USB unplugged, which disconnects DGND from the host's ground (the
+latching relays hold their state unpowered). If N = I with USB unplugged, the path is through the
+control ground.
 
 **What this means.** At 10 MΩ, leakage of 10¹¹–10¹² Ω is visible at the 10–100 ppm level. An
 ohmmeter at IN cannot tell whether it is across the IN jacks and cables (which would not affect the

@@ -11,7 +11,7 @@ k0 = 1/(R_H + 1 Ω), no temperature correction, and u_k0 from the part tolerance
 | Step | What it yields | Status |
 |---|---|---|
 | 1. [Supply characterisation](#1-supply-characterisation) | Supply tempco (as read by the meter), lag and drift; the residual the ratio run inherits | **Done** 2026-10-03, [result](#supply-characterisation-2026-09-27--10-03) |
-| 2. [High legs by resistance](#2-high-legs-by-resistance) | R_total per range; the R_L consistency check | Pending (first attempt invalid: panel wiring) |
+| 2. [High legs by resistance](#2-high-legs-by-resistance) | R_total per range; the R_L consistency check | **Done** 2026-10-04, [result](#high-legs-by-resistance-2026-10-04) |
 | 3. [Null tests](#3-null-tests) | Any signal produced by switching alone | Pending |
 | 4. [Ratio run](#4-ratio-run) | k0 and α per range | Pending |
 | 5. [End-to-end injection](#5-end-to-end-injection) | Acceptance: known nanovolt signals recovered | Pending |
@@ -264,6 +264,46 @@ On 1E-5 that is comparable to the statistical limit on k0, and it is well below 
 range-to-range gain term. α on 1E-5 inherits about ±2 ppm/°C from γ, plus whatever part of γ is the meter's 30 V tempco
 rather than the supply's. The before-and-after anchors on IN
 pin the level; a mid-run anchor would bound the multi-day wander.
+
+### High legs by resistance, 2026-10-04
+
+**Conditions.** Supply unplugged from NORMAL IN, OUT open. HP 3478A in 2-wire ohms across NORMAL IN
+at 1 Hz, its range following the divider (300 kΩ / 3 MΩ / 30 MΩ), each range measured N, I, I, N per
+12-minute cycle; 15 cycles, 3 h. 10,800 readings, none failed (74 retried: the reading that straddles
+each polarity change is over-range, because the divider isolates while K4 switches). TMP275
+25.5–26.3 °C. The first 20 s of each dwell are dropped: the 30 MΩ range is still settling by ~20 ppm
+for the first few seconds. Data, figure and script:
+[`calibration/2026-10-04_high-legs/`](../calibration/2026-10-04_high-legs/).
+
+Each value is R_total = R_H + R_L + relay contacts + leads.
+
+| Range | R_total | vs nominal R_H + 1 Ω | Part tolerance | N − I | Cycle-to-cycle |
+|---|---|---|---|---|---|
+| 1E-5 | **100,034 Ω** | +330 ppm | 0.1 % | 0.0 ppm | at the meter's 1 Ω (10 ppm) resolution: every reading identical |
+| 1E-6 | **999,710 Ω** | −291 ppm | 0.1 % | +21 ppm | 6 ppm |
+| 1E-7 | **10.0071–10.0081 MΩ** | +650 to +810 ppm | 1 % | +102 ppm | stepped (below) |
+
+All three high legs are within their tolerances.
+
+![Total resistance per range over the session](../calibration/2026-10-04_high-legs/high_legs.png)
+
+**A step on the high-value ranges.** About 1.2 h in, 1E-6 fell 8 ppm on average (about 17 ppm at
+first, recovering as the board cooled) and 1E-7 fell 102 ppm (10,008,133 → 10,007,116 Ω) and kept
+sliding. 1E-5 did not move. It coincided with the operator leaving the bench; the cause is not
+identified. The size of the shift grows steeply with resistance, about 1 Ω on 1 MΩ against about
+1 kΩ on 10 MΩ. That is the signature of a parallel leakage of order 10¹¹ Ω, not of a tempco, which
+would move each leg by a similar number of ppm.
+
+**A polarity difference.** Normal and inverted polarity differ by +21 ppm on 1E-6 and +102 ppm on
+1E-7, unchanged across the step, and not at all on 1E-5. It also grows with resistance, which points
+to a leakage to a third point (the meter's or the bench's ground) rather than a thermal EMF.
+Averaging the two polarities, as here, cancels its first-order effect on R_total.
+
+**What this means.** At 10 MΩ, leakage of 10¹¹–10¹² Ω is visible at the 10–100 ppm level. An
+ohmmeter at IN cannot tell whether it is across the IN jacks and cables (which would not affect the
+divider ratio) or across the 10 MΩ leg inside (which would move k₇ by the same amount). The ratio run
+can: k₇ would show the same kind of steps. Until then, treat 1E-7 values at the 100 ppm level as
+provisional.
 
 ### Stored records
 

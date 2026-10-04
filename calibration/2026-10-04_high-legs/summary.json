@@ -1,0 +1,66 @@
+{
+  "run": "2026-10-04_high-legs_002",
+  "quantity": "2-wire resistance across NORMAL IN, divider injecting on each range, OUT open, supply unplugged: R_H + R_L + contacts + leads",
+  "meter": "HP 3478A, 2-wire ohms, 5.5 digits, autozero on, 1 Hz; range 300k / 3M / 30M following the divider",
+  "start_utc": "2026-10-04 02:51:44.546067+00:00",
+  "duration_h": 3.0136420838888887,
+  "samples": 10800,
+  "status": {
+    "ok": 10726,
+    "retry": 74
+  },
+  "settle_s_dropped": 20.0,
+  "tmp275_span_c": [
+    25.5,
+    26.3125
+  ],
+  "step": {
+    "cycle": 6,
+    "near_utc": "2026-10-04 04:04:04.907277+00:00",
+    "note": "1E-6 and 1E-7 fell together; coincided with the operator leaving the bench; cause not identified"
+  },
+  "ranges": {
+    "1E-5": {
+      "nominal_ohm": 100001.0,
+      "tolerance": "0.1 %",
+      "mean_ohm": 100034.00125,
+      "vs_nominal_ppm": 330.0091999081101,
+      "n_mean_ohm": 100034.00083333332,
+      "i_mean_ohm": 100034.00166666666,
+      "n_minus_i_ppm": -0.008330500915158323,
+      "cycle_sd_ppm": 0.06336502421623107,
+      "cycles": 15,
+      "before_step_ohm": 100034.00416666667,
+      "after_step_ohm": 100033.99930555555,
+      "step_ppm": -0.048594586939712185
+    },
+    "1E-6": {
+      "nominal_ohm": 1000001.0,
+      "tolerance": "0.1 %",
+      "mean_ohm": 999710.175,
+      "vs_nominal_ppm": -290.8247091752969,
+      "n_mean_ohm": 999720.5416666666,
+      "i_mean_ohm": 999699.8083333333,
+      "n_minus_i_ppm": 20.73934411368675,
+      "cycle_sd_ppm": 5.973773728138157,
+      "cycles": 15,
+      "before_step_ohm": 999715.1458333334,
+      "after_step_ohm": 999706.8611111111,
+      "step_ppm": -8.28708283232239
+    },
+    "1E-7": {
+      "nominal_ohm": 10000001.0,
+      "tolerance": "1 %",
+      "mean_ohm": 10007523.041666666,
+      "vs_nominal_ppm": 752.2040914462735,
+      "n_mean_ohm": 10008031.583333334,
+      "i_mean_ohm": 10007014.5,
+      "n_minus_i_ppm": 101.63187525017857,
+      "cycle_sd_ppm": 52.464266254368226,
+      "cycles": 15,
+      "before_step_ohm": 10008133.229166666,
+      "after_step_ohm": 10007116.25,
+      "step_ppm": -101.61527063831116
+    }
+  }
+}

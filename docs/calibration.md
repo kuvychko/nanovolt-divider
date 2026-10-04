@@ -10,7 +10,7 @@ k0 = 1/(R_H + 1 Ω), no temperature correction, and u_k0 from the part tolerance
 
 | Step | What it yields | Status |
 |---|---|---|
-| 1. [Supply characterisation](#1-supply-characterisation) | Supply tempco, lag and drift; the residual the ratio run inherits | **Done** 2026-10-03, [result](#supply-characterisation-2026-09-27--10-03) |
+| 1. [Supply characterisation](#1-supply-characterisation) | Supply tempco (as read by the meter), lag and drift; the residual the ratio run inherits | **Done** 2026-10-03, [result](#supply-characterisation-2026-09-27--10-03) |
 | 2. [High legs by resistance](#2-high-legs-by-resistance) | R_total per range; the R_L consistency check | Pending (first attempt invalid: panel wiring) |
 | 3. [Null tests](#3-null-tests) | Any signal produced by switching alone | Pending |
 | 4. [Ratio run](#4-ratio-run) | k0 and α per range | Pending |
@@ -72,8 +72,9 @@ k_i(T) = k0_i · [1 + α_i (T − T0) + β_i (T − T0)²]        valid for Tmin
 
 The divider isolated with no range selected, so the supply is unloaded and the divider dissipates
 nothing. The meter on NORMAL IN, 30 V range, supply at 29 V, for 144 h. Fit
-V_in = V0 · [1 + γ (T_lagged − T_ref) + δ·t] against the TMP275: γ is the supply's tempco, δ its
-drift, plus a fitted lag. The residual scatter is the supply's short-term noise, which the ratio run
+V_in = V0 · [1 + γ (T_lagged − T_ref) + δ·t] against the TMP275: γ is the tempco of the supply as
+read by the meter on its 30 V range, δ its drift, plus a fitted lag. The meter sits on the same bench,
+so its own 30 V tempco is folded into γ; nothing here separates the two. The residual scatter is the supply's short-term noise, which the ratio run
 inherits.
 
 The drop between the supply and the IN jacks under the divider's load (0.5–2 ppm on 1E-5) is not
@@ -127,8 +128,12 @@ supply model of step 1, pinned by **anchors**: the meter moved to IN (30 V range
 k_i is then fitted against the TMP275 with a first-order lag, giving k0_i and α_i (and β_i only if
 significant).
 
-The ratios k_5/k_6 and k_6/k_7 come free from the same blocks. They cancel V_in entirely, and their
-temperature dependence is α_H,6 − α_H,5 (and α_H,7 − α_H,6), independent of the supply model.
+The ratios k_5/k_6 and k_6/k_7 come free from the same blocks. They cancel the common supply level,
+and their temperature dependence is α_H,6 − α_H,5 (and α_H,7 − α_H,6), without needing the supply
+model. They do not cancel supply variation entirely: the ranges are measured one after another, 4 min
+apart, so the supply's movement between those windows stays in each ratio. Step 1's Allan deviation
+puts that near 1 ppm per cycle, averaging down over ~330 cycles, far below the 50 and 500 ppm
+statistical limits of 1E-6 and 1E-7.
 
 Each range carries current only 4 minutes in every 13. Self-heating with a time constant of minutes
 would show as N₁ ≠ N₂ curvature within blocks, which ABBA does not cancel; it is checked for and
@@ -240,6 +245,10 @@ wander can alias onto the multi-day temperature trend. Both estimates are kept:
 > **γ = −14 ± 2 ppm/°C** (−0.41 ± 0.06 mV/°C at 29 V). The supply lags the TMP275 with a first-order
 > time constant of roughly 20–70 min, and the lag is not stable from day to day.
 
+γ is the tempco of the supply *and* the HP 3478A's 30 V range together. The meter's input-attenuator
+tempco is not bounded independently here (see [Uncertainty](#uncertainty)); it is expected to be a few
+ppm/°C at most, but it cannot be separated from the supply's.
+
 ![Supply output against the lagged TMP275](../calibration/2026-09-27_supply/tempco.png)
 
 **Drift and wander.** Once settled there is no consistent drift (per-day slopes of both signs).
@@ -252,7 +261,8 @@ deviation is flat near 1 ppm (≈ 28 µV) from 1 to 16 min, then rises to 2.6 pp
 **What this means for the ratio run.** Over one ABBA block (4 min) the supply contributes about 1 ppm.
 Over a 72 h run, a supply model from this step is good to a few ppm over hours and 4–6 ppm over days.
 On 1E-5 that is comparable to the statistical limit on k0, and it is well below the meter's
-range-to-range gain term. α on 1E-5 inherits about ±2 ppm/°C from γ. The before-and-after anchors on IN
+range-to-range gain term. α on 1E-5 inherits about ±2 ppm/°C from γ, plus whatever part of γ is the meter's 30 V tempco
+rather than the supply's. The before-and-after anchors on IN
 pin the level; a mid-run anchor would bound the multi-day wander.
 
 ### Stored records

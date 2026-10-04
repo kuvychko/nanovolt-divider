@@ -1,11 +1,18 @@
 """Run P' (supply tempco, unloaded): the full analysis.
 
-    uv run --with numpy --with matplotlib python analyze.py <run_dir> <out_dir>
+From the published 1-minute data (this directory's minute.csv), which reproduces summary.json and
+the figures:
+
+    uv run --with numpy --with matplotlib --with polars --with tzdata python analyze.py --minute minute.csv <out_dir>
+
+From the raw logs, which also writes minute.csv:
+
+    uv run --with numpy --with matplotlib --with polars --with tzdata python analyze.py <run_dir> <out_dir>
 
 <run_dir> holds the raw logs, which are not in this repository: Parquet parts of the 1 Hz meter
 readings (columns timestamp_utc, value) and divider.jsonl, the divider telemetry (one JSON object
-per line; "poll" events carry timestamp_utc and temp_c). minute.csv in this directory is the
-1-minute reduction the fits are made on.
+per line; "poll" events carry timestamp_utc and temp_c). Starting from minute.csv gives the same
+fits; only "samples" differs, because the CSV counts just the samples inside the 1-minute means.
 
 Self-contained on purpose (polars + numpy + matplotlib only), so the same script can travel with the
 published result. Everything is done on 1-minute means of the 1 Hz meter readings, joined to 1-minute
@@ -39,51 +46,66 @@ V_NOM = 29.0
 SETTLE_H = 30.0
 LAGS_MIN = np.arange(0, 241, 1)
 
-run = Path(sys.argv[1])
-out = Path(sys.argv[2])
+from_minute = sys.argv[1] == "--minute"
+src = Path(sys.argv[2] if from_minute else sys.argv[1])
+out = Path(sys.argv[-1])
 out.mkdir(parents=True, exist_ok=True)
 
 # -- load -----------------------------------------------------------------------------------------
-samples = (
-    pl.read_parquet(run / "part-*.parquet")
-    .filter(pl.col("value").is_not_null())
-    .select("timestamp_utc", "value")
-    .sort("timestamp_utc")
-)
-rows = [json.loads(x) for x in (run / "divider.jsonl").read_text().splitlines() if x.strip()]
-temps = (
-    pl.DataFrame([r for r in rows if r.get("event") == "poll"])
-    .select(
-        pl.col("timestamp_utc").str.to_datetime(time_zone="UTC", time_unit="us"),
-        pl.col("temp_c").cast(pl.Float64),
+if from_minute:
+    # The published reduction: already on the 1-minute grid, TMP275 already interpolated.
+    frame = pl.read_csv(src).select(
+        pl.col("utc").str.to_datetime(time_zone="UTC", time_unit="us").alias("timestamp_utc"),
+        pl.col("v_in_v").alias("v"),
+        pl.col("v_sd_v").alias("v_sd"),
+        pl.col("samples").alias("n"),
+        pl.col("tmp275_c").alias("temp_c"),
     )
-    .sort("timestamp_utc")
-)
-
-minute = (
-    samples.group_by_dynamic("timestamp_utc", every="1m")
-    .agg(pl.col("value").mean().alias("v"), pl.col("value").std().alias("v_sd"), pl.len().alias("n"))
-    .filter(pl.col("n") >= 50)
-)
-tmin = temps.group_by_dynamic("timestamp_utc", every="1m").agg(pl.col("temp_c").mean())
-# A regular 1-minute grid, so lags are index shifts and gaps stay gaps.
-grid = pl.DataFrame(
-    {
-        "timestamp_utc": pl.datetime_range(
-            minute["timestamp_utc"].min(),
-            minute["timestamp_utc"].max(),
-            interval="1m",
-            time_zone="UTC",
-            time_unit="us",
-            eager=True,
+    run_name = "2026-09-27_psu-tempco_001"
+    n_samples = int(frame["n"].sum())
+else:
+    samples = (
+        pl.read_parquet(src / "part-*.parquet")
+        .filter(pl.col("value").is_not_null())
+        .select("timestamp_utc", "value")
+        .sort("timestamp_utc")
+    )
+    rows = [json.loads(x) for x in (src / "divider.jsonl").read_text().splitlines() if x.strip()]
+    temps = (
+        pl.DataFrame([r for r in rows if r.get("event") == "poll"])
+        .select(
+            pl.col("timestamp_utc").str.to_datetime(time_zone="UTC", time_unit="us"),
+            pl.col("temp_c").cast(pl.Float64),
         )
-    }
-)
-frame = (
-    grid.join(minute, on="timestamp_utc", how="left")
-    .join(tmin, on="timestamp_utc", how="left")
-    .with_columns(pl.col("temp_c").interpolate().fill_null(strategy="forward").fill_null(strategy="backward"))
-)
+        .sort("timestamp_utc")
+    )
+
+    minute = (
+        samples.group_by_dynamic("timestamp_utc", every="1m")
+        .agg(pl.col("value").mean().alias("v"), pl.col("value").std().alias("v_sd"), pl.len().alias("n"))
+        .filter(pl.col("n") >= 50)
+    )
+    tmin = temps.group_by_dynamic("timestamp_utc", every="1m").agg(pl.col("temp_c").mean())
+    # A regular 1-minute grid, so lags are index shifts and gaps stay gaps.
+    grid = pl.DataFrame(
+        {
+            "timestamp_utc": pl.datetime_range(
+                minute["timestamp_utc"].min(),
+                minute["timestamp_utc"].max(),
+                interval="1m",
+                time_zone="UTC",
+                time_unit="us",
+                eager=True,
+            )
+        }
+    )
+    frame = (
+        grid.join(minute, on="timestamp_utc", how="left")
+        .join(tmin, on="timestamp_utc", how="left")
+        .with_columns(pl.col("temp_c").interpolate().fill_null(strategy="forward").fill_null(strategy="backward"))
+    )
+    run_name = src.name
+    n_samples = samples.height
 t0 = frame["timestamp_utc"][0]
 h = ((frame["timestamp_utc"] - t0).dt.total_seconds() / 3600).to_numpy()
 v = frame["v"].to_numpy()
@@ -216,7 +238,7 @@ hourly = (
 )
 
 summary = {
-    "run": run.name,
+    "run": run_name,
     "quantity": "UDP3305S-E CH1 output at the divider's NORMAL IN, divider isolated (no load)",
     "setpoint_v": V_NOM,
     "meter": "HP 3478A, DC V, 30 V range, 5.5 digits, autozero on, 1 Hz",
@@ -224,7 +246,8 @@ summary = {
     "start_utc": str(frame["timestamp_utc"][0]),
     "end_utc": str(frame["timestamp_utc"][-1]),
     "duration_h": float(h.max()),
-    "samples": samples.height,
+    "samples": n_samples,
+    "samples_counted": "samples in the 1-minute means" if from_minute else "all readings",
     "failed_samples": 0,
     "gaps": ["33 s at 2026-09-27T23:23:07Z (service restart to extend the run)"],
     "tmp275_span_c": [float(np.nanmin(T)), float(np.nanmax(T))],
@@ -257,14 +280,15 @@ summary = {
 }
 (out / "summary.json").write_text(json.dumps(summary, indent=2))
 
-minute_out = frame.select(
-    pl.col("timestamp_utc").dt.strftime("%Y-%m-%dT%H:%M:%SZ").alias("utc"),
-    pl.col("v").round(7).alias("v_in_v"),
-    pl.col("v_sd").round(7).alias("v_sd_v"),
-    pl.col("n").alias("samples"),
-    pl.col("temp_c").round(4).alias("tmp275_c"),
-)
-minute_out.write_csv(out / "minute.csv")
+if not from_minute:
+    minute_out = frame.select(
+        pl.col("timestamp_utc").dt.strftime("%Y-%m-%dT%H:%M:%SZ").alias("utc"),
+        pl.col("v").round(7).alias("v_in_v"),
+        pl.col("v_sd").round(7).alias("v_sd_v"),
+        pl.col("n").alias("samples"),
+        pl.col("temp_c").round(4).alias("tmp275_c"),
+    )
+    minute_out.write_csv(out / "minute.csv")
 
 # -- figures -------------------------------------------------------------------------------------
 plt.rcParams.update({"font.size": 10, "axes.spines.top": False, "axes.spines.right": False})

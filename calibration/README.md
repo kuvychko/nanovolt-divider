@@ -25,5 +25,15 @@ Each step directory holds:
 * The figures used in the results section.
 * `analyze.py`: the script that produced them from the raw logs, so the method is exact.
 
+**Reproduce** a step's fits and figures from its published 1-minute data, for example step 1:
+
+```
+cd calibration/2026-09-27_supply
+uv run --with numpy --with matplotlib --with polars --with tzdata python analyze.py --minute minute.csv out
+```
+
+`out/summary.json` matches the published one, except `samples`: from the CSV it counts only the
+samples inside the 1-minute means.
+
 All timestamps are UTC (ISO 8601). Temperatures are TMP275 readings in °C. Voltages are in volts and
 resistances in ohms unless a column name says otherwise.

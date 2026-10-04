@@ -11,7 +11,7 @@ k0 = 1/(R_H + 1 Ω), no temperature correction, and u_k0 from the part tolerance
 | Step | What it yields | Status |
 |---|---|---|
 | 1. [Supply characterisation](#1-supply-characterisation) | Supply tempco, lag and drift; the residual the ratio run inherits | **Done** 2026-10-03, [result](#supply-characterisation-2026-09-27--10-03) |
-| 2. [High legs by resistance](#2-high-legs-by-resistance) | R_total per range; the R_L consistency check | Running |
+| 2. [High legs by resistance](#2-high-legs-by-resistance) | R_total per range; the R_L consistency check | Pending (first attempt invalid: panel wiring) |
 | 3. [Null tests](#3-null-tests) | Any signal produced by switching alone | Pending |
 | 4. [Ratio run](#4-ratio-run) | k0 and α per range | Pending |
 | 5. [End-to-end injection](#5-end-to-end-injection) | Acceptance: known nanovolt signals recovered | Pending |

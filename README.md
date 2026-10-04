@@ -5,7 +5,10 @@ nanovolt-to-microvolt source by **passive resistive division**, read by an exter
 Three ratios (1e-5, 1e-6, 1e-7), relay-controlled polarity reversal for ABBA modulation, and a true
 zero that disconnects the source without touching the measurement path.
 
-![Rev A board, top](docs/images/board-top.png)
+| | |
+|---|---|
+| ![Front panel, INJECTING on the 1E-6 range](docs/images/front_panel_injecting.jpg) | ![Front panel, ISOLATED](docs/images/front_panel_isolated.jpg) |
+| INJECTING: K5 set, the source drives the 1E-6 divider | ISOLATED: the source is open at both ends, the 1 Ω and OUT jacks stay connected |
 
 | | |
 |---|---|
@@ -153,6 +156,11 @@ Wire them to the board like this:
   the 3V3 connector's GND to `J8` (I2C).
 
 ## Board
+
+| | |
+|---|---|
+| ![Rev A board, top (render)](docs/images/board-top.png) | ![Rev A board, populated, with the display harness](docs/images/populated_pcb.jpg) |
+| Layout render | Populated Rev A with the harness pigtails soldered to `J7` / `J8` |
 
 * 60 x 69.1 mm, two layers, laid out top-down: one control band, ten coil-driver columns, the five
   relays, then the three high legs flat in one row.
@@ -311,6 +319,11 @@ Every part prints in PLA on a Prusa i3 MK3S with a 0.4 mm nozzle, using PrusaSli
 Before assembling, heat-set the knurled brass inserts: the M2 ones go into the PCB holder, the M3
 ones into the enclosure parts. Fasteners, banana jacks, the display module, and the cables are
 listed in [BOM §11.4 and §11.5](docs/nanovolt_divider_rev_a.md#114-front-panel--mechanical).
+
+| | |
+|---|---|
+| ![Assembled, cover off](docs/images/assembled_no_cover.jpg) | ![Base plate and back panel](docs/images/underside_backside.jpg) |
+| Cover off: the board on its holder, the display behind the front panel, and the jacks wired to their pads | Base plate with printed feet, and the back panel with the USB opening |
 
 ## Known limitations
 

@@ -393,7 +393,7 @@ def dgnd_symbol_text() -> str:
 # There is no IO22 on any connector, so I2C moves to IO18 (SCL) / IO27 (SDA) on the SPI connector,
 # and J8 is fed by two pigtails (3V3 connector for power, SPI connector for the bus).  The pin names
 # below are the module's labels for the wire that lands there; the pad number no longer says which
-# module pin it is.  Land wires by signal name, never by number.  See README "Display harness".
+# module pin it is.  Land wires by signal name, never by number.  See docs/hardware.md, "Display harness".
 ESP32_CONNECTORS = {
     "J_ESP32_P1": ("ESP32_DISP_P1",
                    "Soldered pigtail from the display module UART/power connector (RXD, TXD, GND, 5V). Pad 3 = 5V wire, "

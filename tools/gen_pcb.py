@@ -26,7 +26,7 @@ Usage: python tools/gen_pcb.py
 
 It shells out to kicad-cli twice: once to export the schematic netlist it reads pad nets from, and
 once to upgrade the board it just wrote to the current file format.  It does NOT run DRC - run that
-yourself (the command is in README.md).  Expect a non-empty report: the board is unrouted, so every
+yourself (the command is in docs/development.md).  Expect a non-empty report: the board is unrouted, so every
 net shows as unconnected, and the silkscreen sits over pads that have no soldermask openings routed
 around them yet.  Compare against the previous run rather than expecting zero.
 """

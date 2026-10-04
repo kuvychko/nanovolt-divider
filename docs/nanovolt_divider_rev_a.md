@@ -17,7 +17,7 @@ its most sensitive range, and ABBA modulation with averaging. With an HP 3478A o
 that combination recovers signals well below the meter's 100 nV quantization step, down to tens of
 nanovolts.
 
-> **A conventional voltage source + passive precision attenuation + reversal + true zero + calibration + averaging.**
+> **A conventional voltage source + passive precision attenuation + reversal + source-disconnected baseline + calibration + averaging.**
 
 The precision signal path is kept as passive and electrically quiet as practical.
 
@@ -183,7 +183,7 @@ family): ESP32, CH340 USB serial, 320×240 ILI9341 TFT, XPT2046-type resistive t
 Its three 4-pin connectors are UART / power (RXD, TXD, GND, 5V), 3V3 (3.3V, IO35, nc, GND) and SPI
 (IO23 MOSI, IO19 MISO, IO18 SCK, IO27 CS). The board takes 5 V and GND from the first, 3.3 V and GND
 from the second, and the I²C bus from the third: **SDA = IO27, SCL = IO18**. The pad-by-pad wiring is
-in the README, under "Display harness".
+in [hardware.md, "Display harness"](hardware.md#display-harness).
 
 ### 6.2 GPIO expansion
 

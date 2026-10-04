@@ -38,7 +38,7 @@ out (`CORE_DEBUG_LEVEL=0`), because it would land in the SCPI response stream. T
 
 ## How it drives the board
 
-* **I2C is SDA = IO27, SCL = IO18.** See the top-level README, "Display harness".
+* **I2C is SDA = IO27, SCL = IO18.** See [docs/hardware.md, "Display harness"](../docs/hardware.md#display-harness).
 * **Coil table.** The table is in `src/coils.cpp`, and nowhere else. It follows the layout order: GPB0..7 = K4 S, K4 R,
   K1 S, K1 R, K2 S, K2 R, K3 S, K3 R; GPA0 = K5 R, GPA1 = K5 S. GPA2..7 stay inputs.
 * **One coil at a time.** Every pulse first confirms that both output latches read back 0. It then sets one bit,
@@ -150,7 +150,7 @@ These rules apply to every command:
 Before you start, flash the `cyd` build with the module alone, and set `SYST:BOOT:SAFE OFF`. That way the first coil
 pulses are ones you fire by hand, not five at once at boot.
 
-1. **Harness.** Land every wire by signal name (top-level README, "Display harness"). The J7 silk numbers are
+1. **Harness.** Land every wire by signal name ([docs/hardware.md, "Display harness"](../docs/hardware.md#display-harness)). The J7 silk numbers are
    reversed against the module. With the power off, buzz the harness from the module pins to the pads:
 
    | Module pin | Board pad |

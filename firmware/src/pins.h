@@ -1,5 +1,5 @@
 // Pin map for the ESP32-2432S028R ("Cheap Yellow Display") as wired to the Rev A board.
-// Board-side wiring: see the "Display harness" table in the top-level README.
+// Board-side wiring: see the "Display harness" table in docs/hardware.md.
 #pragma once
 #include <stdint.h>
 

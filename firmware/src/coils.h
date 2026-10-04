@@ -1,7 +1,7 @@
 // Coil pulses for the five TQ2-L2-5V latching relays.
 //
-// The MCP23017 GPIO order follows the board layout, not the relay numbering (README, "Control
-// wiring"): GPB0..GPB7 = K4 SET, K4 RESET, K1 SET, K1 RESET, K2 SET, K2 RESET, K3 SET, K3 RESET;
+// The MCP23017 GPIO order follows the board layout, not the relay numbering (docs/hardware.md,
+// "Control wiring"): GPB0..GPB7 = K4 SET, K4 RESET, K1 SET, K1 RESET, K2 SET, K2 RESET, K3 SET, K3 RESET;
 // GPA0 = K5 RESET, GPA1 = K5 SET.
 #pragma once
 #include <stdint.h>

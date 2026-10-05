@@ -300,32 +300,32 @@ its own, however many leakage paths it has. It is reciprocal: measured between t
 resistance is the same whichever way round the meter is connected, and reversing K4 is equivalent to
 swapping the meter leads on the divider. 1E-5, with N − I = 0.000 ppm, behaves exactly that way.
 
-What breaks the symmetry is a third terminal that stays with one of the meter's leads. The meter's LO
-has some leakage to its chassis. The chassis is connected through the GPIB adapter and the host
-computer to the USB ground, which is the divider's control ground (DGND). DGND sits within
-relay-insulation and board-surface distance of the precision nodes. A leak from a precision node to
-DGND therefore closes a path back to the meter's LO, whichever end of the divider K4 has put there.
-In NORM the meter's HI is on the top of the high leg; in INV it is on the 1 Ω end. Each reading is
-R_total in parallel with a different leak, and N ≠ I. N reads higher, so the 1 Ω end is the
-leakier: it is the end nearest the relay coils and the DGND pour.
+Two follow-up checks on 2026-10-05, with the meter on IN and the supply unplugged
+([`followup_2026-10-05.json`](../calibration/2026-10-04_high-legs/followup_2026-10-05.json)):
 
-A thermal EMF would also flip sign with K4, adding 2E/I_test to N − I. The EMF would be the same on
-every range, because the path through K4 is the same, while the meter's test current falls about
-tenfold per ohms range. The difference would then be largest in ppm on 1E-5, not zero there, and the
-10–50 µV it would need on the larger ranges is implausible. A ~10¹¹ Ω shunt instead matters about R²
-times more on 10 MΩ than on 100 kΩ, which is the pattern observed.
+* **Not a ground path.** One candidate was leakage from the precision nodes to the control ground,
+  which reaches the meter's chassis through USB, the host and GPIB. The latching relays hold their
+  state with no power, so 1E-7 was read in both polarities with the divider's USB unplugged. The
+  difference remained: N − I = +79 ppm with USB unplugged, against +67 ppm with it connected.
+* **A series EMF on the 10 MΩ leg.** DC volts at IN, with no ohms test current, flip with K4 by
+  2 × 11.9 µV on 1E-7, against under 0.5 µV on 1E-5 and 1E-6. So there is an EMF of about 12 µV in the
+  1E-7 chain, most likely at the terminations of the thick-film 10 MΩ resistor or in K3's contacts.
+  An EMF E adds 2E/I_test to N − I in ohms mode. With the meter's 30 MΩ test current taken as
+  0.1 µA, that accounts for about 240 Ω of the 674 Ω observed: roughly a third.
 
-Averaging the two polarities does **not** remove this. Each polarity is shunted by a different
-leak, and the average is shunted by roughly their mean. R_total on 1E-6 and 1E-7 may therefore read
-low by up to the polarity difference.
+The rest is unexplained: about two thirds of the 1E-7 difference, and nearly all of the 1E-6 one,
+whose chain shows no EMF. It needs something both leakage-like and non-reciprocal. A leak into the
+unpowered coil-driver network, which contains diodes, is one candidate; it is not pursued here.
 
-**Why the ratio is probably unaffected.** In ratio mode, a leak from a precision node to ground
-carries a sub-nanoamp current from the supply round through ground and the meter's LO back to the
-analog return. It passes through neither R_H nor R_L, so it does not change the output. What would
-change the ratio is leakage *across* the high leg. A planned check is to repeat 1E-7 in both
-polarities with the divider's USB unplugged, which disconnects DGND from the host's ground (the
-latching relays hold their state unpowered). If N = I with USB unplugged, the path is through the
-control ground.
+Averaging the two polarities cancels the EMF part, but **not** a leakage part: each polarity is
+shunted differently, and the average is shunted by roughly their mean. R_total on 1E-6 and 1E-7 may
+therefore read low by up to the polarity difference.
+
+**Why the ratio is unaffected by most of this.**
+* The EMF is in series with the 29 V source and is divided by the full ratio: 12 µV on 1E-7 is
+  1.2 pV at OUT. In ratio mode it does not reverse with K4 either, so ABBA removes it.
+* A leak to ground passes through neither R_H nor R_L.
+* What would move a ratio is leakage *across* a high leg.
 
 **What this means.** At 10 MΩ, leakage of 10¹¹–10¹² Ω is visible at the 10–100 ppm level. An
 ohmmeter at IN cannot tell whether it is across the IN jacks and cables (which would not affect the

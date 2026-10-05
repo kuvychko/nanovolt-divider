@@ -1,0 +1,20 @@
+{
+  "date": "2026-10-05",
+  "setup": "HP 3478A on NORMAL IN, supply unplugged, OUT open; divider INJECT on the range shown",
+  "usb_disconnect_test": {
+    "method": "2-wire ohms, 30 MOhm range, 40 readings after 30 s; divider USB unplugged with the latching relays holding the state",
+    "1E-7": {
+      "usb_connected": {"N_ohm": 10007203.8, "I_ohm": 10006530.0, "N_minus_I_ppm": 67.3},
+      "usb_unplugged": {"N_ohm": 10007297.5, "N_se_ohm": 33.3, "I_ohm": 10006507.5, "I_se_ohm": 26.6, "N_minus_I_ppm": 78.9}
+    },
+    "1E-6_usb_connected": {"N_ohm": 999744.2, "I_ohm": 999736.0, "N_minus_I_ppm": 8.3}
+  },
+  "open_circuit_volts": {
+    "method": "DC volts at NORMAL IN, no ohms test current; N, I, I, N, 20 readings per state",
+    "1E-5_30mV_range_uV": {"N": -3.02, "I": -2.18, "half_N_minus_I": -0.42, "mean": -2.60},
+    "1E-6_30mV_range_uV": {"N": -5.19, "I": -4.39, "half_N_minus_I": -0.40, "mean": -4.79},
+    "1E-6_300mV_range_uV": {"N": -19.60, "I": -20.15, "half_N_minus_I": 0.27, "mean": -19.88},
+    "1E-7_300mV_range_uV": {"N": -229.27, "I": -205.53, "half_N_minus_I": -11.87, "mean": -217.40},
+    "note": "1E-7 over-ranges on 30 mV. The polarity-independent mean grows with resistance (meter input bias current, ~20 pA)."
+  }
+}

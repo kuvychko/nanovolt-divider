@@ -12,7 +12,7 @@ k0 = 1/(R_H + 1 Ω), no temperature correction, and u_k0 from the part tolerance
 |---|---|---|
 | 1. [Supply characterisation](#1-supply-characterisation) | Supply tempco (as read by the meter), lag and drift; the residual the ratio run inherits | **Done** 2026-10-03, [result](#supply-characterisation-2026-09-27--10-03) |
 | 2. [High legs by resistance](#2-high-legs-by-resistance) | R_total per range; the R_L consistency check | **Done** 2026-10-04, [result](#high-legs-by-resistance-2026-10-04) |
-| 3. [Null tests](#3-null-tests) | Any signal produced by switching alone | Pending |
+| 3. [Null tests](#3-null-tests) | Any signal produced by switching alone | (b) **done** 2026-10-05, [result](#null-test-b-input-shorted-2026-10-04--05); (a) runs inside the ratio run; (c) after it |
 | 4. [Ratio run](#4-ratio-run) | k0 and α per range | Pending |
 | 5. [End-to-end injection](#5-end-to-end-injection) | Acceptance: known nanovolt signals recovered | Pending |
 | [Write-back](#write-back) | Records stored in the instrument | Pending |
@@ -146,13 +146,13 @@ them by the same ABBA method. This tests the divider at its actual job.
 
 ## Uncertainty
 
-With ABBA blocks of 60 s dwells on the 3478A's 30 mV range scattering by about 26 nV, and ~330 blocks
-per range at 29 V, the statistical limits on k0 are roughly:
+ABBA blocks of 60 s dwells on the 3478A's 30 mV range scatter by about 13 nV (measured in the
+null run, step 3). With ~330 blocks per range at 29 V, the statistical limits on k0 are roughly:
 
 | | 1E-5 | 1E-6 | 1E-7 |
 |---|---|---|---|
 | Signal at 29 V | 290 µV | 29 µV | 2.9 µV |
-| k0, statistical | 5 ppm | 50 ppm | 500 ppm |
+| k0, statistical | 2.5 ppm | 25 ppm | 250 ppm |
 
 Statistical and bounded systematic terms are combined; terms nothing here can bound are reported
 separately:
@@ -332,6 +332,36 @@ ohmmeter at IN cannot tell whether it is across the IN jacks and cables (which w
 divider ratio) or across the 10 MΩ leg inside (which would move k₇ by the same amount). The ratio run
 can: k₇ would show the same kind of steps. Until then, treat 1E-7 values at the 100 ppm level as
 provisional.
+
+### Null test (b), input shorted, 2026-10-04 – 05
+
+**Conditions.** A copper link across NORMAL IN, the supply unplugged. HP 3478A on OUT, 30 mV range,
+5½ digits, autozero on, 1 Hz. The full ratio-run schedule: per 13-minute cycle, ABBA on 1E-5, 1E-6
+and 1E-7, then one ISOLATE dwell. 24 h, 110 blocks per range; 85,800 readings, none failed. TMP275
+23.7–26.9 °C. The first 2 s of each dwell are dropped. Data, figure and script:
+[`calibration/2026-10-04_null-short/`](../calibration/2026-10-04_null-short/).
+
+| Range | Mean S | Block scatter | As ppm of the 29 V signal |
+|---|---|---|---|
+| 1E-5 | −1.1 ± 1.3 nV | 13.7 nV | −4 ± 5 ppm |
+| 1E-6 | −1.2 ± 1.2 nV | 12.2 nV | −42 ± 40 ppm |
+| 1E-7 | +1.9 ± 1.2 nV | 13.0 nV | +660 ± 430 ppm |
+| All 330 blocks | **−0.1 ± 0.7 nV** | | |
+
+![ABBA block signal per range with the input shorted](../calibration/2026-10-04_null-short/null_blocks.png)
+
+**No switching bias.** Every range is consistent with zero; the largest, 1E-7, is 1.5σ. The first and
+second halves agree within their errors on each range. Over the whole run the meter's zero wandered
+between −5.0 and −3.4 µV, and the injecting dwells sat 4–13 nV above the ISOLATE dwell. Both are
+offsets that do not change with polarity, which ABBA removes from S, as the result shows.
+
+**The method is twice as quiet as assumed.** A block scatters by about 13 nV, half the 26 nV the
+uncertainty budget was planned on, and the block-to-block Allan deviation falls roughly as 1/√n out to
+16 blocks. The statistical limits in [Uncertainty](#uncertainty) are updated accordingly.
+
+What this bounds: a switching artefact in the signal path larger than about 2.5 nV (2σ) per range. It
+does not test the supply as a source (variant c) or coupling from the coil drivers and controller
+with the path open (variant a, which runs inside the ratio run).
 
 ### Stored records
 

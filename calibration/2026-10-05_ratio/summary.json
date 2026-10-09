@@ -1,0 +1,183 @@
+{
+  "run": "2026-10-05_divider-ratio_001",
+  "setup": "UDP3305S-E CH1 at 29 V into NORMAL IN; HP 3478A on OUT, 30 mV range, 5.5 digits, autozero on, 1 Hz",
+  "schedule": "per 16-min cycle: ABBA (N,I,I,N) 60 s dwells on 1E-5, 1E-6, 1E-7, then an isolated ABBA block (null a)",
+  "samples": 259200,
+  "duration_h": 72.29415332611111,
+  "tmp275_span_c": [
+    23.9375,
+    26.8125
+  ],
+  "supply_model": {
+    "gamma_ppm_per_c": -14.0,
+    "gamma_u_ppm_per_c": 2.0,
+    "tau_s_min": 45.0
+  },
+  "anchors": {
+    "before": {
+      "time_utc": "2026-10-05 15:33:48.283987+00:00",
+      "tmp275_c": 24.41796875,
+      "v_in_per_range_v": {
+        "1E-5": 29.005544827586206,
+        "1E-6": 29.00555129310345,
+        "1E-7": 29.00556982758621
+      },
+      "v_unloaded_v": 29.005592672413794,
+      "load_drop_ppm": {
+        "1E-5": -1.649503532874519,
+        "1E-6": -1.4265976500116295,
+        "1E-7": -0.7876007859231038
+      }
+    },
+    "after": {
+      "time_utc": "2026-10-09 00:27:42.735227+00:00",
+      "tmp275_c": 27.3671875,
+      "v_in_per_range_v": {
+        "1E-5": 29.00456422413793,
+        "1E-6": 29.00452931034483,
+        "1E-7": 29.004477586206896
+      },
+      "v_unloaded_v": 29.00451422413793,
+      "load_drop_ppm": {
+        "1E-5": 1.7238695884103095,
+        "1E-6": 0.5201330655069114,
+        "1E-7": -1.2631803019136356
+      }
+    }
+  },
+  "per_range": {
+    "1E-5": {
+      "blocks": 270,
+      "k0": 9.981310305816818e-06,
+      "T0_c": 25.3,
+      "k0_vs_nominal_ppm": -1858.9881080124383,
+      "alpha_ppm_per_c": 11.064368769178618,
+      "tau_d_min": 180,
+      "resid_rms_ppm": 46.089056745207344,
+      "u_k0_stat_ppm": 2.3629821655375207,
+      "u_alpha_stat_ppm_per_c": 2.4425563415987357,
+      "u_k0_supply_gamma_ppm": 0.6035269182191882,
+      "u_alpha_supply_gamma_ppm_per_c": 1.628342733021907,
+      "u_k0_supply_lag_ppm": 1.2391033268333018,
+      "u_alpha_supply_lag_ppm_per_c": 1.4638514690069937,
+      "supply_drift_delta_ppm_per_h": 0.05834020910222417,
+      "variations": {
+        "gamma+": {
+          "k0_ppm": 0.6035269182191882,
+          "alpha_ppm_per_c": -1.628342733021907
+        },
+        "gamma-": {
+          "k0_ppm": -0.5777838981702033,
+          "alpha_ppm_per_c": 1.4394586917272343
+        },
+        "tau_s_short": {
+          "k0_ppm": -1.2391033268333018,
+          "alpha_ppm_per_c": -1.3304427666061778
+        },
+        "tau_s_long": {
+          "k0_ppm": 1.1699534265829925,
+          "alpha_ppm_per_c": 1.4638514690069937
+        }
+      }
+    },
+    "1E-6": {
+      "blocks": 270,
+      "k0": 9.98233873804954e-07,
+      "T0_c": 25.3,
+      "k0_vs_nominal_ppm": -1765.1279611722305,
+      "alpha_ppm_per_c": -81.9703666348672,
+      "tau_d_min": 300,
+      "resid_rms_ppm": 434.51241674854026,
+      "u_k0_stat_ppm": 19.374438116906965,
+      "u_alpha_stat_ppm_per_c": 51.105159477579555,
+      "u_k0_supply_gamma_ppm": 0.5036442585204526,
+      "u_alpha_supply_gamma_ppm_per_c": 2.699792326380228,
+      "u_k0_supply_lag_ppm": 1.1906913993664503,
+      "u_alpha_supply_lag_ppm_per_c": 1.0933581148136529,
+      "supply_drift_delta_ppm_per_h": 0.04070517455554139,
+      "variations": {
+        "gamma+": {
+          "k0_ppm": 0.5036369401523189,
+          "alpha_ppm_per_c": -2.6997843023257038
+        },
+        "gamma-": {
+          "k0_ppm": -0.5036442585204526,
+          "alpha_ppm_per_c": 2.699792326380228
+        },
+        "tau_s_short": {
+          "k0_ppm": -1.1906913993664503,
+          "alpha_ppm_per_c": -1.0933581148136529
+        },
+        "tau_s_long": {
+          "k0_ppm": 1.088791579784143,
+          "alpha_ppm_per_c": 0.6489573642411985
+        }
+      }
+    },
+    "1E-7": {
+      "blocks": 270,
+      "k0": 9.964552424138836e-08,
+      "T0_c": 25.3,
+      "k0_vs_nominal_ppm": -3544.6579405922216,
+      "alpha_ppm_per_c": -478.8598205698948,
+      "tau_d_min": 10,
+      "resid_rms_ppm": 4492.937637001684,
+      "u_k0_stat_ppm": 296.70181330291814,
+      "u_alpha_stat_ppm_per_c": 271.0764311320312,
+      "u_k0_supply_gamma_ppm": 0.5474015541961919,
+      "u_alpha_supply_gamma_ppm_per_c": 2.5927525778192275,
+      "u_k0_supply_lag_ppm": 1.1248399647278973,
+      "u_alpha_supply_lag_ppm_per_c": 0.9238557237842628,
+      "supply_drift_delta_ppm_per_h": 0.01076249475706087,
+      "variations": {
+        "gamma+": {
+          "k0_ppm": 0.5473942141787091,
+          "alpha_ppm_per_c": -2.592742347136336
+        },
+        "gamma-": {
+          "k0_ppm": -0.5474015541961919,
+          "alpha_ppm_per_c": 2.5927525778192275
+        },
+        "tau_s_short": {
+          "k0_ppm": -1.1248399647278973,
+          "alpha_ppm_per_c": 0.6782535032180876
+        },
+        "tau_s_long": {
+          "k0_ppm": 1.0398402976452559,
+          "alpha_ppm_per_c": -0.9238557237842628
+        }
+      }
+    }
+  },
+  "range_ratios": {
+    "k1E-5/k1E-6": {
+      "mean_vs_nominal_ppm": -96.5864573384545,
+      "u_stat_ppm": 26.875045346222176,
+      "from_k0_vs_nominal_ppm": -94.02611496478474
+    },
+    "k1E-6/k1E-7": {
+      "mean_vs_nominal_ppm": 1798.6059921291098,
+      "u_stat_ppm": 272.60115223530823,
+      "from_k0_vs_nominal_ppm": 1785.8602431113368
+    }
+  },
+  "null_a": {
+    "blocks": 270,
+    "mean_nv": -0.2809706257982237,
+    "se_nv": 0.8121765080659771
+  },
+  "r_l_consistency": {
+    "1E-5": {
+      "R_total_ohm": 100034.00125,
+      "R_L_ohm": 0.9984704076087175
+    },
+    "1E-6": {
+      "R_total_ohm": 999710.175,
+      "R_L_ohm": 0.9979445606724785
+    },
+    "1E-7": {
+      "R_total_ohm": 10007523.041666666,
+      "R_L_ohm": 0.9972048798446483
+    }
+  }
+}

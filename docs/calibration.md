@@ -12,8 +12,8 @@ k0 = 1/(R_H + 1 Ω), no temperature correction, and u_k0 from the part tolerance
 |---|---|---|
 | 1. [Supply characterisation](#1-supply-characterisation) | Supply tempco (as read by the meter), lag and drift; the residual the ratio run inherits | **Done** 2026-10-03, [result](#supply-characterisation-2026-09-27--10-03) |
 | 2. [High legs by resistance](#2-high-legs-by-resistance) | R_total per range; the R_L consistency check | **Done** 2026-10-04, [result](#high-legs-by-resistance-2026-10-04) |
-| 3. [Null tests](#3-null-tests) | Any signal produced by switching alone | (b) **done** 2026-10-05, [result](#null-test-b-input-shorted-2026-10-04--05); (a) runs inside the ratio run; (c) after it |
-| 4. [Ratio run](#4-ratio-run) | k0 and α per range | Pending |
+| 3. [Null tests](#3-null-tests) | Any signal produced by switching alone | (b) **done** 2026-10-05, [result](#null-test-b-input-shorted-2026-10-04--05); (a) **done** inside the ratio run, [result](#ratio-run-2026-10-05--08); (c) optional, not yet run |
+| 4. [Ratio run](#4-ratio-run) | k0 and α per range | **Done** 2026-10-08, [result](#ratio-run-2026-10-05--08); R_L check open |
 | 5. [End-to-end injection](#5-end-to-end-injection) | Acceptance: known nanovolt signals recovered | Pending |
 | [Write-back](#write-back) | Records stored in the instrument | Pending |
 
@@ -362,6 +362,72 @@ uncertainty budget was planned on, and the block-to-block Allan deviation falls 
 What this bounds: a switching artefact in the signal path larger than about 2.5 nV (2σ) per range. It
 does not test the supply as a source (variant c) or coupling from the coil drivers and controller
 with the path open (variant a, which runs inside the ratio run).
+
+### Ratio run, 2026-10-05 – 08
+
+**Conditions.** UNI-T UDP3305S-E CH1 at 29.00 V into NORMAL IN, on since 2026-09-27. HP 3478A on
+OUT, 30 mV range, 5½ digits, autozero on, 1 Hz. Per 16-minute cycle: ABBA on 1E-5, 1E-6 and 1E-7,
+then an isolated ABBA block (null variant a: K4 and the coil drivers switching with the output open).
+72 h, 270 cycles, 259,200 readings, none failed, no restarts, no controller resets. TMP275
+23.9–26.8 °C. The first 2 s of each dwell are dropped. Data, figures and script:
+[`calibration/2026-10-05_ratio/`](../calibration/2026-10-05_ratio/).
+
+**Input voltage.** One-cycle anchors on IN (30 V range), running the same schedule, so each range's
+V_in is read under its own load:
+
+| Anchor | TMP275 | V_in (1E-5 / 1E-6 / 1E-7 dwells) |
+|---|---|---|
+| before, 2026-10-05 15:33 UTC | 24.42 °C | 29.005545 / 29.005551 / 29.005570 V |
+| after, 2026-10-09 00:27 UTC | 27.37 °C | 29.004564 / 29.004529 / 29.004478 V |
+
+Between them, V_in follows the supply model from step 1 (γ = −14 ppm/°C, lag 45 min). That model
+predicts the after anchor to within **4.7 ppm over 81 h**; the gap is closed with a linear drift
+term. The after anchor was taken 7 h after the run ended, with the divider isolated meanwhile.
+
+**Results.** k = S / V_in per block, fitted per range as k0 [1 + α (T_d − T0)], T0 = 25.3 °C, with
+T_d the TMP275 through the divider's own first-order lag (scanned).
+
+| Range | k0 | vs nominal | k0 statistical | α (ppm/°C) |
+|---|---|---|---|---|
+| 1E-5 | **9.98131 × 10⁻⁶** | −1,859 ppm | ±2.4 ppm | **+11 ± 4** |
+| 1E-6 | **9.98234 × 10⁻⁷** | −1,765 ppm | ±19 ppm | not resolved (−82 ± 51) |
+| 1E-7 | **9.9646 × 10⁻⁸** | −3,545 ppm | ±297 ppm | not resolved (−480 ± 270) |
+
+![Ratio per ABBA block, fitted k(T), and the isolated-block null](../calibration/2026-10-05_ratio/ratio_blocks.png)
+
+* **The 1E-5 tempco.** ±4 combines the statistical ±2.4, the supply tempco's ±2 ppm/°C (±1.6 here),
+  the supply's lag range (±1.5) and the divider-lag choice (+9 at 90 min against +11 at 180 min,
+  the best fit). As expected, natural cycling does not resolve α on 1E-6 and 1E-7.
+* **The supply model's effect on k0** is ±0.6 ppm (γ) and ±1.2 ppm (its lag): small against the
+  statistics.
+* **Null (a), isolated ABBA: −0.3 ± 0.8 nV** over 270 blocks. Relay switching with the output open
+  puts nothing on OUT.
+* **Range ratios, block by block in the same cycle** (V_in cancels apart from its small load
+  difference): k₅/k₆ is −96.6 ± 26.9 ppm vs nominal, against −94.0 ppm from the k0 values; k₆/k₇ is
+  +1,799 ± 273 ppm, against +1,786 ppm. They agree.
+
+![Ratio against lagged TMP275 per range](../calibration/2026-10-05_ratio/ratio_vs_temperature.png)
+
+**R_L consistency: open.** With R_total from step 2, R_L,i = k0_i × R_total,i:
+
+| Range | R_total (step 2) | R_L |
+|---|---|---|
+| 1E-5 | 100,034.0 Ω | 0.99847 Ω |
+| 1E-6 | 999,710.2 Ω | 0.99795 Ω (−523 ppm vs 1E-5, ±19 statistical) |
+| 1E-7 | 10,007,523 Ω | 0.99721 Ω (−1,265 ppm, ±297) |
+
+All three are within the 1 Ω part's 1 % tolerance, but they do not agree with each other at their
+statistical uncertainty. Leakage across a high leg cannot cause this: it raises k and lowers the
+measured R_total by the same fraction, so it cancels in the product. What remains is the meter:
+
+* the 3478A's accuracy on its 300 kΩ, 3 MΩ and 30 MΩ ohms ranges relative to each other (step 2); or
+* the linearity of its 30 mV range between a 290 µV and a 29 µV or 2.9 µV signal (this step).
+
+Which one, and whether the spread is within the meter's specification, is not yet settled. Until it
+is, the k0 values carry an uncertainty from the meter at the level of this spread.
+
+**Unbounded here,** as planned: the meter's 30 V-to-30 mV range gain, which enters k0 directly, and
+its 30 V input-attenuator tempco.
 
 ### Stored records
 

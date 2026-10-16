@@ -4,7 +4,7 @@ A programmable precision attenuator for nanovolt-to-microvolt experiments: it di
 bench power supply down by **passive resistive division**, read by an external precision DMM. Three
 ratios (1e-5, 1e-6, 1e-7), relay-controlled polarity reversal for ABBA modulation, and a
 source-disconnected baseline that opens the source without touching the measurement path.
-Calibration is in progress (see [Status](#status)).
+Measured end to end down to 1.4 nV (see [Status](#status)).
 
 | | |
 |---|---|
@@ -26,8 +26,11 @@ Calibration is in progress (see [Status](#status)).
 Rev A is built and verified: all relay transitions work, and with 10 V applied all three ratios read
 within 0.25 % of nominal, with the ISOLATE reading unchanged by the source. Firmware is 0.2.0.
 
-**Calibration is in progress.** Until it completes, the instrument carries nominal ratios with
-tolerance-sized uncertainties. The method, and each result as it comes in, are in
+**Calibration: measured and accepted, write-back pending.** The three ratios are measured
+(1E-5 to ±2.4 ppm statistical, plus the DMM's range-to-range accuracy), and an end-to-end test
+recovered every injected signal from 1 µV down to **1.39 ± 0.24 nV** at its predicted level, with
+the switching null at −0.03 ± 0.24 nV. Until the records are written, the instrument carries nominal
+ratios with tolerance-sized uncertainties. The method and every result are in
 [docs/calibration.md](docs/calibration.md).
 
 ## Documentation

@@ -12,7 +12,8 @@ calibration/
   YYYY-MM-DD_high-legs/     step 2
   YYYY-MM-DD_null/          step 3
   YYYY-MM-DD_ratio/         step 4
-  YYYY-MM-DD_injection/     step 5
+  YYYY-MM-DD_end-to-end/    step 5, and null (c)
+  YYYY-MM-DD_detection/     step 5: the smallest signal, ~1 nV
   records/                  CAL:REC values written to the instrument
 ```
 

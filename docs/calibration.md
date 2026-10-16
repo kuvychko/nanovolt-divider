@@ -4,17 +4,18 @@ How the divider's three ratios, and their temperature dependence, are measured, 
 the result is written into the instrument. Results are added here as each step completes, so the
 page also serves as a reference for anyone building and calibrating their own.
 
-**Status: in progress.** Until calibration completes, the instrument carries nominal records:
-k0 = 1/(R_H + 1 Ω), no temperature correction, and u_k0 from the part tolerances (10050 / 10050 /
-14142 ppm).
+**Status: measured and accepted; write-back pending.** Steps 1–5 are complete. The end-to-end
+injection recovered every signal from 1 µV down to **1.39 ± 0.24 nV** at its predicted level. Until the
+records are written, the instrument carries nominal ones: k0 = 1/(R_H + 1 Ω), no temperature
+correction, and u_k0 from the part tolerances (10050 / 10050 / 14142 ppm).
 
 | Step | What it yields | Status |
 |---|---|---|
 | 1. [Supply characterisation](#1-supply-characterisation) | Supply tempco (as read by the meter), lag and drift; the residual the ratio run inherits | **Done** 2026-10-03, [result](#supply-characterisation-2026-09-27--10-03) |
 | 2. [High legs by resistance](#2-high-legs-by-resistance) | R_total per range; the R_L consistency check | **Done** 2026-10-04, [result](#high-legs-by-resistance-2026-10-04) |
-| 3. [Null tests](#3-null-tests) | Any signal produced by switching alone | (b) **done** 2026-10-05, [result](#null-test-b-input-shorted-2026-10-04--05); (a) **done** inside the ratio run, [result](#ratio-run-2026-10-05--08); (c) optional, not yet run |
-| 4. [Ratio run](#4-ratio-run) | k0 and α per range | **Done** 2026-10-08, [result](#ratio-run-2026-10-05--08); R_L check open |
-| 5. [End-to-end injection](#5-end-to-end-injection) | Acceptance: known nanovolt signals recovered | Pending |
+| 3. [Null tests](#3-null-tests) | Any signal produced by switching alone | (b) **done** 2026-10-05, [result](#null-test-b-input-shorted-2026-10-04--05); (a) **done** inside the ratio, end-to-end and detection runs, [result](#detection-limit-2026-10-11--16); (c) **done** 2026-10-11: this supply is not a zero source, [result](#end-to-end-injection-and-null-c-2026-10-09--11) |
+| 4. [Ratio run](#4-ratio-run) | k0 and α per range | **Done** 2026-10-08, [result](#ratio-run-2026-10-05--08); R_L check within or near the meter's specification |
+| 5. [End-to-end injection](#5-end-to-end-injection) | Acceptance: known nanovolt signals recovered | **Done** 2026-10-16: [ladder](#end-to-end-injection-and-null-c-2026-10-09--11) from 1 µV to 10 nV, and [1.39 nV](#detection-limit-2026-10-11--16) at 5.9σ |
 | [Write-back](#write-back) | Records stored in the instrument | Pending |
 
 ## Equipment
@@ -56,9 +57,10 @@ k_i(T) = k0_i · [1 + α_i (T − T0) + β_i (T − T0)²]        valid for Tmin
   thermal EMF of K4, K5 or the range-relay contacts is in series with R_H and reaches the output
   divided by ~1/k: at 1E-5, a 1 µV contact EMF becomes 10 pV. Switching the supply's own output
   relay would add an EMF that switches in step with the signal.
-* **60 s dwells, first 2 s dropped.** With this meter, the Allan deviation times √τ is flat below
-  about 30 s, so 60 s dwells lose nothing per unit time and keep ABBA's linear-drift assumption
-  honest. The sample straddling a switch is discarded, and so is the next.
+* **60 s dwells at 1 Hz, first 2 s dropped,** for steps 1–4 and the end-to-end ladder. The sample
+  straddling a switch is discarded, and so is the next. This is not the quietest choice: the
+  detection run found 15 s dwells read back-to-back about 1.8× lower in noise per unit time
+  ([result](#detection-limit-2026-10-11--16)). Use them for new runs.
 * **Fixed meter ranges** for a whole run, and **UTC timestamps** throughout. `SYST:TIME` is set on the
   divider at every connect, and `SYST:BOOT:COUNT?` is checked every 10 s.
 * **The supply stays on between steps.** After switch-on its output settles over about a day; turning
@@ -141,8 +143,19 @@ modelled if present.
 
 ### 5. End-to-end injection
 
-With the calibrated factors stored, inject known signals of 10–100 nV through the divider and recover
-them by the same ABBA method. This tests the divider at its actual job.
+Inject known signals through the divider and recover them by the same ABBA method. This tests the
+divider at its actual job. The meter stays on OUT and the supply on IN, so nothing is moved:
+
+* **A ladder.** The ratio run's schedule (one ABBA block per range plus an isolated block, 60 s dwells)
+  at 1 V and at 0.1 V for 24 h each. 1E-5 is the in-run reference; each smaller range is predicted as
+  S₅ × k_i/k₅. The supply's actual output and the meter's gain cancel, so what is tested is the ratios
+  and the meter's 30 mV linearity down to ~10 nV.
+* **The smallest signal.** One low setpoint, for days, with most of the time on 1E-7 and an equal share
+  on isolated blocks as the hardware null. Here: 15 mV (1E-7 ≈ 1.3 nV), 120 h, 15 s dwells sampled as
+  fast as the meter allows. The dwell length comes from a zero-signal run: cut into pseudo-blocks of
+  any length, it gives the noise per unit time for each choice (see the result).
+
+Null (c) is the ladder's schedule at a 0 V setpoint.
 
 ## Uncertainty
 
@@ -164,9 +177,12 @@ separately:
 | Lag / hysteresis (warming vs cooling fits) | systematic | Separate fits on warming and cooling segments. |
 | TMP275 quantisation (0.0625 °C) | systematic | Its effect on the fitted α. |
 | Switching bias | systematic | Step 3. |
-| **Meter range-to-range gain, 30 V vs 30 mV** | **unbounded here** | Enters k0 directly, at the meter's accuracy-spec level (hundreds of ppm). Only a second meter or a reference can close it. |
+| **Meter range-to-range gain, 30 V vs 30 mV** | **unbounded here** | Enters k0 directly. For the 3478A, if it is within its 1-year specification: ±(0.007 % + 4 counts) on 30 V and ±0.035 % of reading on 30 mV (its 40-count offset term cancels in ABBA), about ±430 ppm worst case. Only a second meter or a reference can close it. |
 | Meter input-attenuator tempco (30 V range only) | unbounded here | Does not cancel between steps 1 and 4. A few ppm/°C at most. |
 | Sensor-to-leg gain mismatch (high legs off the island) | unbounded here | The range-ratio temperature dependence constrains it. |
+
+Meter figures are from the HP 3478A Operating Manual (part 03478-90009), Table 4-3. They bound the
+meter only if it is within calibration; this one's calibration date is not known.
 
 **Realistic outcome.** k0 is limited by the meter's range-to-range accuracy rather than by statistics,
 except perhaps on 1E-7. α resolves on 1E-5 (a few ppm/°C). On 1E-6 and 1E-7 the natural temperature
@@ -423,11 +439,97 @@ measured R_total by the same fraction, so it cancels in the product. What remain
 * the 3478A's accuracy on its 300 kΩ, 3 MΩ and 30 MΩ ohms ranges relative to each other (step 2); or
 * the linearity of its 30 mV range between a 290 µV and a 29 µV or 2.9 µV signal (this step).
 
-Which one, and whether the spread is within the meter's specification, is not yet settled. Until it
-is, the k0 values carry an uncertainty from the meter at the level of this spread.
+**Against the meter's specification** (1-year, Table 4-3 of its manual; 2-wire adds 0.0016 % on 3 MΩ and
+0.0083 % on 30 MΩ), the worst-case relative error between two ohms ranges is ±376 ppm for 3 MΩ vs
+300 kΩ and ±1,063 ppm for 30 MΩ vs 300 kΩ. 1E-7's −1,265 ± 297 ppm is within that. 1E-6's −523 ± 19 ppm
+exceeds it by about 150 ppm. The 30 mV range's linearity is not specified separately, and the
+end-to-end ladder (below) tests the 1E-6/1E-5 ratio only to ±1,300 ppm, so it cannot separate the two
+candidates. The likeliest reading is a meter a little outside its ohms specification, or one whose
+calibration has aged. A single meter cannot settle it.
+
+The R_L check therefore does not reveal a fault in the divider. The k0 values carry an uncertainty from the meter at
+the level of this spread until a second meter or a reference closes it.
 
 **Unbounded here,** as planned: the meter's 30 V-to-30 mV range gain, which enters k0 directly, and
 its 30 V input-attenuator tempco.
+
+### End-to-end injection and null (c), 2026-10-09 – 11
+
+**Conditions.** Supply CH1 into NORMAL IN; HP 3478A on OUT, 30 mV range, 5½ digits, autozero on,
+1 Hz. The ratio run's 16-minute cycle (ABBA on each range, then an isolated ABBA block). Three runs
+back to back with nothing moved: 1 V for 24 h, 0.1 V for 24 h, 0 V for 8 h. 201,600 readings, none
+failed. TMP275 21.3–27.3 °C. First 2 s of each dwell dropped. Data, figure and script:
+[`calibration/2026-10-09_end-to-end/`](../calibration/2026-10-09_end-to-end/).
+
+Each range is predicted from the same run's 1E-5 blocks as S₅ × k_i/k₅, with k0 from the ratio run:
+
+| Setpoint | Delivered (S₅/k₅) | 1E-6: measured / predicted | 1E-7: measured / predicted | Null (a) |
+|---|---|---|---|---|
+| 1 V | 999.69 ± 0.12 mV | 998.99 ± 1.27 / 997.93 nV (+0.8σ) | 99.56 ± 1.44 / 99.62 nV (−0.0σ) | −1.53 ± 1.36 nV |
+| 0.1 V | 99.80 ± 0.13 mV | 100.02 ± 1.39 / 99.62 nV (+0.3σ) | 9.56 ± 1.07 / 9.94 nV (−0.4σ) | −1.18 ± 1.47 nV |
+| 0 V | **−4.25 ± 0.24 mV** | −2.03 ± 1.86 / −4.24 nV (+1.2σ) | −0.58 ± 2.30 / −0.42 nV (−0.1σ) | −3.38 ± 2.29 nV |
+
+![Recovered minus predicted, per range and setpoint](../calibration/2026-10-09_end-to-end/end_to_end_residuals.png)
+
+* **Every range recovers its prediction**, from 998 nV down to 9.9 nV, within 1.2σ.
+* **Null (c): this supply is not a zero source.** At its 0 V setpoint it delivers −4.25 ± 0.24 mV.
+  The divider passes that correctly: 1E-6 and 1E-7 read what the 1E-5 blocks predict. A true zero at
+  IN is what null (b), the copper link, provides.
+* **The supply near zero.** Measured the same way: 1 V → 999.69 mV, 0.1 V → 99.80 mV, 10 mV →
+  6.2–7.2 mV, 15 mV → 13.1–13.6 mV, 0 V → −4.25 mV. Its readback and display round to 10 mV. At low
+  setpoints, measure what is delivered; the in-run 1E-5 blocks do that automatically.
+* **Null (a), pooled over the three runs:** −1.7 ± 0.9 nV, not significant. See the detection run below
+  for a much tighter value.
+
+### Detection limit, 2026-10-11 – 16
+
+**Conditions.** As above, at a 15 mV setpoint (delivering 13.46 ± 0.05 mV). Each 10-minute cycle is
+ABBA blocks on 1E-7, null, 1E-7, null, 1E-5, 1E-7, null, 1E-7, null, 1E-6: 40 % of the time on the
+target, 40 % on the isolated-block null, 10 % each on the 1E-5 reference and a 1E-6 middle rung. 15 s
+dwells, the meter read back-to-back (2.34 readings/s). 123.2 h, 720 cycles, 1,038,511 readings, none
+failed, no controller resets. TMP275 21.0–27.1 °C. First 2 s of each dwell dropped. Data, figures and
+script: [`calibration/2026-10-11_detection/`](../calibration/2026-10-11_detection/).
+
+| | Blocks | Measured | Predicted | Residual | From zero |
+|---|---|---|---|---|---|
+| 1E-5 (reference) | 720 | 134.37 ± 0.47 nV | — | — | — |
+| 1E-6 | 720 | 12.98 ± 0.49 nV | 13.44 nV | −0.9σ | 26σ |
+| **1E-7** | **2,880** | **1.394 ± 0.235 nV** | **1.341 nV** | **+0.2σ** | **5.9σ** |
+| Null (isolated blocks) | 2,880 | −0.030 ± 0.237 nV | 0 | −0.1σ | — |
+| 1E-7 − null | | 1.42 ± 0.33 nV | | | 4.3σ |
+
+![Running means of the 1E-7 target and the null](../calibration/2026-10-11_detection/detection_running_mean.png)
+
+**The divider delivers a 1.3 nV signal at its predicted level, and switching it puts nothing on OUT
+to ±0.24 nV.** The null is the same ABBA switching as the target, coil pulses included, with the
+output open, measured over the same five days.
+
+**The error bars** are block scatter / √n, 12.6 nV per block. Nothing indicates they are optimistic:
+the block series has no lag-1 autocorrelation (|r| ≤ 0.012), 12-hour bins scatter as the bars predict
+(χ² 7.8 / 10 for the target, 14.1 / 10 for the null), split halves agree, neither target nor null
+depends on temperature (−0.12 ± 0.19 nV/°C each, over 6 °C), and dropping 1 or 3 s instead of 2 moves
+the target by at most 0.05 nV.
+
+**Every injected signal,** with the ladder above:
+
+![Every injected signal against its prediction](../calibration/2026-10-11_detection/ladder_residuals.png)
+
+**Dwell length and sampling.** The calibration steps used 60 s dwells at 1 Hz. A zero-signal run (null
+b), cut into pseudo-ABBA blocks of any length, shows the noise per unit time is 124 nV·√s at 5–10 s
+dwells, 132 at 15 s and 187 at 60 s: beyond ~15 s the meter's slow wander adds to the white noise.
+Reading back-to-back adds the conversions that 1 Hz sampling discards. A 6-hour pilot measured the
+result, and also tried the meter's autozero off:
+
+| Autozero | Readings/s | Block scatter | Noise per unit time |
+|---|---|---|---|
+| on (two 2 h runs) | 2.34 | 12.8–13.4 nV | 99–104 nV·√s |
+| off (2 h) | 4.44 | 269 nV | 2,086 nV·√s |
+
+![Noise per unit time](../calibration/2026-10-11_detection/noise_per_time.png)
+
+So for the smallest signals: **15 s dwells, read as fast as the meter allows, autozero on.** That is
+about 1.8× lower noise per unit time than 60 s at 1 Hz. Polarity reversal every 15 s does not replace
+the meter's autozero.
 
 ### Stored records
 

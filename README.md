@@ -26,12 +26,11 @@ Measured end to end down to 1.4 nV (see [Status](#status)).
 Rev A is built and verified: all relay transitions work, and with 10 V applied all three ratios read
 within 0.25 % of nominal, with the ISOLATE reading unchanged by the source. Firmware is 0.2.0.
 
-**Calibration: measured and accepted, write-back pending.** The three ratios are measured
-(1E-5 to ±2.4 ppm statistical, plus the DMM's range-to-range accuracy), and an end-to-end test
-recovered every injected signal from 1 µV down to **1.39 ± 0.24 nV** at its predicted level, with
-the switching null at −0.03 ± 0.24 nV. Until the records are written, the instrument carries nominal
-ratios with tolerance-sized uncertainties. The method and every result are in
-[docs/calibration.md](docs/calibration.md).
+**Calibration: complete.** The three ratios are measured (1E-5 to ±2.7 ppm, plus the DMM's
+range-to-range accuracy), and an end-to-end test recovered every injected signal from 1 µV down to
+**1.39 ± 0.24 nV** at its predicted level, with the switching null at −0.03 ± 0.24 nV. The records
+were written to the instrument on 2026-10-16 and read back identical. The method, every result and
+the stored records are in [docs/calibration.md](docs/calibration.md).
 
 ## Documentation
 

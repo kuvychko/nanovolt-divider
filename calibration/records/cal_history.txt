@@ -1,0 +1,20 @@
+# CAL:SAVE utc=2026-09-27T00:59:27Z boot=1 uptime_ms=38660
+range=1E-5 k0=9.999900001000e-06 t0=25.0000 alpha=0.000000e+00 beta=0.000000e+00 u_k0_ppm=10050.000 u_alpha_ppm=0.0000 tmin=-40.00 tmax=125.00 date="-" source="nominal"
+range=1E-6 k0=1.000012300000e-06 t0=23.5000 alpha=-1.500000e-05 beta=2.000000e-07 u_k0_ppm=50.000 u_alpha_ppm=3.0000 tmin=21.00 tmax=26.00 date="2026-09-26" source="FIRMWARE TEST, not a calibration"
+range=1E-7 k0=9.999999000000e-08 t0=25.0000 alpha=0.000000e+00 beta=0.000000e+00 u_k0_ppm=14142.000 u_alpha_ppm=0.0000 tmin=-40.00 tmax=125.00 date="-" source="nominal"
+# CAL:SAVE utc=2026-09-27T01:00:02Z boot=2 uptime_ms=3062
+range=1E-5 k0=9.999900001000e-06 t0=25.0000 alpha=0.000000e+00 beta=0.000000e+00 u_k0_ppm=10050.000 u_alpha_ppm=0.0000 tmin=-40.00 tmax=125.00 date="-" source="nominal"
+range=1E-6 k0=1.000012300000e-06 t0=23.5000 alpha=-1.500000e-05 beta=2.000000e-07 u_k0_ppm=50.000 u_alpha_ppm=3.0000 tmin=21.00 tmax=26.00 date="2026-09-26" source="FIRMWARE TEST, not a calibration"
+range=1E-7 k0=9.999999000000e-08 t0=25.0000 alpha=0.000000e+00 beta=0.000000e+00 u_k0_ppm=14142.000 u_alpha_ppm=0.0000 tmin=-40.00 tmax=125.00 date="-" source="nominal"
+# CAL:SAVE utc=2026-09-27T01:00:35Z boot=3 uptime_ms=3064
+range=1E-5 k0=9.999900001000e-06 t0=25.0000 alpha=0.000000e+00 beta=0.000000e+00 u_k0_ppm=10050.000 u_alpha_ppm=0.0000 tmin=-40.00 tmax=125.00 date="-" source="nominal"
+range=1E-6 k0=1.000012300000e-06 t0=23.5000 alpha=-1.500000e-05 beta=2.000000e-07 u_k0_ppm=50.000 u_alpha_ppm=3.0000 tmin=21.00 tmax=26.00 date="2026-09-26" source="FIRMWARE TEST, not a calibration"
+range=1E-7 k0=9.999999000000e-08 t0=25.0000 alpha=0.000000e+00 beta=0.000000e+00 u_k0_ppm=14142.000 u_alpha_ppm=0.0000 tmin=-40.00 tmax=125.00 date="-" source="nominal"
+# CAL:SAVE utc=2026-09-27T01:01:00Z boot=4 uptime_ms=12841
+range=1E-5 k0=9.999900001000e-06 t0=25.0000 alpha=0.000000e+00 beta=0.000000e+00 u_k0_ppm=10050.000 u_alpha_ppm=0.0000 tmin=-40.00 tmax=125.00 date="-" source="nominal"
+range=1E-6 k0=9.999990000010e-07 t0=25.0000 alpha=0.000000e+00 beta=0.000000e+00 u_k0_ppm=10050.000 u_alpha_ppm=0.0000 tmin=-40.00 tmax=125.00 date="-" source="nominal"
+range=1E-7 k0=9.999999000000e-08 t0=25.0000 alpha=0.000000e+00 beta=0.000000e+00 u_k0_ppm=14142.000 u_alpha_ppm=0.0000 tmin=-40.00 tmax=125.00 date="-" source="nominal"
+# CAL:SAVE utc=2026-10-16T23:43:04Z boot=20 uptime_ms=982126048
+range=1E-5 k0=9.981310305817e-06 t0=25.3000 alpha=1.106000e-05 beta=0.000000e+00 u_k0_ppm=2.740 u_alpha_ppm=4.0000 tmin=23.93 tmax=26.82 date="2026-10-16" source="ratio run 2026-10-05/08 at 29 V, u excl. 3478A range gain"
+range=1E-6 k0=9.982338738050e-07 t0=25.3000 alpha=1.100000e-05 beta=0.000000e+00 u_k0_ppm=19.420 u_alpha_ppm=7.6000 tmin=23.93 tmax=26.82 date="2026-10-16" source="ratio run 2026-10-05/08 at 29 V, u excl. 3478A range gain"
+range=1E-7 k0=9.964552424139e-08 t0=25.3000 alpha=1.100000e-05 beta=0.000000e+00 u_k0_ppm=296.700 u_alpha_ppm=29.3000 tmin=23.93 tmax=26.82 date="2026-10-16" source="ratio run 2026-10-05/08 at 29 V, u excl. 3478A range gain"

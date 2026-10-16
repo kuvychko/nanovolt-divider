@@ -4,10 +4,11 @@ How the divider's three ratios, and their temperature dependence, are measured, 
 the result is written into the instrument. Results are added here as each step completes, so the
 page also serves as a reference for anyone building and calibrating their own.
 
-**Status: measured and accepted; write-back pending.** Steps 1–5 are complete. The end-to-end
-injection recovered every signal from 1 µV down to **1.39 ± 0.24 nV** at its predicted level. Until the
-records are written, the instrument carries nominal ones: k0 = 1/(R_H + 1 Ω), no temperature
-correction, and u_k0 from the part tolerances (10050 / 10050 / 14142 ppm).
+**Status: calibrated.** Steps 1–5 are complete, and the records were written to the instrument on
+2026-10-16 (firmware 0.2.0) and read back identical: [stored records](#stored-records). The
+end-to-end injection recovered every signal from 1 µV down to **1.39 ± 0.24 nV** at its predicted
+level. Before the write-back the instrument carried nominal records: k0 = 1/(R_H + 1 Ω), no
+temperature correction, and u_k0 from the part tolerances (10050 / 10050 / 14142 ppm).
 
 | Step | What it yields | Status |
 |---|---|---|
@@ -16,7 +17,7 @@ correction, and u_k0 from the part tolerances (10050 / 10050 / 14142 ppm).
 | 3. [Null tests](#3-null-tests) | Any signal produced by switching alone | (b) **done** 2026-10-05, [result](#null-test-b-input-shorted-2026-10-04--05); (a) **done** inside the ratio, end-to-end and detection runs, [result](#detection-limit-2026-10-11--16); (c) **done** 2026-10-11: this supply is not a zero source, [result](#end-to-end-injection-and-null-c-2026-10-09--11) |
 | 4. [Ratio run](#4-ratio-run) | k0 and α per range | **Done** 2026-10-08, [result](#ratio-run-2026-10-05--08); R_L check within or near the meter's specification |
 | 5. [End-to-end injection](#5-end-to-end-injection) | Acceptance: known nanovolt signals recovered | **Done** 2026-10-16: [ladder](#end-to-end-injection-and-null-c-2026-10-09--11) from 1 µV to 10 nV, and [1.39 nV](#detection-limit-2026-10-11--16) at 5.9σ |
-| [Write-back](#write-back) | Records stored in the instrument | Pending |
+| [Write-back](#write-back) | Records stored in the instrument | **Done** 2026-10-16, [stored records](#stored-records) |
 
 ## Equipment
 
@@ -533,4 +534,44 @@ the meter's autozero.
 
 ### Stored records
 
-The records written to the instrument, with date and firmware version, once write-back happens.
+**2026-10-16, firmware 0.2.0.** Written with `CAL:REC`, then `CAL:SAVE` and `CAL:EXP`. Each record
+was read back before the save and again after it, and both readbacks matched what was sent exactly.
+`CAL:FACT?` at T0 returned k0. No command left an error in the queue.
+
+| Range | k0 | vs nominal | u_k0 | α | u_α | T0 | [Tmin, Tmax] |
+|---|---|---|---|---|---|---|---|
+| 1E-5 | 9.981310305817 × 10⁻⁶ | −1,859 ppm | 2.74 ppm | +11.06 ppm/°C | 4.0 ppm/°C | 25.3 °C | 23.93 – 26.82 °C |
+| 1E-6 | 9.982338738050 × 10⁻⁷ | −1,765 ppm | 19.42 ppm | +11.0 ppm/°C | 7.6 ppm/°C | 25.3 °C | 23.93 – 26.82 °C |
+| 1E-7 | 9.964552424139 × 10⁻⁸ | −3,545 ppm | 296.7 ppm | +11.0 ppm/°C | 29.3 ppm/°C | 25.3 °C | 23.93 – 26.82 °C |
+
+β = 0 on all three. Every record carries `source = "ratio run 2026-10-05/08 at 29 V, u excl. 3478A range gain"`.
+
+How each field was chosen:
+
+* **k0** is the [ratio run](#ratio-run-2026-10-05--08) fit at T0, at full precision.
+* **u_k0** combines the ratio run's statistical error with the supply model's two terms (tempco and
+  lag) in quadrature: 2.36, 0.60 and 1.24 ppm on 1E-5. It **excludes the meter's 30 V-to-30 mV range
+  gain**, about ±430 ppm worst case and only if the meter is within its specification (see
+  [Uncertainty](#uncertainty)). That term is the same for all three ranges, so it cancels in any
+  measurement referred to another range or to an in-run reference, as every result on this page is.
+  For an absolute k, add it. The `source` field says so, so the instrument carries the caveat.
+* **α on 1E-5** is measured: +11 ± 4 ppm/°C, the ratio run's result.
+* **α on 1E-6 and 1E-7** is inferred, because the ratio run does not resolve it. With
+  α_i = α_L − α_H,i (see [What is calibrated](#what-is-calibrated)), the 1E-5 result and its 5 ppm/°C high leg give
+  α_L. Each high leg's specified tempco then gives α_i: 10 ppm/°C for the 1 MΩ, and 50 ppm/°C taken for
+  the 10 MΩ thick film, the larger of the figures distributors list. Each bound is treated as
+  rectangular. The ratio run's own fits, −82 ± 51 and −480 ± 270 ppm/°C, sit 1.8σ below these
+  values. That is not significant, but both point the same way, and a run with a deliberate
+  temperature step could settle it.
+* **[Tmin, Tmax]** is the TMP275 span the ratio fit covered, 23.94 – 26.81 °C, rounded outward. The
+  end-to-end and detection runs covered 21 – 27 °C, but they test the ratios between ranges, not k0.
+  Outside the span `CAL:FACT?` still applies k(T), with u growing as u_α·|T − T0|, and reports
+  `in_span=0`.
+
+Files, in [calibration/records/](../calibration/records/):
+
+* `cal.txt`: the instrument's own `CAL:EXP` export, read back off its microSD card.
+* `cal_history.txt`: its append-only `CAL:SAVE` history. The four entries from 2026-09-27 are
+  firmware bring-up: a deliberate test record on 1E-6, then nominal again.
+* `2026-10-16_writeback.json`: the records as read before the write, as sent, and as read back
+  after the save.

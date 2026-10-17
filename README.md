@@ -24,7 +24,7 @@ Measured end to end down to 1.4 nV (see [Status](#status)).
 ## Status
 
 Rev A is built and verified: all relay transitions work, and with 10 V applied all three ratios read
-within 0.25 % of nominal, with the ISOLATE reading unchanged by the source. Firmware is 0.2.0.
+within 0.25 % of nominal, with the ISOLATE reading unchanged by the source. Firmware is 0.2.1.
 
 **Calibration: complete.** The three ratios are measured (1E-5 to ±2.7 ppm, plus the DMM's
 range-to-range accuracy), and an end-to-end test recovered every injected signal from 1 µV down to

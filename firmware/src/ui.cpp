@@ -218,19 +218,27 @@ void drawReadout() {
   else formatFactor(b, sizeof(b), e.k, e.u_ppm);
   text(readout, b, 6, 42, C_TEXT, C_BG, &fonts::Font4, middle_left);
   if (!isnan(e.k)) {
-    // Amber outside the record's measured temperature span (or with no temperature).
     formatUncertainty(b, sizeof(b), e.u_ppm);
-    text(readout, b, W - 6, 42, e.in_span ? C_DIM : C_WARN, C_BG, &fonts::Font2, middle_right);
+    text(readout, b, W - 6, 42, C_DIM, C_BG, &fonts::Font2, middle_right);
   }
 
+  // The TMP275 monitors the 1 ohm island. It corrects k only if a record carries a tempco; what
+  // it always does is flag operation outside the span the record was validated over.
+  const bool ranged = s.range != instrument::RANGE_NONE;
+  const bool outside = ranged && !e.in_span;
   if (isnan(t)) snprintf(b, sizeof(b), "T  ---");
   else snprintf(b, sizeof(b), "T  %.2f C", t);
-  text(readout, b, 6, 70, C_TEXT, C_BG, &fonts::Font2, middle_left);
-  if (s.range != instrument::RANGE_NONE) {
+  text(readout, b, 6, 70, outside ? C_WARN : C_TEXT, C_BG, &fonts::Font2, middle_left);
+  if (ranged) {
     const cal::RangeCal &c = cal::get(s.range);
-    snprintf(b, sizeof(b), "Tref %.1f  a %+.1f ppm/C%s", c.t0, c.alpha * 1e6,
-             cal::dirty() ? "  UNSAVED" : "");
-    text(readout, b, W - 6, 70, cal::dirty() ? C_WARN : C_DIM, C_BG, &fonts::Font2, middle_right);
+    if (cal::dirty()) snprintf(b, sizeof(b), "cal UNSAVED");
+    else {
+      char tc[24] = "";
+      if (c.alpha != 0 || c.beta != 0) snprintf(tc, sizeof(tc), "a %+.1f ppm/C  ", c.alpha * 1e6);
+      snprintf(b, sizeof(b), "%s%s %.1f-%.1f C", tc, outside ? "outside" : "span", c.tmin, c.tmax);
+    }
+    text(readout, b, W - 6, 70, cal::dirty() || outside ? C_WARN : C_DIM, C_BG, &fonts::Font2,
+         middle_right);
   }
   readout.pushSprite(0, INFO_Y);
   g_drawn_dirty = cal::dirty();

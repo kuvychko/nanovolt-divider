@@ -46,13 +46,15 @@ The precision signal path is kept as passive and electrically quiet as practical
    - a physically meaningful zero that does not perturb the low-voltage measurement path
 
 5. **Temperature monitoring**
-   - one TMP275 adjacent to the 1 Ω resistor
-   - drives the stored temperature correction of the ratio
-   - the correction depends on the *change* in temperature since calibration, so short-term repeatability
-     (12-bit, 0.0625 °C) matters and absolute accuracy (±0.5 °C) does not
+   - one TMP275 adjacent to the 1 Ω resistor, 12-bit (0.0625 °C)
+   - reports the temperature with every state query, so a host can log it beside its data
+   - flags use outside the temperature span a range's calibration was validated over
+   - can drive a stored temperature correction of the ratio. With the parts used, that correction is
+     below what a natural-temperature calibration can attribute to the divider, so this unit carries
+     none ([calibration.md](calibration.md#temperature-monitored-not-corrected))
 
 6. **Stored calibration**
-   - per range: calibrated ratio, reference temperature, temperature coefficients, uncertainties, valid temperature span
+   - per range: calibrated ratio, uncertainty, valid temperature span, and optional temperature coefficients
    - stored in nonvolatile memory, backed up and audit-logged on microSD
 
 7. **Local user interface**
@@ -264,7 +266,8 @@ u(T) = sqrt(u_k0² + (u_α (T − T0))²)          (ppm, k = 1)
 ```
 
 with T the TMP275 reading on the 1 Ω island, valid over the span [Tmin, Tmax] it was measured over,
-plus a date and a provenance string. The instrument answers "the ratio at this board temperature"
+plus a date and a provenance string. α and β are optional: with both 0, k is the constant k0 and u_k0
+allows for the tempco over the span, which is how this unit is calibrated. The instrument answers "the ratio at this board temperature"
 directly (`CAL:FACT? <range>,<T>` → k, uncertainty, in-span flag). Every saved calibration is
 appended to an audit trail on the SD card. Before calibration the records are nominal, with
 tolerance-sized uncertainties. How the records are measured is in [calibration.md](calibration.md).

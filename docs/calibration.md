@@ -5,7 +5,9 @@ the result is written into the instrument. Results are added here as each step c
 page also serves as a reference for anyone building and calibrating their own.
 
 **Status: calibrated.** Steps 1–5 are complete, and the records were written to the instrument on
-2026-10-16 (firmware 0.2.0) and read back identical: [stored records](#stored-records). The
+2026-10-16 and read back identical: [stored records](#stored-records). They carry no temperature
+correction; the TMP275 checks that the instrument is used inside the 21.0–27.3 °C span they were
+validated over ([why](#temperature-monitored-not-corrected)). The
 end-to-end injection recovered every signal from 1 µV down to **1.39 ± 0.24 nV** at its predicted
 level. Before the write-back the instrument carried nominal records: k0 = 1/(R_H + 1 Ω), no
 temperature correction, and u_k0 from the part tolerances (10050 / 10050 / 14142 ppm).
@@ -46,6 +48,9 @@ k_i(T) = k0_i · [1 + α_i (T − T0) + β_i (T − T0)²]        valid for Tmin
   **α_i = α_L − α_H,i**. α_L (the 1 Ω) is common to all three ranges; α_H,i belongs to each high leg.
 * **β** stays 0 unless the observed span resolves curvature. **[Tmin, Tmax]** is the TMP275 span
   actually observed. Outside it, `CAL:FACT?` still answers but reports `in_span=0`.
+* **α and β are optional.** A record with both at 0 is a constant k0, with the possible tempco
+  carried in u_k0 over the span instead. This unit's records are of that kind; see
+  [Temperature: monitored, not corrected](#temperature-monitored-not-corrected).
 * Stored with each record: `u_k0_ppm` and `u_alpha_ppm` (standard uncertainties, k = 1), a date, and
   a `source` string identifying the calibration.
 
@@ -186,9 +191,42 @@ Meter figures are from the HP 3478A Operating Manual (part 03478-90009), Table 4
 meter only if it is within calibration; this one's calibration date is not known.
 
 **Realistic outcome.** k0 is limited by the meter's range-to-range accuracy rather than by statistics,
-except perhaps on 1E-7. α resolves on 1E-5 (a few ppm/°C). On 1E-6 and 1E-7 the natural temperature
-swing does not resolve α, and it stays at the part tolerances; within a few °C of T0 that
-contributes less than those ranges' statistical limits.
+except perhaps on 1E-7. On 1E-6 and 1E-7 the natural temperature swing does not resolve α, and on
+1E-5 what it resolves cannot be separated from the meter's own tempcos. So the tempco is carried as
+an uncertainty over the room's span rather than corrected; over 21–27 °C it adds tens of ppm, still
+well below the meter's range-gain term.
+
+### Temperature: monitored, not corrected
+
+The firmware can correct k for temperature, but this unit's records set α = β = 0 and carry the
+possible tempco in u_k0 instead. The TMP275 is there to log the temperature with the data and to flag
+use outside the validated span. Why:
+
+* **1E-6 and 1E-7: not resolved.** The ratio run's fits were −82 ± 51 and −480 ± 270 ppm/°C, both
+  within 2σ of zero.
+* **1E-5: seen, but not attributable to the divider.** The ratio run found +11 ± 4 ppm/°C. That ratio
+  is the 3478A's 30 mV range over a supply model measured on its 30 V range, so the meter's tempco on
+  both ranges is folded in, and nothing here separates them. The parts would allow anything within
+  about ±55 ppm/°C (1 Ω ±50, 100 kΩ ±5).
+* **A live correction would use the wrong temperature.** The fit uses the TMP275 delayed by the
+  divider's own thermal lag, about 3 h on 1E-5. Corrected from the live reading during a room swing,
+  the resistors can be 1–2 °C away from what the board reads: an error of 10–20 ppm, as large as the
+  correction.
+* **In volts it is tiny.** 11 ppm/°C on 1E-5 is 3.2 nV/°C at the largest output the divider produces
+  (290 µV from 29 V), under one ABBA block's 13 nV scatter; resolving it took 72 h of averaging. On
+  the smaller ranges and signals it is far below anything measurable.
+* **In ratio work it mostly cancels.** α_L is common to all three ranges, so against an in-run
+  reference only α_H,i − α_H,j remains, bounded by the high legs' specifications.
+
+The allowance in u_k0 is rectangular, with half-width |α|max × 4.3 °C, the farthest the
+[21.0, 27.3] °C span reaches from T0 = 25.3 °C. |α|max is 15 ppm/°C on 1E-5 (the measured 11 + 4),
+30 on 1E-6 and 70 on 1E-7: α_L ≈ 20 from the 1E-5 result, plus each high leg's specified tempco,
+10 ppm/°C for the 1 MΩ and 50 taken for the 10 MΩ thick film, the larger of the figures distributors
+list. As standard uncertainties that is 37, 74 and 174 ppm.
+
+A temperature correction becomes worth storing when it can be measured as the divider's own: with the
+divider in a temperature-controlled enclosure and the meter outside it, so that the meter's tempco
+does not enter, and stepped by several °C rather than following the room.
 
 ## Write-back
 
@@ -534,44 +572,44 @@ the meter's autozero.
 
 ### Stored records
 
-**2026-10-16, firmware 0.2.0.** Written with `CAL:REC`, then `CAL:SAVE` and `CAL:EXP`. Each record
-was read back before the save and again after it, and both readbacks matched what was sent exactly.
-`CAL:FACT?` at T0 returned k0. No command left an error in the queue.
+**Current: 2026-10-17 01:23 UTC, firmware 0.2.1.** Written with `CAL:REC`, then `CAL:SAVE` and
+`CAL:EXP`. Each record was read back before the save and again after it, and both readbacks matched
+what was sent exactly. No command left an error in the queue.
 
-| Range | k0 | vs nominal | u_k0 | α | u_α | T0 | [Tmin, Tmax] |
-|---|---|---|---|---|---|---|---|
-| 1E-5 | 9.981310305817 × 10⁻⁶ | −1,859 ppm | 2.74 ppm | +11.06 ppm/°C | 4.0 ppm/°C | 25.3 °C | 23.93 – 26.82 °C |
-| 1E-6 | 9.982338738050 × 10⁻⁷ | −1,765 ppm | 19.42 ppm | +11.0 ppm/°C | 7.6 ppm/°C | 25.3 °C | 23.93 – 26.82 °C |
-| 1E-7 | 9.964552424139 × 10⁻⁸ | −3,545 ppm | 296.7 ppm | +11.0 ppm/°C | 29.3 ppm/°C | 25.3 °C | 23.93 – 26.82 °C |
+| Range | k0 | vs nominal | u_k0 | α, β | T0 | [Tmin, Tmax] |
+|---|---|---|---|---|---|---|
+| 1E-5 | 9.981310305817 × 10⁻⁶ | −1,859 ppm | 37.34 ppm | 0 | 25.3 °C | 21.0 – 27.3 °C |
+| 1E-6 | 9.982338738050 × 10⁻⁷ | −1,765 ppm | 76.97 ppm | 0 | 25.3 °C | 21.0 – 27.3 °C |
+| 1E-7 | 9.964552424139 × 10⁻⁸ | −3,545 ppm | 343.85 ppm | 0 | 25.3 °C | 21.0 – 27.3 °C |
 
-β = 0 on all three. Every record carries `source = "ratio run 2026-10-05/08 at 29 V, u excl. 3478A range gain"`.
+Every record carries `source = "ratio run 2026-10-05/08, no T corr, u excl. 3478A range gain"`.
 
 How each field was chosen:
 
 * **k0** is the [ratio run](#ratio-run-2026-10-05--08) fit at T0, at full precision.
-* **u_k0** combines the ratio run's statistical error with the supply model's two terms (tempco and
-  lag) in quadrature: 2.36, 0.60 and 1.24 ppm on 1E-5. It **excludes the meter's 30 V-to-30 mV range
-  gain**, about ±430 ppm worst case and only if the meter is within its specification (see
-  [Uncertainty](#uncertainty)). That term is the same for all three ranges, so it cancels in any
-  measurement referred to another range or to an in-run reference, as every result on this page is.
-  For an absolute k, add it. The `source` field says so, so the instrument carries the caveat.
-* **α on 1E-5** is measured: +11 ± 4 ppm/°C, the ratio run's result.
-* **α on 1E-6 and 1E-7** is inferred, because the ratio run does not resolve it. With
-  α_i = α_L − α_H,i (see [What is calibrated](#what-is-calibrated)), the 1E-5 result and its 5 ppm/°C high leg give
-  α_L. Each high leg's specified tempco then gives α_i: 10 ppm/°C for the 1 MΩ, and 50 ppm/°C taken for
-  the 10 MΩ thick film, the larger of the figures distributors list. Each bound is treated as
-  rectangular. The ratio run's own fits, −82 ± 51 and −480 ± 270 ppm/°C, sit 1.8σ below these
-  values. That is not significant, but both point the same way, and a run with a deliberate
-  temperature step could settle it.
-* **[Tmin, Tmax]** is the TMP275 span the ratio fit covered, 23.94 – 26.81 °C, rounded outward. The
-  end-to-end and detection runs covered 21 – 27 °C, but they test the ratios between ranges, not k0.
-  Outside the span `CAL:FACT?` still applies k(T), with u growing as u_α·|T − T0|, and reports
-  `in_span=0`.
+* **u_k0** combines, in quadrature, the ratio run's statistical error and the supply model's two
+  terms (2.74 / 19.42 / 296.70 ppm together) with the tempco allowance over the span (37.24 /
+  74.48 / 173.78 ppm; see [Temperature: monitored, not corrected](#temperature-monitored-not-corrected)).
+  It **excludes the meter's 30 V-to-30 mV range gain**, about ±430 ppm worst case and only if the
+  meter is within its specification (see [Uncertainty](#uncertainty)). That term is the same for all
+  three ranges, so it cancels in any measurement referred to another range or to an in-run reference,
+  as every result on this page is. For an absolute k, add it. The `source` field says so, so the
+  instrument carries the caveat.
+* **[Tmin, Tmax]** is the TMP275 span over the ratio, end-to-end and detection runs. Outside it
+  `CAL:FACT?` reports `in_span=0` and the display shows the temperature in amber.
+
+**Superseded: 2026-10-16 23:43 UTC, firmware 0.2.0.** The first write-back, replaced about two hours
+later. Same k0 and T0, but with a temperature correction: α = +11.06 ± 4.0 ppm/°C on 1E-5, and
++11.0 ppm/°C on 1E-6 and 1E-7, inferred from the 1E-5 result and the part tempcos (±7.6 and
+±29.3 ppm/°C). u_k0 was 2.74 / 19.42 / 296.7 ppm, valid over the ratio fit's span alone,
+23.93 – 26.82 °C. It was replaced for the reasons under
+[Temperature: monitored, not corrected](#temperature-monitored-not-corrected).
 
 Files, in [calibration/records/](../calibration/records/):
 
-* `cal.txt`: the instrument's own `CAL:EXP` export, read back off its microSD card.
-* `cal_history.txt`: its append-only `CAL:SAVE` history. The four entries from 2026-09-27 are
-  firmware bring-up: a deliberate test record on 1E-6, then nominal again.
-* `2026-10-16_writeback.json`: the records as read before the write, as sent, and as read back
-  after the save.
+* `cal.txt`: the instrument's own `CAL:EXP` export of the current records, read back off its microSD
+  card.
+* `cal_history.txt`: its append-only `CAL:SAVE` history, both write-backs included. The four entries
+  from 2026-09-27 are firmware bring-up: a deliberate test record on 1E-6, then nominal again.
+* `2026-10-16_writeback.json` and `2026-10-17_writeback.json`: for each write-back, the records as
+  read before it, as sent, and as read back after the save.

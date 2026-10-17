@@ -18,3 +18,7 @@ range=1E-7 k0=9.999999000000e-08 t0=25.0000 alpha=0.000000e+00 beta=0.000000e+00
 range=1E-5 k0=9.981310305817e-06 t0=25.3000 alpha=1.106000e-05 beta=0.000000e+00 u_k0_ppm=2.740 u_alpha_ppm=4.0000 tmin=23.93 tmax=26.82 date="2026-10-16" source="ratio run 2026-10-05/08 at 29 V, u excl. 3478A range gain"
 range=1E-6 k0=9.982338738050e-07 t0=25.3000 alpha=1.100000e-05 beta=0.000000e+00 u_k0_ppm=19.420 u_alpha_ppm=7.6000 tmin=23.93 tmax=26.82 date="2026-10-16" source="ratio run 2026-10-05/08 at 29 V, u excl. 3478A range gain"
 range=1E-7 k0=9.964552424139e-08 t0=25.3000 alpha=1.100000e-05 beta=0.000000e+00 u_k0_ppm=296.700 u_alpha_ppm=29.3000 tmin=23.93 tmax=26.82 date="2026-10-16" source="ratio run 2026-10-05/08 at 29 V, u excl. 3478A range gain"
+# CAL:SAVE utc=2026-10-17T01:23:27Z boot=21 uptime_ms=2639113
+range=1E-5 k0=9.981310305817e-06 t0=25.3000 alpha=0.000000e+00 beta=0.000000e+00 u_k0_ppm=37.340 u_alpha_ppm=0.0000 tmin=21.00 tmax=27.30 date="2026-10-16" source="ratio run 2026-10-05/08, no T corr, u excl. 3478A range gain"
+range=1E-6 k0=9.982338738050e-07 t0=25.3000 alpha=0.000000e+00 beta=0.000000e+00 u_k0_ppm=76.970 u_alpha_ppm=0.0000 tmin=21.00 tmax=27.30 date="2026-10-16" source="ratio run 2026-10-05/08, no T corr, u excl. 3478A range gain"
+range=1E-7 k0=9.964552424139e-08 t0=25.3000 alpha=0.000000e+00 beta=0.000000e+00 u_k0_ppm=343.850 u_alpha_ppm=0.0000 tmin=21.00 tmax=27.30 date="2026-10-16" source="ratio run 2026-10-05/08, no T corr, u excl. 3478A range gain"

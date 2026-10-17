@@ -17,16 +17,16 @@ Measured end to end down to 1.4 nV (see [Status](#status)).
 | Polarity | K4 reverses the source *upstream* of the high leg, so relay-contact EMFs reach the output divided by ~1/k |
 | Baseline | ISOLATE opens the source at both ends; the 1 Ω, its Kelvin taps and the DMM path are never switched |
 | Switching | Five latching relays, pulsed for 20 ms and never held: no continuous coil power |
-| Temperature | TMP275 on a slotted island next to the 1 Ω |
-| Calibration | Per-range k(T) = k0 [1 + α(T−T0) + β(T−T0)²] with uncertainties, stored in NVS and backed up to microSD |
+| Temperature | TMP275 on a slotted island next to the 1 Ω: monitoring, and a check that the instrument is used inside its calibrated span |
+| Calibration | A calibrated ratio k0 per range with its uncertainty and validated temperature span, stored in NVS and backed up to microSD. The firmware also supports a temperature correction k(T) = k0 [1 + α(T−T0) + β(T−T0)²]; this unit's records carry none ([why](docs/calibration.md#temperature-monitored-not-corrected)) |
 | Control | SCPI over USB serial, and a 2.8" touchscreen (ESP32 "Cheap Yellow Display") |
 
 ## Status
 
 Rev A is built and verified: all relay transitions work, and with 10 V applied all three ratios read
-within 0.25 % of nominal, with the ISOLATE reading unchanged by the source. Firmware is 0.2.1.
+within 0.25 % of nominal, with the ISOLATE reading unchanged by the source. Firmware is 0.2.2.
 
-**Calibration: complete.** The three ratios are measured (1E-5 to ±2.7 ppm, plus the DMM's
+**Calibration: complete.** The three ratios are measured (1E-5 to ±37 ppm over 21–27 °C, plus the DMM's
 range-to-range accuracy), and an end-to-end test recovered every injected signal from 1 µV down to
 **1.39 ± 0.24 nV** at its predicted level, with the switching null at −0.03 ± 0.24 nV. The records
 were written to the instrument on 2026-10-16 and read back identical. The method, every result and

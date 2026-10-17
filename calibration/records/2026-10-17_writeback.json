@@ -1,0 +1,136 @@
+{
+  "utc": "2026-10-17T01:23:27.028140+00:00",
+  "identity": "NVD,Nanovolt Divider Rev A,C89A0FE9BFB4,0.2.1",
+  "before": [
+    {
+      "range": "1E-5",
+      "k0": 9.981310305817e-06,
+      "t0": 25.3,
+      "alpha": 1.106e-05,
+      "beta": 0.0,
+      "u_k0_ppm": 2.74,
+      "u_alpha_ppm": 4.0,
+      "t_min": 23.93,
+      "t_max": 26.82,
+      "date": "2026-10-16",
+      "source": "ratio run 2026-10-05/08 at 29 V, u excl. 3478A range gain",
+      "raw": "9.981310305817e-06,25.3000,1.106000e-05,0.000000e+00,2.740,4.0000,23.93,26.82,\"2026-10-16\",\"ratio run 2026-10-05/08 at 29 V, u excl. 3478A range gain\""
+    },
+    {
+      "range": "1E-6",
+      "k0": 9.98233873805e-07,
+      "t0": 25.3,
+      "alpha": 1.1e-05,
+      "beta": 0.0,
+      "u_k0_ppm": 19.42,
+      "u_alpha_ppm": 7.6,
+      "t_min": 23.93,
+      "t_max": 26.82,
+      "date": "2026-10-16",
+      "source": "ratio run 2026-10-05/08 at 29 V, u excl. 3478A range gain",
+      "raw": "9.982338738050e-07,25.3000,1.100000e-05,0.000000e+00,19.420,7.6000,23.93,26.82,\"2026-10-16\",\"ratio run 2026-10-05/08 at 29 V, u excl. 3478A range gain\""
+    },
+    {
+      "range": "1E-7",
+      "k0": 9.964552424139e-08,
+      "t0": 25.3,
+      "alpha": 1.1e-05,
+      "beta": 0.0,
+      "u_k0_ppm": 296.7,
+      "u_alpha_ppm": 29.3,
+      "t_min": 23.93,
+      "t_max": 26.82,
+      "date": "2026-10-16",
+      "source": "ratio run 2026-10-05/08 at 29 V, u excl. 3478A range gain",
+      "raw": "9.964552424139e-08,25.3000,1.100000e-05,0.000000e+00,296.700,29.3000,23.93,26.82,\"2026-10-16\",\"ratio run 2026-10-05/08 at 29 V, u excl. 3478A range gain\""
+    }
+  ],
+  "sent": [
+    {
+      "range": "1E-5",
+      "k0": 9.981310305817e-06,
+      "t0": 25.3,
+      "alpha": 0.0,
+      "beta": 0.0,
+      "u_k0_ppm": 37.34,
+      "u_alpha_ppm": 0.0,
+      "t_min": 21.0,
+      "t_max": 27.3,
+      "date": "2026-10-16",
+      "source": "ratio run 2026-10-05/08, no T corr, u excl. 3478A range gain",
+      "command": "CAL:REC 1E-5,9.981310305817e-06,25.3000,0.000000e+00,0.000000e+00,37.340,0.0000,21.00,27.30,\"2026-10-16\",\"ratio run 2026-10-05/08, no T corr, u excl. 3478A range gain\""
+    },
+    {
+      "range": "1E-6",
+      "k0": 9.98233873805e-07,
+      "t0": 25.3,
+      "alpha": 0.0,
+      "beta": 0.0,
+      "u_k0_ppm": 76.97,
+      "u_alpha_ppm": 0.0,
+      "t_min": 21.0,
+      "t_max": 27.3,
+      "date": "2026-10-16",
+      "source": "ratio run 2026-10-05/08, no T corr, u excl. 3478A range gain",
+      "command": "CAL:REC 1E-6,9.982338738050e-07,25.3000,0.000000e+00,0.000000e+00,76.970,0.0000,21.00,27.30,\"2026-10-16\",\"ratio run 2026-10-05/08, no T corr, u excl. 3478A range gain\""
+    },
+    {
+      "range": "1E-7",
+      "k0": 9.964552424139e-08,
+      "t0": 25.3,
+      "alpha": 0.0,
+      "beta": 0.0,
+      "u_k0_ppm": 343.85,
+      "u_alpha_ppm": 0.0,
+      "t_min": 21.0,
+      "t_max": 27.3,
+      "date": "2026-10-16",
+      "source": "ratio run 2026-10-05/08, no T corr, u excl. 3478A range gain",
+      "command": "CAL:REC 1E-7,9.964552424139e-08,25.3000,0.000000e+00,0.000000e+00,343.850,0.0000,21.00,27.30,\"2026-10-16\",\"ratio run 2026-10-05/08, no T corr, u excl. 3478A range gain\""
+    }
+  ],
+  "after": [
+    {
+      "range": "1E-5",
+      "k0": 9.981310305817e-06,
+      "t0": 25.3,
+      "alpha": 0.0,
+      "beta": 0.0,
+      "u_k0_ppm": 37.34,
+      "u_alpha_ppm": 0.0,
+      "t_min": 21.0,
+      "t_max": 27.3,
+      "date": "2026-10-16",
+      "source": "ratio run 2026-10-05/08, no T corr, u excl. 3478A range gain",
+      "raw": "9.981310305817e-06,25.3000,0.000000e+00,0.000000e+00,37.340,0.0000,21.00,27.30,\"2026-10-16\",\"ratio run 2026-10-05/08, no T corr, u excl. 3478A range gain\""
+    },
+    {
+      "range": "1E-6",
+      "k0": 9.98233873805e-07,
+      "t0": 25.3,
+      "alpha": 0.0,
+      "beta": 0.0,
+      "u_k0_ppm": 76.97,
+      "u_alpha_ppm": 0.0,
+      "t_min": 21.0,
+      "t_max": 27.3,
+      "date": "2026-10-16",
+      "source": "ratio run 2026-10-05/08, no T corr, u excl. 3478A range gain",
+      "raw": "9.982338738050e-07,25.3000,0.000000e+00,0.000000e+00,76.970,0.0000,21.00,27.30,\"2026-10-16\",\"ratio run 2026-10-05/08, no T corr, u excl. 3478A range gain\""
+    },
+    {
+      "range": "1E-7",
+      "k0": 9.964552424139e-08,
+      "t0": 25.3,
+      "alpha": 0.0,
+      "beta": 0.0,
+      "u_k0_ppm": 343.85,
+      "u_alpha_ppm": 0.0,
+      "t_min": 21.0,
+      "t_max": 27.3,
+      "date": "2026-10-16",
+      "source": "ratio run 2026-10-05/08, no T corr, u excl. 3478A range gain",
+      "raw": "9.964552424139e-08,25.3000,0.000000e+00,0.000000e+00,343.850,0.0000,21.00,27.30,\"2026-10-16\",\"ratio run 2026-10-05/08, no T corr, u excl. 3478A range gain\""
+    }
+  ]
+}

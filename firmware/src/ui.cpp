@@ -183,6 +183,25 @@ void drawBanner() {
   }
 }
 
+// k to the digit its uncertainty supports: the last digit shown is the first one u reaches. So
+// 9.98131e-06 at 2.7 ppm, 9.9823e-07 at 19 ppm, 1.0e-05 at the nominal 1 %. SCPI keeps full precision.
+void formatFactor(char *b, size_t n, double k, double u_ppm) {
+  const double mantissa = k / pow(10, floor(log10(fabs(k))));
+  const double u_mantissa = mantissa * u_ppm * 1e-6;
+  int digits = u_mantissa > 0 ? int(ceil(-log10(u_mantissa))) : 7;
+  digits = digits < 1 ? 1 : digits > 7 ? 7 : digits;  // 7 keeps k and u apart at 320 px
+  snprintf(b, n, "k  %.*e", digits, k);
+}
+
+// Uncertainty to two significant figures: "2.7 ppm", "19 ppm", "300 ppm", "1.0 %".
+void formatUncertainty(char *b, size_t n, double u_ppm) {
+  if (u_ppm < 10) snprintf(b, n, "u %.1f ppm", u_ppm);
+  else if (u_ppm < 1000) {
+    const double step = u_ppm < 100 ? 1 : 10;
+    snprintf(b, n, "u %.0f ppm", round(u_ppm / step) * step);
+  } else snprintf(b, n, "u %.1f %%", u_ppm * 1e-4);
+}
+
 void drawReadout() {
   const instrument::State &s = instrument::state();
   const float t = tmp275::celsius();
@@ -194,17 +213,23 @@ void drawReadout() {
   text(readout, s.polarity == instrument::POL_INV ? "Pol INV" : "Pol NORM", W - 6, 12,
        s.polarity == instrument::POL_INV ? C_WARN : C_TEXT, C_BG, &fonts::Font4, middle_right);
 
-  const double k = cal::factor(s.range, t);
-  if (isnan(k)) snprintf(b, sizeof(b), "k  ---");
-  else snprintf(b, sizeof(b), "k  %.9e", k);
+  const cal::Eval e = cal::evaluate(s.range, t);
+  if (isnan(e.k)) snprintf(b, sizeof(b), "k  ---");
+  else formatFactor(b, sizeof(b), e.k, e.u_ppm);
   text(readout, b, 6, 42, C_TEXT, C_BG, &fonts::Font4, middle_left);
+  if (!isnan(e.k)) {
+    // Amber outside the record's measured temperature span (or with no temperature).
+    formatUncertainty(b, sizeof(b), e.u_ppm);
+    text(readout, b, W - 6, 42, e.in_span ? C_DIM : C_WARN, C_BG, &fonts::Font2, middle_right);
+  }
 
   if (isnan(t)) snprintf(b, sizeof(b), "T  ---");
   else snprintf(b, sizeof(b), "T  %.2f C", t);
   text(readout, b, 6, 70, C_TEXT, C_BG, &fonts::Font2, middle_left);
   if (s.range != instrument::RANGE_NONE) {
     const cal::RangeCal &c = cal::get(s.range);
-    snprintf(b, sizeof(b), "Tref %.1f  a %.1e%s", c.t0, c.alpha, cal::dirty() ? "  UNSAVED" : "");
+    snprintf(b, sizeof(b), "Tref %.1f  a %+.1f ppm/C%s", c.t0, c.alpha * 1e6,
+             cal::dirty() ? "  UNSAVED" : "");
     text(readout, b, W - 6, 70, cal::dirty() ? C_WARN : C_DIM, C_BG, &fonts::Font2, middle_right);
   }
   readout.pushSprite(0, INFO_Y);

@@ -9,7 +9,7 @@ page also serves as a reference for anyone building and calibrating their own.
 correction; the TMP275 checks that the instrument is used inside the 21.0–27.3 °C span they were
 validated over ([why](#temperature-monitored-not-corrected)). The
 end-to-end injection recovered every signal from 1 µV down to **1.39 ± 0.24 nV** at its predicted
-level. Before the write-back the instrument carried nominal records: k0 = 1/(R_H + 1 Ω), no
+level, and a second ladder measured **0.73 ± 0.27 nV** where 0.71 nV was predicted. Before the write-back the instrument carried nominal records: k0 = 1/(R_H + 1 Ω), no
 temperature correction, and u_k0 from the part tolerances (10050 / 10050 / 14142 ppm).
 
 | Step | What it yields | Status |
@@ -18,7 +18,7 @@ temperature correction, and u_k0 from the part tolerances (10050 / 10050 / 14142
 | 2. [High legs by resistance](#2-high-legs-by-resistance) | R_total per range; the R_L consistency check | **Done** 2026-10-04, [result](#high-legs-by-resistance-2026-10-04) |
 | 3. [Null tests](#3-null-tests) | Any signal produced by switching alone | (b) **done** 2026-10-05, [result](#null-test-b-input-shorted-2026-10-04--05); (a) **done** inside the ratio, end-to-end and detection runs, [result](#detection-limit-2026-10-11--16); (c) **done** 2026-10-11: this supply is not a zero source, [result](#end-to-end-injection-and-null-c-2026-10-09--11) |
 | 4. [Ratio run](#4-ratio-run) | k0 and α per range | **Done** 2026-10-08, [result](#ratio-run-2026-10-05--08); R_L check within or near the meter's specification |
-| 5. [End-to-end injection](#5-end-to-end-injection) | Acceptance: known nanovolt signals recovered | **Done** 2026-10-16: [ladder](#end-to-end-injection-and-null-c-2026-10-09--11) from 1 µV to 10 nV, and [1.39 nV](#detection-limit-2026-10-11--16) at 5.9σ |
+| 5. [End-to-end injection](#5-end-to-end-injection) | Acceptance: known nanovolt signals recovered | **Done** 2026-10-16: [ladder](#end-to-end-injection-and-null-c-2026-10-09--11) from 1 µV to 10 nV, and [1.39 nV](#detection-limit-2026-10-11--16) at 5.9σ; a [second ladder](#second-injection-ladder-2026-10-17--25) 2026-10-25, 997 nV to 0.71 nV |
 | [Write-back](#write-back) | Records stored in the instrument | **Done** 2026-10-16, [stored records](#stored-records) |
 
 ## Equipment
@@ -569,6 +569,65 @@ result, and also tried the meter's autozero off:
 So for the smallest signals: **15 s dwells, read as fast as the meter allows, autozero on.** That is
 about 1.8× lower noise per unit time than 60 s at 1 Hz. Polarity reversal every 15 s does not replace
 the meter's autozero.
+
+### Second injection ladder, 2026-10-17 – 25
+
+**Conditions.** The detection run's method at more setpoints: 15 s dwells, the meter read
+back-to-back (2.34 readings/s), autozero on, ABBA by K4 polarity, first 2 s of each dwell dropped.
+One supply setpoint per run, nothing moved between runs. In every run 1E-5 is the in-run reference,
+and 1E-6 and 1E-7 are predicted as S₅ × k_i/k₅ from the [stored records](#stored-records):
+
+* 1 V, 0.3 V and 0.1 V: 6 h each, one block on each range and one isolated block per cycle.
+* 30 mV: 12 h, weighted toward 1E-7.
+* 10 mV: the detection run's schedule (40 % on 1E-7, 40 % on the isolated-block null), 98 h in two
+  runs.
+* 15 mV: the [detection run](#detection-limit-2026-10-11--16) above, analysed the same way.
+
+TMP275 21.0–27.1 °C over all runs, none failed a reading. Data, figures and scripts:
+[`calibration/2026-10-17_ladder/`](../calibration/2026-10-17_ladder/).
+
+| Setpoint | Delivered (S₅/k₅) | 1E-6: measured / predicted | 1E-7: measured / predicted | 1E-7 from zero |
+|---|---|---|---|---|
+| 1 V | 999.1 mV | 997.37 ± 1.26 / 997.38 nV (−0.0σ) | 99.54 ± 1.19 / 99.56 nV (−0.0σ) | 84σ |
+| 0.3 V | 297.6 mV | 296.47 ± 1.24 / 297.04 nV (−0.5σ) | 27.24 ± 1.34 / 29.65 nV (−1.8σ) | 20σ |
+| 0.1 V | 99.65 mV | 97.82 ± 1.42 / 99.48 nV (−1.2σ) | 9.34 ± 1.48 / 9.93 nV (−0.4σ) | 6.3σ |
+| 30 mV | 28.24 mV | 28.43 ± 1.41 / 28.19 nV (+0.2σ) | 1.90 ± 0.73 / 2.81 nV (−1.3σ) | 2.6σ |
+| 15 mV | 13.46 mV | 12.98 ± 0.49 / 13.44 nV (−0.9σ) | **1.394 ± 0.235 / 1.341 nV (+0.2σ)** | **5.9σ** |
+| 10 mV | 7.02 / 7.21 mV | 5.85 ± 0.55 / 7.14 nV (−2.4σ) | **0.728 ± 0.270 / 0.712 nV (+0.1σ)** | **2.7σ** |
+| Null, all six | | | −0.03 ± 0.17 nV over 5,577 isolated blocks | |
+
+![Every injected signal against its prediction](../calibration/2026-10-17_ladder/recovery.png)
+
+* **Every signal agrees with its prediction**, from 997 nV down to 0.71 nV: χ² = 13.0 for 12, largest
+  residual 2.4σ.
+* **Detection reaches 1.4 nV; agreement reaches 0.7 nV.** At 10 mV the 1E-7 signal is 1/140 of the
+  meter's 100 nV count. It comes back where predicted, but only 2.7σ from zero and 1.6σ above the
+  10 mV null (0.62 ± 0.39 nV). 5σ there would take about 3.6 times the 98 h spent.
+* **The null holds at every setpoint:** pooled over all six, switching puts −0.03 ± 0.17 nV on OUT.
+* **One hint, not a finding:** the six 1E-6 residuals share a common −0.75 ± 0.32 nV (χ² 2.6 on 5),
+  where 1E-7 shares −0.06 ± 0.17 nV. It is not a ratio error (at 1 V the 1E-6 residual is
+  −0.01 ± 1.27 nV out of 997). If real, it is an additive term under a nanovolt on the 1E-6 path,
+  reversing with K4. At 2.3σ it needs a run weighted toward 1E-6 at a low setpoint to settle.
+* **10 mV is two runs, each against its own reference.** The host lost power 29 h into the first, and
+  after the restart the supply was driven to 29 V underneath it, so only the part before the outage
+  is used. The repeat ran 67 h. The supply delivered 7.02 ± 0.10 mV in one and 7.21 ± 0.07 mV in the
+  other, so the two are pooled as results, not as blocks. Blocks broken by a stop or a restart are
+  excluded: all four dwells present, starting within 60 s, each with at least 80 % of a full dwell's
+  readings.
+
+**What a signal this small looks like.** Left, one block as measured, on a fixed ±1450 nV scale: below
+about 100 nV the signal sinks into the meter's per-reading scatter of ~120 nV. Right, every block at
+that level averaged, each block's mean removed. The square wave stays visible down to 1.3 nV; at
+0.71 nV the dwell levels sit where predicted, at about 1σ each.
+
+![One block as measured, and every block averaged, at each level](../calibration/2026-10-17_ladder/waveforms.png)
+
+**The error bars** are block scatter / √n, 10.7–14.0 nV per block at every setpoint. For the long
+runs: lag-1 autocorrelation |r| ≤ 0.07, 6-hour bins scatter as the bars predict (worst χ² 18.9 / 11,
+the 1E-6 range in the 67 h run, p ≈ 0.06), split halves agree, and no target or null depends on
+temperature beyond 1.7σ. Dropping 1 or 3 s instead of 2 changes no result by more than its error
+bar. At 1 V on the 1E-6 range the first 0.5 s of a dwell reads 5–12 % short, which is what the 2 s
+cut removes.
 
 ### Stored records
 

@@ -14,6 +14,7 @@ calibration/
   YYYY-MM-DD_ratio/         step 4
   YYYY-MM-DD_end-to-end/    step 5, and null (c)
   YYYY-MM-DD_detection/     step 5: the smallest signal, ~1 nV
+  YYYY-MM-DD_ladder/        step 5: a second ladder, 1 uV to 0.7 nV
   records/                  CAL:REC values written to the instrument, as the
                             instrument exported them, plus the write-back log
 ```

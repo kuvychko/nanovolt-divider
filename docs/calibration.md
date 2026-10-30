@@ -18,7 +18,7 @@ temperature correction, and u_k0 from the part tolerances (10050 / 10050 / 14142
 | 2. [High legs by resistance](#2-high-legs-by-resistance) | R_total per range; the R_L consistency check | **Done** 2026-10-04, [result](#high-legs-by-resistance-2026-10-04) |
 | 3. [Null tests](#3-null-tests) | Any signal produced by switching alone | (b) **done** 2026-10-05, [result](#null-test-b-input-shorted-2026-10-04--05); (a) **done** inside the ratio, end-to-end and detection runs, [result](#detection-limit-2026-10-11--16); (c) **done** 2026-10-11: this supply is not a zero source, [result](#end-to-end-injection-and-null-c-2026-10-09--11) |
 | 4. [Ratio run](#4-ratio-run) | k0 and α per range | **Done** 2026-10-08, [result](#ratio-run-2026-10-05--08); R_L check within or near the meter's specification |
-| 5. [End-to-end injection](#5-end-to-end-injection) | Acceptance: known nanovolt signals recovered | **Done** 2026-10-16: [ladder](#end-to-end-injection-and-null-c-2026-10-09--11) from 1 µV to 10 nV, and [1.39 nV](#detection-limit-2026-10-11--16) at 5.9σ; a [second ladder](#second-injection-ladder-2026-10-17--25) 2026-10-25, 997 nV to 0.71 nV |
+| 5. [End-to-end injection](#5-end-to-end-injection) | Acceptance: known nanovolt signals recovered | **Done** 2026-10-16: [ladder](#end-to-end-injection-and-null-c-2026-10-09--11) from 1 µV to 10 nV, and [1.39 nV](#detection-limit-2026-10-11--16) at 5.9σ; a [second ladder](#second-injection-ladder-2026-10-17--25) 2026-10-25, 997 nV to 0.71 nV; a [1E-6 offset test](#1e-6-offset-test-2026-10-26--29) 2026-10-29, no offset above 0.6 nV |
 | [Write-back](#write-back) | Records stored in the instrument | **Done** 2026-10-16, [stored records](#stored-records) |
 
 ## Equipment
@@ -607,7 +607,8 @@ TMP275 21.0–27.1 °C over all runs, none failed a reading. Data, figures and s
 * **One hint, not a finding:** the six 1E-6 residuals share a common −0.75 ± 0.32 nV (χ² 2.6 on 5),
   where 1E-7 shares −0.06 ± 0.17 nV. It is not a ratio error (at 1 V the 1E-6 residual is
   −0.01 ± 1.27 nV out of 997). If real, it is an additive term under a nanovolt on the 1E-6 path,
-  reversing with K4. At 2.3σ it needs a run weighted toward 1E-6 at a low setpoint to settle.
+  reversing with K4. At 2.3σ it needed a run weighted toward 1E-6 at a low setpoint to settle, and
+  that run did not reproduce it: [1E-6 offset test](#1e-6-offset-test-2026-10-26--29) below.
 * **10 mV is two runs, each against its own reference.** The host lost power 29 h into the first, and
   after the restart the supply was driven to 29 V underneath it, so only the part before the outage
   is used. The repeat ran 67 h. The supply delivered 7.02 ± 0.10 mV in one and 7.21 ± 0.07 mV in the
@@ -628,6 +629,41 @@ the 1E-6 range in the 67 h run, p ≈ 0.06), split halves agree, and no target o
 temperature beyond 1.7σ. Dropping 1 or 3 s instead of 2 changes no result by more than its error
 bar. At 1 V on the 1E-6 range the first 0.5 s of a dwell reads 5–12 % short, which is what the 2 s
 cut removes.
+
+### 1E-6 offset test, 2026-10-26 – 29
+
+**Why.** The second ladder's six 1E-6 residuals shared a common −0.75 ± 0.32 nV. An additive term
+shows best where the predicted signal is small and nearly free of error, so this run repeated the
+ladder's strongest contributor, 10 mV (−1.29 ± 0.55 nV), with the time moved onto 1E-6.
+
+**Conditions.** 10 mV setpoint (delivered 6.998 ± 0.047 mV), 74 h. Per 6.2-minute cycle, six ABBA
+blocks: 1E-6, 1E-6, isolated null, 1E-6, 1E-6, 1E-5 reference, so 67 % of the time on 1E-6. The
+ladder's settings otherwise: 15 s dwells, the meter read back-to-back, 30 mV range, autozero on,
+first 2 s of each dwell dropped, 1E-6 predicted from the in-run 1E-5 blocks with the
+[stored records](#stored-records). The reduction imports the ladder's `analyze.py`, so the two are
+processed identically. 623,714 readings, none failed; TMP275 21.6–25.2 °C. Data, figure and scripts:
+[`calibration/2026-10-26_offset/`](../calibration/2026-10-26_offset/).
+
+| | Blocks | Measured | Predicted | Residual |
+|---|---|---|---|---|
+| 1E-5 reference | 720 | 69.85 ± 0.47 nV | | |
+| **1E-6** | **2,880** | **6.857 ± 0.243 nV** | 6.985 ± 0.047 nV | **−0.13 ± 0.25 nV (−0.5σ)** |
+| Null (isolated) | 719 | +0.10 ± 0.49 nV | 0 | +0.2σ |
+
+![1E-6 residuals: the second ladder, this run, and combined](../calibration/2026-10-26_offset/residuals.png)
+
+* **The offset does not reproduce.** This run differs from the ladder's −0.75 ± 0.32 nV by
+  0.62 ± 0.41 nV (1.5σ), and from the ladder's 10 mV point by 1.16 ± 0.60 nV (1.9σ). All seven 1E-6
+  residuals combine to **−0.36 ± 0.20 nV**, χ² 4.9 on 6: consistent with one another and 1.8σ from
+  zero. Any additive term on the 1E-6 path is below about 0.6 nV (95 %).
+* **Switching is neither found nor excluded.** In the ladder every 1E-6 block followed a range or
+  output change; here two of the four do and two follow another 1E-6 block. After a change the
+  residual is −0.35 ± 0.36 nV, after 1E-6 +0.09 ± 0.33 nV, a difference of −0.44 ± 0.49 nV (0.9σ).
+  Settling a transient that small would take a few times this run.
+* **The error bars hold:** lag-1 autocorrelation −0.013, 6-hour bins χ² 15.1 / 12, halves
+  6.90 ± 0.34 and 6.81 ± 0.34 nV, temperature slope +0.18 ± 0.27 nV/°C. Dropping 1, 3 or 5 s instead
+  of 2 moves the 1E-6 mean by at most 0.12 nV.
+* **The stored records stand.** Nothing here calls for a change to the 1E-6 k0 or an offset term.
 
 ### Stored records
 
